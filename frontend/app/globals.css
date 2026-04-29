@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f7f7f8;
+  --fg: #111;
+  --accent: #2563eb;
+  --error: #dc2626;
+  --muted: #6b7280;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.field-required::after {
+  content: " *";
+  color: var(--error);
+}

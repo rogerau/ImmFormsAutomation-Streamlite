@@ -1,0 +1,14 @@
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.9
+python-multipart>=0.0.12
+pypdf>=5.1
+pikepdf>=9.0
+cryptography>=42
+python-jose[cryptography]>=3.3
+google-api-python-client>=2.150
+google-auth>=2.35
+google-auth-httplib2>=0.2
+anthropic>=0.40
+python-dotenv>=1.0
+httpx>=0.27
