@@ -18,11 +18,7 @@ from . import tenants
 from .auth import TokenClaims, issue_token, verify_token
 from .forms.imm5645.filler import fill_pdf
 from .forms.imm5645.schema import FamilyData
-from .integrations.google import (
-    append_rows,
-    find_spreadsheet_in_folder,
-    upload_pdf_to_drive,
-)
+from .integrations.google import append_rows, upload_pdf_to_drive
 from .integrations.sheets_imm5645 import (
     children_rows,
     new_submission_id,
@@ -139,14 +135,7 @@ def imm5645_fill(payload: FamilyData, claims: TokenClaims = Depends(require_toke
         raise HTTPException(status_code=502, detail=f"Drive upload failed: {e}")
 
     try:
-        sheet_id = find_spreadsheet_in_folder(
-            tenant.submissions_sheet_name, tenant.application_data_folder_id
-        )
-        if not sheet_id:
-            raise RuntimeError(
-                f"Sheet '{tenant.submissions_sheet_name}' not found in folder "
-                f"{tenant.application_data_folder_id}"
-            )
+        sheet_id = tenant.submissions_spreadsheet_id
         append_rows(
             sheet_id,
             "Submissions",

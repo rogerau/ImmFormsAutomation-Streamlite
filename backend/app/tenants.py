@@ -24,8 +24,10 @@ from pydantic import BaseModel
 
 class TenantConfig(BaseModel):
     filled_forms_folder_id: str
-    application_data_folder_id: str
+    submissions_spreadsheet_id: str  # ID of the "IMM5645 Submissions" Google Sheet
     submissions_sheet_name: str = "IMM5645 Submissions"
+    # Kept for backwards-compat but no longer used to look up the sheet:
+    application_data_folder_id: str = ""
 
 
 @lru_cache(maxsize=1)

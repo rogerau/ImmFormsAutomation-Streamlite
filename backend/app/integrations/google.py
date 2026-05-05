@@ -1,87 +1,59 @@
-"""Google Drive + Sheets clients shared by all forms.
+"""Google Drive + Sheets via n8n webhook proxy.
 
-Auth: a Google service-account JSON. Provide it via the
-GOOGLE_SERVICE_ACCOUNT_JSON env var (the literal JSON contents,
-not a file path) — this lets us deploy on Railway without writing
-secrets to disk.
+Instead of a service-account JSON key (blocked by org policy), we delegate
+all Google API calls to two n8n webhooks that use n8n's existing OAuth
+credentials.  Set N8N_DRIVE_WEBHOOK_URL and N8N_SHEETS_WEBHOOK_URL in env.
 """
 from __future__ import annotations
 
-import io
-import json
+import base64
 import os
-from functools import lru_cache
-from typing import Optional
 
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+import httpx
 
-SCOPES = [
-    "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/spreadsheets",
-]
+_TIMEOUT = 60.0  # Drive upload can take a few seconds for large PDFs
 
 
-@lru_cache(maxsize=1)
-def _credentials():
-    raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
-    if not raw:
-        raise RuntimeError("GOOGLE_SERVICE_ACCOUNT_JSON env var not set")
-    info = json.loads(raw)
-    return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+def _drive_url() -> str:
+    url = os.environ.get("N8N_DRIVE_WEBHOOK_URL", "")
+    if not url:
+        raise RuntimeError("N8N_DRIVE_WEBHOOK_URL env var not set")
+    return url
 
 
-def drive_client():
-    return build("drive", "v3", credentials=_credentials(), cache_discovery=False)
-
-
-def sheets_client():
-    return build("sheets", "v4", credentials=_credentials(), cache_discovery=False)
+def _sheets_url() -> str:
+    url = os.environ.get("N8N_SHEETS_WEBHOOK_URL", "")
+    if not url:
+        raise RuntimeError("N8N_SHEETS_WEBHOOK_URL env var not set")
+    return url
 
 
 def upload_pdf_to_drive(filename: str, pdf_bytes: bytes, folder_id: str) -> dict:
-    """Upload a filled PDF and return {id, webViewLink}."""
-    service = drive_client()
-    media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype="application/pdf", resumable=False)
-    metadata = {"name": filename, "parents": [folder_id]}
-    file = (
-        service.files()
-        .create(body=metadata, media_body=media, fields="id, webViewLink", supportsAllDrives=True)
-        .execute()
-    )
-    return file
-
-
-def find_spreadsheet_in_folder(name: str, folder_id: str) -> Optional[str]:
-    """Return the Google Sheets file ID for `name` inside `folder_id`."""
-    service = drive_client()
-    q = (
-        f"name = '{name}' "
-        f"and '{folder_id}' in parents "
-        f"and mimeType = 'application/vnd.google-apps.spreadsheet' "
-        f"and trashed = false"
-    )
-    res = service.files().list(q=q, fields="files(id,name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-    files = res.get("files", [])
-    return files[0]["id"] if files else None
+    """Upload a filled PDF via n8n and return {fileId, webViewLink}."""
+    payload = {
+        "filename": filename,
+        "pdf_base64": base64.b64encode(pdf_bytes).decode(),
+        "folder_id": folder_id,
+    }
+    r = httpx.post(_drive_url(), json=payload, timeout=_TIMEOUT)
+    r.raise_for_status()
+    return r.json()
 
 
 def append_rows(spreadsheet_id: str, sheet_name: str, rows: list[list]) -> dict:
-    """Append rows to a sheet, USER_ENTERED so dates parse natively."""
+    """Append rows to a sheet via n8n. Returns {ok, updatedRows}."""
     if not rows:
-        return {"updates": {"updatedRows": 0}}
-    service = sheets_client()
-    body = {"values": rows}
-    return (
-        service.spreadsheets()
-        .values()
-        .append(
-            spreadsheetId=spreadsheet_id,
-            range=f"{sheet_name}!A1",
-            valueInputOption="USER_ENTERED",
-            insertDataOption="INSERT_ROWS",
-            body=body,
-        )
-        .execute()
-    )
+        return {"ok": True, "updatedRows": 0}
+    payload = {
+        "spreadsheet_id": spreadsheet_id,
+        "sheet_name": sheet_name,
+        "rows": rows,
+    }
+    r = httpx.post(_sheets_url(), json=payload, timeout=_TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+def find_spreadsheet_in_folder(name: str, folder_id: str) -> str | None:
+    """Not used when routing through n8n — tenants supply spreadsheet_id directly."""
+    return None

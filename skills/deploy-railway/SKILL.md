@@ -29,8 +29,9 @@ JWT_SECRET=<long random>            # MUST match frontend
 ADMIN_SECRET=<long random>          # MUST match frontend
 FRONTEND_ORIGIN=https://<frontend-railway-url>
 FRONTEND_BASE_URL=https://<frontend-railway-url>
-GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}   # single line
-TENANTS_JSON={"patko":{"filled_forms_folder_id":"...","application_data_folder_id":"...","submissions_sheet_name":"IMM5645 Submissions"}}
+N8N_DRIVE_WEBHOOK_URL=https://automations.streamlite.ca/webhook/imm-drive-upload
+N8N_SHEETS_WEBHOOK_URL=https://automations.streamlite.ca/webhook/imm-sheets-append
+TENANTS_JSON={"patko":{"filled_forms_folder_id":"<Drive folder ID>","submissions_spreadsheet_id":"<Sheet file ID>","submissions_sheet_name":"IMM5645 Submissions"}}
 LOG_LEVEL=INFO
 ```
 
@@ -93,4 +94,5 @@ curl -X POST https://<frontend>/api/admin/issue-link \
 
 - **CORS errors in the browser.** `FRONTEND_ORIGIN` on the backend must include the exact `https://...` origin Next.js runs on. Trailing slash matters.
 - **`401 Invalid or expired token` on submit.** `JWT_SECRET` mismatch between services. Verify both Railway services have the identical secret.
-- **`Sheet 'IMM5645 Submissions' not found`.** The SA isn't shared on the Drive folder, or the folder ID in `TENANTS_JSON` is wrong.
+- **`502 Drive upload failed` or `Sheets append failed`.** Check that `N8N_DRIVE_WEBHOOK_URL` and `N8N_SHEETS_WEBHOOK_URL` point to active n8n workflows on `automations.streamlite.ca`. Verify the workflows are active in n8n.
+- **`submissions_spreadsheet_id` missing.** Ensure `TENANTS_JSON` includes `submissions_spreadsheet_id` (the Sheet file ID, from its URL).
