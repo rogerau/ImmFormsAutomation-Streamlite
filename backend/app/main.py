@@ -139,7 +139,7 @@ def imm5645_fill(payload: FamilyData, claims: TokenClaims = Depends(require_toke
         append_rows(
             sheet_id,
             "Submissions",
-            [submissions_row(payload, filename, drive_file["id"], claims.tenant_id)],
+            [submissions_row(payload, filename, drive_file.get("id", ""), claims.tenant_id)],
         )
         crows = children_rows(payload)
         if crows:
@@ -152,14 +152,14 @@ def imm5645_fill(payload: FamilyData, claims: TokenClaims = Depends(require_toke
         # Non-fatal: PDF is already in Drive. Surface as a warning so client knows.
         return {
             "submission_id": payload.submission_id,
-            "pdf_drive_id": drive_file["id"],
+            "pdf_drive_id": drive_file.get("id"),
             "pdf_url": drive_file.get("webViewLink"),
             "sheets_warning": str(e),
         }
 
     return {
         "submission_id": payload.submission_id,
-        "pdf_drive_id": drive_file["id"],
+        "pdf_drive_id": drive_file.get("id"),
         "pdf_url": drive_file.get("webViewLink"),
     }
 
