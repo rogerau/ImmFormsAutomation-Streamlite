@@ -13,6 +13,7 @@ export interface TokenClaims {
   form_type: string;
   client_name: string;
   tenant_id: string;
+  optional_forms: string[];
   exp: number;
 }
 
@@ -29,7 +30,9 @@ export async function signToken(
 export async function verifyToken(token: string): Promise<TokenClaims | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
-    return payload as unknown as TokenClaims;
+    const claims = payload as unknown as TokenClaims;
+    if (!claims.optional_forms) claims.optional_forms = [];
+    return claims;
   } catch {
     return null;
   }

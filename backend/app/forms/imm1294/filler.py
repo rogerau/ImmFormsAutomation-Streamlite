@@ -1,0 +1,297 @@
+"""IMM 1294 — Application for Study Permit (XFA-based filler).
+
+Strategy: the datasets XML is ~500KB because it contains LOV lookup tables.
+We read the datasets from the unencrypted template, parse just the <form1> data
+section, replace field values in-place using ElementTree, then serialize and inject.
+"""
+from __future__ import annotations
+
+import io
+import os
+import zlib
+from typing import TYPE_CHECKING
+from xml.etree import ElementTree as ET
+
+import pikepdf
+
+if TYPE_CHECKING:
+    from ..study_permit.schema import StudyPermitData
+
+TEMPLATE = os.path.join(os.path.dirname(__file__), "template", "imm1294e.pdf")
+UNENC = os.path.join(os.path.dirname(__file__), "template", "imm1294e_unenc.pdf")
+
+XFA_NS = "http://www.xfa.org/schema/xfa-data/1.0/"
+
+
+def _get_raw_datasets(pdf_path: str) -> bytes:
+    """Return the raw (compressed) bytes of the XFA datasets stream."""
+    with pikepdf.open(pdf_path) as pdf:
+        xfa_array = list(pdf.Root.AcroForm.XFA)
+        for i in range(0, len(xfa_array) - 1, 2):
+            if str(xfa_array[i]) == "datasets":
+                return bytes(xfa_array[i + 1].read_raw_bytes())
+    raise ValueError("datasets stream not found in PDF")
+
+
+def _set(root: ET.Element, path: str, value: str) -> None:
+    """Navigate dot-path and set element text; silently skip missing nodes."""
+    node = root
+    for part in path.split("."):
+        found = node.find(f".//{part}") if part != node.tag else node
+        if found is None:
+            # Try direct child
+            found = node.find(part)
+        if found is None:
+            return
+        node = found
+    node.text = value
+
+
+def _find(root: ET.Element, *tags: str) -> ET.Element | None:
+    """Walk through a sequence of child tags and return the final node or None."""
+    node = root
+    for tag in tags:
+        child = node.find(tag)
+        if child is None:
+            return None
+        node = child
+    return node
+
+
+def _set_path(root: ET.Element, *tags_and_value: str) -> None:
+    """Set element text by navigating a sequence of child tags. Last arg is value."""
+    *tags, value = tags_and_value
+    node = root
+    for tag in tags:
+        child = node.find(tag)
+        if child is None:
+            return
+        node = child
+    node.text = value
+
+
+def _build_datasets_xml(data: "StudyPermitData") -> str:
+    """
+    Read the template datasets XML, modify the form1 section with our data,
+    and return the full XML string.
+    """
+    raw = _get_raw_datasets(UNENC)
+    xml_str = zlib.decompress(raw).decode("utf-8", errors="replace")
+
+    # ElementTree requires a single root; the datasets root is <xfa:datasets>
+    # Register namespace to avoid ns0: prefixes
+    ET.register_namespace("xfa", XFA_NS)
+
+    # Parse
+    root = ET.fromstring(xml_str)
+    xfa_data = root.find(f"{{{XFA_NS}}}data")
+    if xfa_data is None:
+        raise ValueError("xfa:data element not found in datasets")
+
+    form1 = xfa_data.find("form1")
+    if form1 is None:
+        raise ValueError("form1 element not found in xfa:data")
+
+    d = data.personal_info
+    p = data.passport
+
+    # ---- Page 1 — Personal Details ----
+    page1 = form1.find("Page1")
+    if page1 is not None:
+        pd = page1.find("PersonalDetails")
+        if pd is not None:
+            _set_path(pd, "Name", "FamilyName", d.family_name)
+            _set_path(pd, "Name", "GivenName", d.given_name)
+            if d.alias_family_name:
+                _set_path(pd, "AliasName", "AliasFamilyName", d.alias_family_name)
+                _set_path(pd, "AliasName", "AliasGivenName", d.alias_given_name)
+                alias_ind = _find(pd, "AliasName", "AliasNameIndicator", "AliasNameIndicator")
+                if alias_ind is not None:
+                    alias_ind.text = "1"
+            sex_el = _find(pd, "Sex", "Sex")
+            if sex_el is not None:
+                sex_el.text = d.sex.value
+            # DOB
+            dob_parts = d.date_of_birth.split("-") if d.date_of_birth else ["", "", ""]
+            year, month, day = (dob_parts + ["", "", ""])[:3]
+            for tag, val in [("DOBYear", year), ("DOBMonth", month), ("DOBDay", day)]:
+                el = pd.find(tag)
+                if el is not None:
+                    el.text = val
+            for tag, val in [("PlaceBirthCity", d.place_birth_city),
+                              ("PlaceBirthCountry", d.place_birth_country)]:
+                el = pd.find(tag)
+                if el is not None:
+                    el.text = val
+            cit_el = _find(pd, "Citizenship", "Citizenship")
+            if cit_el is not None:
+                cit_el.text = d.citizenship
+            # Current country of residence
+            cor_el = _find(pd, "CurrentCOR", "Row2", "Country")
+            if cor_el is not None:
+                cor_el.text = d.current_country
+        # Marital status
+        ms_el = _find(page1, "MaritalStatus", "SectionA", "MaritalStatus")
+        if ms_el is not None:
+            ms_el.text = d.marital_status
+
+    # ---- Page 2 — Passport + Contact ----
+    page2 = form1.find("Page2")
+    if page2 is not None:
+        # Language
+        lang_el = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "ableToCommunicate", "ableToCommunicate")
+        if lang_el is not None:
+            lang_el.text = d.language.value
+        native_lang = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "nativeLang", "nativeLang")
+        if native_lang is not None:
+            native_lang.text = d.language.value
+
+        # Passport
+        pp = _find(page2, "MaritalStatus", "SectionA", "Passport")
+        if pp is not None:
+            issue_parts = p.issue_date.split("-") if p.issue_date else ["", "", ""]
+            exp_parts = p.expiry_date.split("-") if p.expiry_date else ["", "", ""]
+            iy, im, iday = (issue_parts + ["", "", ""])[:3]
+            ey, em, eday = (exp_parts + ["", "", ""])[:3]
+            for field_path, val in [
+                (("PassportNum", "PassportNum"), p.passport_number),
+                (("CountryofIssue", "CountryofIssue"), p.country_of_issue),
+                (("IssueYYYY",), iy), (("IssueMM",), im), (("IssueDD",), iday),
+                (("expiryYYYY",), ey), (("expiryMM",), em), (("expiryDD",), eday),
+            ]:
+                node = pp
+                for part in field_path:
+                    child = node.find(part)
+                    if child is None:
+                        break
+                    node = child
+                else:
+                    node.text = val
+
+        # Contact — mailing address
+        contact = page2.find("contact")
+        if contact is not None:
+            addr = data.contact.mailing_address
+            for tag, val in [
+                ("AddressRow1/StreetNum/StreetNum", addr.street_number),
+                ("AddressRow1/Streetname/Streetname", addr.street_name),
+                ("AddressRow1/Apt/AptUnit", addr.unit),
+                ("AddressRow2/CityTow/CityTown", addr.city),
+                ("AddressRow2/Country/Country", addr.country),
+                ("AddressRow2/ProvinceState/ProvinceState", addr.province_state),
+                ("AddressRow2/PostalCode/PostalCode", addr.postal_code),
+            ]:
+                el = contact.find(tag)
+                if el is not None:
+                    el.text = val
+
+    # ---- Page 3 — Phone, Study Details, Education, Occupation ----
+    page3 = form1.find("Page3")
+    if page3 is not None:
+        # Phone
+        phone_el = _find(page3, "PhoneNumbers", "Phone", "ActualNumber")
+        if phone_el is not None:
+            phone_el.text = data.contact.phone
+        # Email
+        email_el = _find(page3, "FaxEmail", "Email")
+        if email_el is not None:
+            email_el.text = data.contact.email
+
+        # Study details
+        study = data.study
+        dos = page3.find("DetailsOfStudy")
+        if dos is not None:
+            row = dos.find("PurposeRow1")
+            if row is not None:
+                _set_path(row, "schoolName", "SchoolName", study.school_name)
+                _set_path(row, "schoolName", "Level", study.level)
+                _set_path(row, "schoolName", "Program", study.program)
+                _set_path(row, "ProvinceState", "Prov", study.province_state)
+                _set_path(row, "CityTown", "CityTown", study.city)
+                _set_path(row, "Address", "Address", study.address)
+                dli_el = row.find("DLI")
+                if dli_el is not None:
+                    dli_el.text = study.dli_number
+                sno_el = row.find("StudentNo")
+                if sno_el is not None:
+                    sno_el.text = study.student_number
+                # Dates
+                sd = study.start_date.split("-") if study.start_date else ["", "", ""]
+                ed = study.end_date.split("-") if study.end_date else ["", "", ""]
+                from_el = _find(row, "HowLongStudy", "FromDate")
+                if from_el is not None:
+                    from_el.text = study.start_date
+                to_el = _find(row, "HowLongStudy", "ToDate")
+                if to_el is not None:
+                    to_el.text = study.end_date
+
+        # Education history (first entry)
+        edu_section = page3.find("Education")
+        if edu_section is not None and data.education_history:
+            e = data.education_history[0]
+            edu_row = edu_section.find("Edu_Row1")
+            if edu_row is not None:
+                for tag, val in [
+                    ("FromYear", e.from_year), ("FromMonth", e.from_month),
+                    ("ToYear", e.to_year), ("ToMonth", e.to_month),
+                    ("FieldOfStudy", e.field_of_study), ("School", e.school),
+                    ("CityTown", e.city), ("ProvState", e.province_state),
+                ]:
+                    el = edu_row.find(tag)
+                    if el is not None:
+                        el.text = val
+                country_el = _find(edu_row, "Country", "Country")
+                if country_el is not None:
+                    country_el.text = e.country
+
+        # Occupation history (up to 3 rows)
+        occ_section = page3.find("Occupation")
+        if occ_section is not None:
+            for idx, row_tag in enumerate(["OccupationRow1", "OccupationRow2", "OccupationRow3"]):
+                if idx >= len(data.occupation_history):
+                    break
+                o = data.occupation_history[idx]
+                occ_row = occ_section.find(row_tag)
+                if occ_row is not None:
+                    for tag, val in [
+                        ("FromYear", o.from_year), ("FromMonth", o.from_month),
+                        ("ToYear", o.to_year), ("ToMonth", o.to_month),
+                        ("Employer", o.employer), ("ProvState", o.province_state),
+                    ]:
+                        el = occ_row.find(tag)
+                        if el is not None:
+                            el.text = val
+                    occ_el = _find(occ_row, "Occupation", "Occupation")
+                    if occ_el is not None:
+                        occ_el.text = o.occupation
+                    city_el = _find(occ_row, "CityTown", "CityTown")
+                    if city_el is not None:
+                        city_el.text = o.city
+                    country_el = _find(occ_row, "Country", "Country")
+                    if country_el is not None:
+                        country_el.text = o.country
+
+    # ---- Serialize back to string ----
+    ET.register_namespace("xfa", XFA_NS)
+    return ET.tostring(root, encoding="unicode", xml_declaration=False)
+
+
+def fill_pdf(data: "StudyPermitData") -> bytes:
+    if not os.path.exists(TEMPLATE):
+        raise FileNotFoundError(f"IMM 1294 template not found: {TEMPLATE}")
+    if not os.path.exists(UNENC):
+        raise FileNotFoundError(f"IMM 1294 unencrypted copy not found: {UNENC}")
+
+    xml_str = _build_datasets_xml(data)
+
+    with pikepdf.open(TEMPLATE, password="") as pdf:
+        xfa_array = list(pdf.Root.AcroForm.XFA)
+        for i in range(0, len(xfa_array) - 1, 2):
+            if str(xfa_array[i]) == "datasets":
+                stream_obj = xfa_array[i + 1]
+                compressed = zlib.compress(xml_str.encode("utf-8"))
+                stream_obj.write_raw_bytes(compressed)
+                break
+        buf = io.BytesIO()
+        pdf.save(buf)
+        return buf.getvalue()

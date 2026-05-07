@@ -1,11 +1,41 @@
 ---
 name: add-new-form
-description: Recipe for extending the portal to support a new IRCC form (IMM 1294, IMM 5257, IMM 0008, etc.) — dump PDF fields, write schema + filler, add Zod schema and React form component.
+description: Recipe for extending the portal to support a new IRCC form — either as a standalone form or as a new bundle (application type). Covers AcroForm (pypdf) and pure-XFA (pikepdf datasets injection) approaches.
 ---
 
 # Add a new IRCC form
 
-The portal is built so each form is a self-contained module. To add a new one, follow these six steps. Estimated effort: 2–4 hours per form depending on field count.
+The portal supports two patterns:
+
+1. **Standalone form** — a single PDF with its own endpoint (original pattern).
+2. **Bundle** — multiple forms grouped under one application type (e.g. study permit = IMM 1294 + IMM 5707 + optional forms). Each form in the bundle is a separate module; the bundle orchestrator in `forms/<bundle>/filler.py` calls them all.
+
+The current implementation uses the **bundle pattern** for the study permit. Estimated effort: 2–4 hours per form.
+
+## Determine the PDF type first
+
+Run the inspect script against the downloaded PDF:
+
+```bash
+python tools/inspect_pdf_fields.py backend/app/forms/<form>/template/<form>e.pdf
+```
+
+- **`total fields: N` (N > 0)** → hybrid AcroForm form. Fill with pypdf's `update_page_form_field_values`. See `forms/imm5409/filler.py`.
+- **`total fields: 0`** → pure XFA form. Fill by injecting a new datasets XML stream. See `forms/imm5707/filler.py` and `forms/xfa_filler.py`.
+
+For **pure XFA forms**, also extract and save the datasets XML template:
+
+```python
+import pikepdf, zlib
+with pikepdf.open('backend/app/forms/<form>/template/<form>e_unenc.pdf') as pdf:
+    items = list(pdf.Root.AcroForm.XFA)
+    for i in range(0, len(items)-1, 2):
+        if str(items[i]) == 'datasets':
+            xml = zlib.decompress(bytes(items[i+1].read_raw_bytes())).decode('utf-8')
+            open('backend/app/forms/<form>/template/<form>_datasets.xml', 'w').write(xml)
+```
+
+The datasets XML shows every field path as an XML element. Set values by building a complete XML string and injecting it via `fill_xfa_pdf()` in `forms/xfa_filler.py`.
 
 ## 1. Get the empty PDF
 

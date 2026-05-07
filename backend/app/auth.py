@@ -17,6 +17,7 @@ class TokenClaims(BaseModel):
     form_type: str
     client_name: str
     tenant_id: str
+    optional_forms: list[str] = []
     exp: int
 
 
@@ -26,6 +27,7 @@ def issue_token(
     client_name: str,
     tenant_id: str,
     expires_in_days: int = 30,
+    optional_forms: list[str] | None = None,
 ) -> str:
     if not JWT_SECRET:
         raise RuntimeError("JWT_SECRET env var not set")
@@ -35,6 +37,7 @@ def issue_token(
         "form_type": form_type,
         "client_name": client_name,
         "tenant_id": tenant_id,
+        "optional_forms": optional_forms or [],
         "exp": int(exp.timestamp()),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -45,6 +48,7 @@ def verify_token(token: str) -> Optional[TokenClaims]:
         raise RuntimeError("JWT_SECRET env var not set")
     try:
         decoded = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        decoded.setdefault("optional_forms", [])
         return TokenClaims(**decoded)
     except JWTError:
         return None

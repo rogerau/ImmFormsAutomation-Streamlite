@@ -17,9 +17,10 @@ export async function POST(req: NextRequest) {
 
   const token = await signToken({
     case_id: body.case_id,
-    form_type: body.form_type || "imm5645",
+    form_type: body.form_type || "study_permit",
     client_name: body.client_name,
     tenant_id: body.tenant_id,
+    optional_forms: Array.isArray(body.optional_forms) ? body.optional_forms : [],
   }, body.expires_in_days || 30);
 
   const base = process.env.NEXT_PUBLIC_FRONTEND_BASE_URL || "http://localhost:3000";
