@@ -19,17 +19,32 @@ def new_submission_id() -> str:
 SUBMISSIONS_HEADERS = [
     "submission_id", "timestamp", "case_id", "tenant_id", "form_type", "optional_forms",
     # Applicant identity
+    "uci",
     "family_name", "given_name", "native_name", "alias_family_name", "alias_given_name",
     "sex", "date_of_birth", "place_birth_city", "place_birth_country",
     "citizenship", "current_country", "marital_status", "applicant_occupation", "language",
     # Passport
     "passport_number", "passport_country_of_issue", "passport_issue_date", "passport_expiry_date",
+    # National Identity Document
+    "has_national_id", "nat_id_doc_number", "nat_id_country_of_issue",
+    "nat_id_issue_date", "nat_id_expiry_date",
+    # U.S. Permanent Resident Card
+    "has_us_pr_card", "us_pr_doc_number", "us_pr_expiry_date",
     # Contact
-    "address_street_name", "address_city", "address_country",
-    "address_province_state", "address_postal_code", "phone", "email",
+    "address_unit", "address_street_number", "address_street_name",
+    "address_city", "address_country", "address_province_state", "address_postal_code",
+    "phone", "email",
     # Study details
-    "school_name", "study_level", "study_program", "school_city",
-    "dli_number", "study_start_date", "study_end_date", "financial_support",
+    "school_name", "study_level", "study_program",
+    "school_city", "school_province_state", "school_address",
+    "dli_number", "student_number", "study_start_date", "study_end_date",
+    # Cost of studies
+    "tuition_amount", "room_board_amount", "other_amount", "funds_available",
+    "expenses_paid_by", "expenses_paid_by_other",
+    # PAL / TAL
+    "pal_doc_number", "pal_doc_expiry",
+    # Quebec CAQ
+    "caq_cert_number", "caq_cert_expiry",
     # Spouse
     "spouse_family_name", "spouse_given_names", "spouse_dob", "spouse_country_of_birth",
     "spouse_marital_status", "spouse_address", "spouse_occupation", "spouse_accompanies",
@@ -45,8 +60,13 @@ SUBMISSIONS_HEADERS = [
     # Declarations
     "section_c_signature", "section_c_date",
     "applicant_signature", "applicant_signature_date",
-    # Background
-    "medical_condition", "previously_refused_visa", "military_service",
+    # Background — IMM 1294 Page 4
+    "tuberculosis",
+    "medical_condition", "medical_condition_details",
+    "previously_refused_visa", "previously_refused_visa_details",
+    "criminal_record", "criminal_record_details",
+    "military_service", "military_service_details",
+    "consent_to_contact",
     # Optional form summaries (key fields inline)
     "common_law_partner_name", "cohabitation_start",
     "custodian_name", "custodian_address",
@@ -82,6 +102,13 @@ def submissions_row(
     def _drive(form_id: str, key: str) -> str:
         return drive_results.get(form_id, {}).get(key, "")
 
+    nid = data.national_id
+    usc = data.us_pr_card
+    addr = data.contact.mailing_address
+    st = data.study
+
+    yn = lambda v: "Yes" if v else "No"
+
     return [
         data.submission_id,
         datetime.now(timezone.utc).isoformat(),
@@ -90,6 +117,7 @@ def submissions_row(
         "study_permit",
         ",".join(data.optional_forms),
         # Applicant identity
+        pi.uci,
         pi.family_name, pi.given_name, pi.native_name,
         pi.alias_family_name, pi.alias_given_name,
         pi.sex.value if pi.sex else "", pi.date_of_birth,
@@ -101,18 +129,26 @@ def submissions_row(
         data.passport.country_of_issue,
         data.passport.issue_date,
         data.passport.expiry_date,
+        # National Identity Document
+        yn(nid.has_document), nid.doc_number, nid.country_of_issue,
+        nid.issue_date, nid.expiry_date,
+        # U.S. Permanent Resident Card
+        yn(usc.has_card), usc.doc_number, usc.expiry_date,
         # Contact
-        data.contact.mailing_address.street_name,
-        data.contact.mailing_address.city,
-        data.contact.mailing_address.country,
-        data.contact.mailing_address.province_state,
-        data.contact.mailing_address.postal_code,
+        addr.unit, addr.street_number, addr.street_name,
+        addr.city, addr.country, addr.province_state, addr.postal_code,
         data.contact.phone, data.contact.email,
         # Study
-        data.study.school_name, data.study.level, data.study.program,
-        data.study.city, data.study.dli_number,
-        data.study.start_date, data.study.end_date,
-        getattr(data, "financial_support", ""),
+        st.school_name, st.level, st.program,
+        st.city, st.province_state, st.address,
+        st.dli_number, st.student_number, st.start_date, st.end_date,
+        # Cost of studies
+        st.tuition_amount, st.room_board_amount, st.other_amount, st.funds_available,
+        st.expenses_paid_by, st.expenses_paid_by_other,
+        # PAL / TAL
+        st.pal_doc_number, st.pal_doc_expiry,
+        # Quebec CAQ
+        st.caq_cert_number, st.caq_cert_expiry,
         # Spouse
         s.family_name if s else "", s.given_names if s else "",
         s.date_of_birth if s else "", s.country_of_birth if s else "",
@@ -127,15 +163,18 @@ def submissions_row(
         mo.family_name, mo.given_names, mo.date_of_birth, mo.country_of_birth,
         mo.status.value if mo.status else "Living", mo.address, mo.occupation,
         # Children flags
-        "Yes" if f.children else "No",
+        yn(bool(f.children)),
         f.no_children_signature, f.no_children_date,
         # Declarations
         f.section_c_signature, f.section_c_date,
         data.applicant_signature, data.applicant_signature_date,
-        # Background
-        "Yes" if data.medical_condition else "No",
-        "Yes" if data.previously_refused_visa else "No",
-        "Yes" if data.military_service else "No",
+        # Background — IMM 1294 Page 4
+        yn(data.tuberculosis),
+        yn(data.medical_condition), data.medical_condition_details,
+        yn(data.previously_refused_visa), data.previously_refused_visa_details,
+        yn(data.criminal_record), data.criminal_record_details,
+        yn(data.military_service), data.military_service_details,
+        yn(data.consent_to_contact),
         # Optional form summaries
         cl_partner, cl_start, cust_name, cust_addr,
         # PDFs
