@@ -34,6 +34,20 @@ def _get_raw_datasets(pdf_path: str) -> bytes:
     raise ValueError("datasets stream not found in PDF")
 
 
+def _normalize_postal(code: str, country: str) -> str:
+    """Canadian postal codes must be formatted "A1A 1A1" (with space) for IRCC's
+    JavaScript validator. Insert the space if missing. Leave non-Canadian codes
+    (US ZIPs, etc.) untouched."""
+    if not code or not country:
+        return code or ""
+    if country.strip().lower() not in ("canada", "ca"):
+        return code
+    s = code.replace(" ", "").upper()
+    if len(s) == 6 and s[0].isalpha() and s[1].isdigit() and s[2].isalpha() and s[3].isdigit() and s[4].isalpha() and s[5].isdigit():
+        return f"{s[:3]} {s[3:]}"
+    return code
+
+
 def _set(root: ET.Element, path: str, value: str) -> None:
     """Navigate dot-path and set element text; silently skip missing nodes."""
     node = root
@@ -173,6 +187,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
         contact = page2.find("contact")
         if contact is not None:
             addr = data.contact.mailing_address
+            postal = _normalize_postal(addr.postal_code, addr.country)
             for tag, val in [
                 ("AddressRow1/StreetNum/StreetNum", addr.street_number),
                 ("AddressRow1/Streetname/Streetname", addr.street_name),
@@ -180,7 +195,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 ("AddressRow2/CityTow/CityTown", addr.city),
                 ("AddressRow2/Country/Country", addr.country),
                 ("AddressRow2/ProvinceState/ProvinceState", addr.province_state),
-                ("AddressRow2/PostalCode/PostalCode", addr.postal_code),
+                ("AddressRow2/PostalCode/PostalCode", postal),
             ]:
                 el = contact.find(tag)
                 if el is not None:
