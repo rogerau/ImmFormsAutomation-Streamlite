@@ -1,10 +1,13 @@
 "use client";
-import { FieldErrors, UseFormRegister } from "react-hook-form";
+import { useEffect } from "react";
+import { FieldErrors, UseFormRegister, UseFormGetValues, UseFormSetValue } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  getValues: UseFormGetValues<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -21,8 +24,16 @@ function Field({ label, required, error, children }: { label: string; required?:
   );
 }
 
-export function RepresentativeStep({ register, errors }: Props) {
+export function RepresentativeStep({ register, errors, getValues, setValue }: Props) {
   const r = errors.representative as any;
+
+  // Auto-populate applicant name from personal_info (same person — no need to re-ask).
+  useEffect(() => {
+    const pi = getValues("personal_info");
+    if (pi?.family_name) setValue("representative.applicant_family_name", pi.family_name);
+    if (pi?.given_name) setValue("representative.applicant_given_name", pi.given_name);
+  }, [getValues, setValue]);
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Use of a Representative (IMM 5476)</h2>

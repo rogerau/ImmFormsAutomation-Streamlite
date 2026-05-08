@@ -157,7 +157,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
     stepComponents[optIdx++] = <CustodianStep register={register} errors={errors} />;
   }
   if (optionalForms.includes("imm5476")) {
-    stepComponents[optIdx++] = <RepresentativeStep register={register} errors={errors} />;
+    stepComponents[optIdx++] = <RepresentativeStep register={register} errors={errors} getValues={getValues} setValue={setValue} />;
   }
   stepComponents[totalSteps] = (
     <ReviewSignStep
