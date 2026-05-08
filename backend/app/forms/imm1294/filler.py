@@ -6,13 +6,14 @@ section, replace field values in-place using ElementTree, then serialize and inj
 """
 from __future__ import annotations
 
-import io
 import os
 import zlib
 from typing import TYPE_CHECKING
 from xml.etree import ElementTree as ET
 
 import pikepdf
+
+from ..xfa_filler import fill_xfa_pdf
 
 if TYPE_CHECKING:
     from ..study_permit.schema import StudyPermitData
@@ -283,15 +284,4 @@ def fill_pdf(data: "StudyPermitData") -> bytes:
         raise FileNotFoundError(f"IMM 1294 unencrypted copy not found: {UNENC}")
 
     xml_str = _build_datasets_xml(data)
-
-    with pikepdf.open(TEMPLATE, password="") as pdf:
-        xfa_array = list(pdf.Root.AcroForm.XFA)
-        for i in range(0, len(xfa_array) - 1, 2):
-            if str(xfa_array[i]) == "datasets":
-                stream_obj = xfa_array[i + 1]
-                compressed = zlib.compress(xml_str.encode("utf-8"))
-                stream_obj.write_raw_bytes(compressed)
-                break
-        buf = io.BytesIO()
-        pdf.save(buf)
-        return buf.getvalue()
+    return fill_xfa_pdf(TEMPLATE, xml_str)
