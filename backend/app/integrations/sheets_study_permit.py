@@ -192,7 +192,8 @@ def submissions_row(
 
 CHILDREN_HEADERS = [
     "child_id", "submission_id", "child_index",
-    "family_name", "given_names", "date_of_birth", "country_of_birth",
+    "family_name", "given_names", "native_name",
+    "date_of_birth", "country_of_birth",
     "relationship", "marital_status", "address", "occupation", "accompanies",
 ]
 
@@ -202,7 +203,8 @@ def children_rows(data: StudyPermitData) -> list[list]:
     for i, c in enumerate(data.family.children or [], start=1):
         rows.append([
             str(uuid.uuid4()), data.submission_id, i,
-            c.family_name, c.given_names, c.date_of_birth, c.country_of_birth,
+            c.family_name, c.given_names, c.native_name,
+            c.date_of_birth, c.country_of_birth,
             c.relationship,
             c.marital_status.value if c.marital_status else "",
             c.address, c.occupation,
@@ -217,7 +219,9 @@ def children_rows(data: StudyPermitData) -> list[list]:
 
 EMPLOYMENT_HEADERS = [
     "employment_id", "submission_id", "entry_index",
-    "employer", "occupation", "city", "country", "from_date", "to_date",
+    "employer", "occupation",
+    "city", "province_state", "country",
+    "from_date", "to_date",
 ]
 
 
@@ -228,7 +232,9 @@ def employment_rows(data: StudyPermitData) -> list[list]:
         to_date = f"{o.to_year}-{o.to_month}"
         rows.append([
             str(uuid.uuid4()), data.submission_id, i,
-            o.employer, o.occupation, o.city, o.country, from_date, to_date,
+            o.employer, o.occupation,
+            o.city, o.province_state, o.country,
+            from_date, to_date,
         ])
     return rows
 
@@ -239,7 +245,9 @@ def employment_rows(data: StudyPermitData) -> list[list]:
 
 EDUCATION_HEADERS = [
     "education_id", "submission_id", "entry_index",
-    "institution", "field_of_study", "city", "country", "from_date", "to_date",
+    "institution", "field_of_study",
+    "city", "province_state", "country",
+    "from_date", "to_date",
 ]
 
 
@@ -250,7 +258,9 @@ def education_rows(data: StudyPermitData) -> list[list]:
         to_date = f"{e.to_year}-{e.to_month}"
         rows.append([
             str(uuid.uuid4()), data.submission_id, i,
-            e.school, e.field_of_study, e.city, e.country, from_date, to_date,
+            e.school, e.field_of_study,
+            e.city, e.province_state, e.country,
+            from_date, to_date,
         ])
     return rows
 
@@ -261,11 +271,22 @@ def education_rows(data: StudyPermitData) -> list[list]:
 
 REPRESENTATIVES_HEADERS = [
     "submission_id",
-    "rep_family_name", "rep_given_name",
-    "organization_name", "iccrc_number", "provincial_law_society",
-    "street_name", "city", "province", "country", "postal_code",
-    "phone", "email",
+    # Applicant (Section A of IMM 5476)
+    "applicant_family_name", "applicant_given_name", "applicant_dob", "uci_number",
+    # Representative identity + accreditation
+    "rep_type", "rep_family_name", "rep_given_name",
+    "iccrc_number", "provincial_law_society", "membership_id",
+    "organization_name", "lawyer_name",
+    # Address
+    "unit", "street_number", "street_name",
+    "city", "province", "country", "postal_code",
+    # Phone / fax / email
+    "phone_country_code", "phone_number",
+    "fax_country_code", "fax_number",
+    "email",
+    # Signatures
     "applicant_signature", "applicant_date_signed",
+    "rep_signature", "rep_date_signed",
 ]
 
 
@@ -275,9 +296,22 @@ def representatives_row(data: StudyPermitData) -> Optional[list]:
         return None
     return [
         data.submission_id,
+        # Applicant
+        rep.applicant_family_name, rep.applicant_given_name,
+        rep.applicant_dob, rep.uci_number,
+        # Rep identity
+        rep.rep_type.value if rep.rep_type else "",
         rep.rep_family_name, rep.rep_given_name,
-        rep.organization_name, rep.iccrc_number, rep.provincial_law_society,
-        rep.street_name, rep.city, rep.province, rep.country, rep.postal_code,
-        rep.phone_number, rep.email,
+        rep.iccrc_number, rep.provincial_law_society, rep.membership_id,
+        rep.organization_name, rep.lawyer_name,
+        # Address
+        rep.unit, rep.street_number, rep.street_name,
+        rep.city, rep.province, rep.country, rep.postal_code,
+        # Phone / fax / email
+        rep.phone_country_code, rep.phone_number,
+        rep.fax_country_code, rep.fax_number,
+        rep.email,
+        # Signatures
         rep.applicant_signature, rep.applicant_date_signed,
+        rep.rep_signature, rep.rep_date_signed,
     ]
