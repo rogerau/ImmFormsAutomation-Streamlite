@@ -24,6 +24,8 @@ function Field({ label, required, error, children }: { label: string; required?:
 
 const STUDY_LEVELS = ["University", "College", "CEGEP", "High School", "Vocational / Trade", "Other"];
 
+const isYes = (v: unknown) => v === true || v === "true";
+
 export function StudyDetailsStep({ register, errors, watch }: Props) {
   const s = errors.study;
   const medical = watch("medical_condition");
@@ -69,18 +71,18 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
         </Field>
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-800 pt-4">Background Questions</h2>
-      <p className="text-sm text-gray-500">If you answer "Yes", please provide details below.</p>
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Background Information</h2>
+      <p className="text-sm text-gray-500">If you answer "Yes" to any of the following questions, provide the details in the space provided.</p>
       <div className="space-y-4">
         {[
           { field: "medical_condition", detailsField: "medical_condition_details",
-            label: "Do you have a medical condition requiring health care or special assistance?",
+            label: "Within the past two years, have you or a family member had tuberculosis of the lungs or been in close contact with a person with tuberculosis of the lungs? Do you have any physical or mental disorder that would require social and/or health services, other than medication, during your stay in Canada?",
             value: medical },
           { field: "previously_refused_visa", detailsField: "previously_refused_visa_details",
-            label: "Have you previously been refused a visa, permit, or entry to Canada or any other country?",
+            label: "Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada? Have you previously applied to enter or remain in Canada? Have you been refused a visa or permit, denied entry or ordered to leave Canada or any other country?",
             value: refused },
           { field: "military_service", detailsField: "military_service_details",
-            label: "Have you served in a military, paramilitary, or armed group in any country?",
+            label: "Have you ever served in any military, militia, civil defence unit, or served in a security organization or police force (including non-obligatory national service, reserve or volunteer units)?",
             value: military },
         ].map(({ field, detailsField, label, value }) => (
           <div key={field} className="space-y-2">
@@ -91,7 +93,7 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
                 <option value="false">No</option>
               </select>
             </Field>
-            {value === true && (
+            {isYes(value) && (
               <Field label="Details" required={false} error={e?.[detailsField]?.message}>
                 <textarea
                   {...register(detailsField as any)}

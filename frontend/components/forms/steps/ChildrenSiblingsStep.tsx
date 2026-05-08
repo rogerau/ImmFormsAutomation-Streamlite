@@ -6,6 +6,9 @@ const MARITAL_STATUSES = [
   "Annulled marriage", "Common-law", "Divorced", "Legally separated",
   "Married-physically present", "Married-not physically present", "Single", "Widowed",
 ];
+const RELATIONSHIPS = [
+  "Son", "Daughter", "Step-son", "Step-daughter", "Adopted son", "Adopted daughter", "Other",
+];
 
 interface Props {
   control: Control<StudyPermitData>;
@@ -46,7 +49,10 @@ export function ChildrenSiblingsStep({ control, register, errors }: Props) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Relationship" required error={f?.children?.[idx]?.relationship?.message}>
-              <input {...register(`family.children.${idx}.relationship`)} placeholder="son, daughter, step-child, adopted" className={inp} />
+              <select {...register(`family.children.${idx}.relationship`)} className={inp}>
+                <option value="">-- Select --</option>
+                {RELATIONSHIPS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
             </Field>
             <Field label="Family Name" required error={f?.children?.[idx]?.family_name?.message}>
               <input {...register(`family.children.${idx}.family_name`)} className={inp} />
