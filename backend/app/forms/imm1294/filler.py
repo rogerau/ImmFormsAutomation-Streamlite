@@ -115,6 +115,9 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
     if page1 is not None:
         pd = page1.find("PersonalDetails")
         if pd is not None:
+            uci_el = pd.find("UCIClientID")
+            if uci_el is not None:
+                uci_el.text = d.uci or ""
             _set_path(pd, "Name", "FamilyName", d.family_name)
             _set_path(pd, "Name", "GivenName", d.given_name)
             if d.alias_family_name:
@@ -183,6 +186,46 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 else:
                     node.text = val
 
+        # National Identity Document (page2/natID)
+        nat_id = data.national_id
+        nat_id_el = page2.find("natID")
+        if nat_id_el is not None:
+            ind = _find(nat_id_el, "q1", "natIDIndicator")
+            if ind is not None:
+                ind.text = "Y" if nat_id.has_document else "N"
+            if nat_id.has_document:
+                docs = nat_id_el.find("natIDdocs")
+                if docs is not None:
+                    dn = _find(docs, "DocNum", "DocNum")
+                    if dn is not None:
+                        dn.text = nat_id.doc_number
+                    coi = _find(docs, "CountryofIssue", "CountryofIssue")
+                    if coi is not None:
+                        coi.text = nat_id.country_of_issue
+                    isd = _find(docs, "IssueDate", "IssueDate")
+                    if isd is not None:
+                        isd.text = nat_id.issue_date
+                    exp = docs.find("ExpiryDate")
+                    if exp is not None:
+                        exp.text = nat_id.expiry_date
+
+        # US PR Card (page2/USCard)
+        us = data.us_pr_card
+        us_card_el = page2.find("USCard")
+        if us_card_el is not None:
+            ind = _find(us_card_el, "q1", "usCardIndicator")
+            if ind is not None:
+                ind.text = "Y" if us.has_card else "N"
+            if us.has_card:
+                docs = us_card_el.find("usCarddocs")
+                if docs is not None:
+                    dn = _find(docs, "DocNum", "DocNum")
+                    if dn is not None:
+                        dn.text = us.doc_number
+                    exp = docs.find("ExpiryDate")
+                    if exp is not None:
+                        exp.text = us.expiry_date
+
         # Contact — mailing address
         contact = page2.find("contact")
         if contact is not None:
@@ -241,6 +284,44 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 if to_el is not None:
                     to_el.text = study.end_date
 
+        # Cost-of-studies / funds / PAL / CAQ (Page3/Contacts_Row1)
+        contacts_row = page3.find("Contacts_Row1")
+        if contacts_row is not None:
+            tu = _find(contacts_row, "tuition", "amount")
+            if tu is not None:
+                tu.text = study.tuition_amount
+            rb = _find(contacts_row, "roomBoard", "amount")
+            if rb is not None:
+                rb.text = study.room_board_amount
+            ot = _find(contacts_row, "other", "amount")
+            if ot is not None:
+                ot.text = study.other_amount
+            funds = _find(contacts_row, "expensesPaid", "Funds", "Funds")
+            if funds is not None:
+                funds.text = study.funds_available
+            paid_by = _find(contacts_row, "expensesPaid", "expensesPaidBy")
+            if paid_by is not None:
+                paid_by.text = study.expenses_paid_by
+            paid_other = _find(contacts_row, "expensesPaid", "Other")
+            if paid_other is not None:
+                paid_other.text = study.expenses_paid_by_other
+            pal = contacts_row.find("PAL")
+            if pal is not None:
+                dn = pal.find("DocNum")
+                if dn is not None:
+                    dn.text = study.pal_doc_number
+                de = pal.find("DocExpiry")
+                if de is not None:
+                    de.text = study.pal_doc_expiry
+            caq = contacts_row.find("CAQ")
+            if caq is not None:
+                cn = caq.find("CertNum")
+                if cn is not None:
+                    cn.text = study.caq_cert_number
+                ce = caq.find("CertExpiry")
+                if ce is not None:
+                    ce.text = study.caq_cert_expiry
+
         # Education history (first entry)
         edu_section = page3.find("Education")
         if edu_section is not None and data.education_history:
@@ -290,12 +371,17 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
     # ---- Page 4 — Background Questions ----
     page4 = form1.find("Page4")
     if page4 is not None:
-        # Medical (BackgroundInfo)
+        # BackgroundInfo holds two sub-questions:
+        #   Choice[0] = Q86 tuberculosis
+        #   Choice[1] = Q87 medical disorder
+        #   Details/MedicalDetails = Q87 textbox
         bg1 = page4.find("BackgroundInfo")
         if bg1 is not None:
-            choice = bg1.find("Choice")
-            if choice is not None:
-                choice.text = "Y" if data.medical_condition else "N"
+            choices = bg1.findall("Choice")
+            if len(choices) >= 1:
+                choices[0].text = "Y" if data.tuberculosis else "N"
+            if len(choices) >= 2:
+                choices[1].text = "Y" if data.medical_condition else "N"
             details_el = _find(bg1, "Details", "MedicalDetails")
             if details_el is not None:
                 details_el.text = data.medical_condition_details or ""
@@ -303,17 +389,34 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
         # PageWrapper holds the rest
         wrap = page4.find("PageWrapper")
         if wrap is not None:
-            # Refused visa (BackgroundInfo2)
+            # Visa-refusal block (BackgroundInfo2): VisaChoice1/2/3 = three Y/N
+            # sub-questions; refusedDetails = combined textbox.
             bg2 = wrap.find("BackgroundInfo2")
             if bg2 is not None:
-                vc = bg2.find("VisaChoice1")
-                if vc is not None:
-                    vc.text = "Y" if data.previously_refused_visa else "N"
+                vc1 = bg2.find("VisaChoice1")  # overstay/unauthorized work
+                if vc1 is not None:
+                    vc1.text = "Y" if data.previously_refused_visa else "N"
+                vc2 = bg2.find("VisaChoice2")  # previously applied
+                if vc2 is not None:
+                    vc2.text = "Y" if data.previously_refused_visa else "N"
+                vc3 = bg2.find("VisaChoice3")  # been refused
+                if vc3 is not None:
+                    vc3.text = "Y" if data.previously_refused_visa else "N"
                 ref_details = _find(bg2, "Details", "refusedDetails")
                 if ref_details is not None:
                     ref_details.text = data.previously_refused_visa_details or ""
 
-            # Military service
+            # Criminal record (BackgroundInfo3 — Q90)
+            bg3 = wrap.find("BackgroundInfo3")
+            if bg3 is not None:
+                cc = bg3.find("Choice")
+                if cc is not None:
+                    cc.text = "Y" if data.criminal_record else "N"
+                cd = bg3.find("Details")
+                if cd is not None:
+                    cd.text = data.criminal_record_details or ""
+
+            # Military / political-violence service
             mil = wrap.find("Military")
             if mil is not None:
                 mc = mil.find("Choice")
@@ -322,6 +425,13 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 mil_details = mil.find("militaryServiceDetails")
                 if mil_details is not None:
                     mil_details.text = data.military_service_details or ""
+
+        # Consent (Consent0)
+        consent = page4.find("Consent0")
+        if consent is not None:
+            cc = consent.find("Choice")
+            if cc is not None:
+                cc.text = "Y" if data.consent_to_contact else "N"
 
     # ---- Serialize back to string ----
     ET.register_namespace("xfa", XFA_NS)

@@ -48,6 +48,40 @@ class Imm1294StudyDetails(BaseModel):
     start_date: str    # YYYY-MM-DD
     end_date: str      # YYYY-MM-DD
 
+    # Costs (Page 3 — "The cost of my studies will be:")
+    tuition_amount: str = ""        # numeric string in CAD, e.g. "20000"
+    room_board_amount: str = ""
+    other_amount: str = ""
+    funds_available: str = ""       # CAD funds available for stay
+
+    # "My expenses in Canada will be paid by:" — IRCC dropdown options
+    expenses_paid_by: str = ""      # "Myself", "Parents", "Other family"...
+    expenses_paid_by_other: str = ""  # free-text when "Other"
+
+    # Provincial Attestation Letter (PAL) / Territorial Attestation Letter (TAL)
+    pal_doc_number: str = ""
+    pal_doc_expiry: str = ""        # YYYY-MM-DD
+
+    # Quebec Acceptance Certificate (CAQ)
+    caq_cert_number: str = ""
+    caq_cert_expiry: str = ""       # YYYY-MM-DD
+
+
+class Imm1294NationalID(BaseModel):
+    """National Identity Document — IMM 1294 Page 2 'natID' section."""
+    has_document: bool = False      # natIDIndicator: Y/N
+    doc_number: str = ""
+    country_of_issue: str = ""
+    issue_date: str = ""            # YYYY-MM-DD
+    expiry_date: str = ""           # YYYY-MM-DD
+
+
+class Imm1294USCard(BaseModel):
+    """US Permanent Resident Card / Green Card — IMM 1294 Page 2 'USCard' section."""
+    has_card: bool = False          # usCardIndicator: Y/N
+    doc_number: str = ""
+    expiry_date: str = ""           # YYYY-MM-DD
+
 
 class Imm1294EducationEntry(BaseModel):
     from_year: str

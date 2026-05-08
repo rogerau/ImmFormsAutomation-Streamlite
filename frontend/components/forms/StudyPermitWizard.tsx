@@ -82,7 +82,11 @@ export function StudyPermitWizard({ token, claims }: Props) {
         occupation_history: [],
         medical_condition_details: "",
         previously_refused_visa_details: "",
+        criminal_record_details: "",
         military_service_details: "",
+        consent_to_contact: true as any,
+        national_id: { has_document: false as any, doc_number: "", country_of_issue: "", issue_date: "", expiry_date: "" },
+        us_pr_card: { has_card: false as any, doc_number: "", expiry_date: "" },
       };
     })(),
     mode: "onTouched",
@@ -98,8 +102,8 @@ export function StudyPermitWizard({ token, claims }: Props) {
 
   // Step-level field groups to validate on "Next"
   const STEP_FIELDS: Record<number, string[]> = {
-    1: ["personal_info", "passport", "contact"],
-    2: ["study"],
+    1: ["personal_info", "passport", "national_id", "us_pr_card", "contact"],
+    2: ["study", "tuberculosis", "medical_condition", "previously_refused_visa", "criminal_record", "military_service", "consent_to_contact"],
     3: ["family.applicant_marital_status", "family.applicant_occupation", "family.father", "family.mother"],
     4: ["family.children", "family.no_children_signature"],
     5: [],  // education/occupation optional
@@ -141,7 +145,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
 
   // Map step number to component
   const stepComponents: Record<number, React.ReactNode> = {
-    1: <PersonalInfoStep register={register} errors={errors} />,
+    1: <PersonalInfoStep register={register} errors={errors} watch={watch} />,
     2: <StudyDetailsStep register={register} errors={errors} watch={watch} />,
     3: <FamilyBackgroundStep register={register} errors={errors} watch={watch} setValue={setValue} />,
     4: <ChildrenSiblingsStep control={control} register={register} errors={errors} />,

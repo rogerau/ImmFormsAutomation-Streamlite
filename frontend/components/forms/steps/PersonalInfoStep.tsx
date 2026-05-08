@@ -1,11 +1,14 @@
 "use client";
-import { Control, FieldErrors, UseFormRegister } from "react-hook-form";
+import { Control, FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  watch: UseFormWatch<StudyPermitData>;
 }
+
+const isYes = (v: unknown) => v === true || v === "true";
 
 function Field({
   label,
@@ -32,8 +35,12 @@ function Field({
 const inp =
   "mt-0 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-export function PersonalInfoStep({ register, errors }: Props) {
+export function PersonalInfoStep({ register, errors, watch }: Props) {
   const pi = errors.personal_info;
+  const nat = errors.national_id as any;
+  const usc = errors.us_pr_card as any;
+  const hasNatID = isYes(watch("national_id.has_document"));
+  const hasUSCard = isYes(watch("us_pr_card.has_card"));
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Personal Information</h2>
@@ -85,6 +92,9 @@ export function PersonalInfoStep({ register, errors }: Props) {
             <option value="Neither">Neither</option>
           </select>
         </Field>
+        <Field label="UCI / Client ID Number (if known)" error={pi?.uci?.message}>
+          <input {...register("personal_info.uci")} placeholder="e.g. 12345678" className={inp} />
+        </Field>
       </div>
 
       <h2 className="text-lg font-semibold text-gray-800 pt-4">Passport</h2>
@@ -102,6 +112,56 @@ export function PersonalInfoStep({ register, errors }: Props) {
           <input {...register("passport.expiry_date")} placeholder="YYYY-MM-DD" className={inp} />
         </Field>
       </div>
+
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">National Identity Document</h2>
+      <p className="text-sm text-gray-500">Do you have a national identity document?</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Has national identity document?" required error={nat?.has_document?.message}>
+          <select {...register("national_id.has_document")} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+      </div>
+      {hasNatID && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Document Number" error={nat?.doc_number?.message}>
+            <input {...register("national_id.doc_number")} className={inp} />
+          </Field>
+          <Field label="Country of Issue" error={nat?.country_of_issue?.message}>
+            <input {...register("national_id.country_of_issue")} className={inp} />
+          </Field>
+          <Field label="Issue Date" error={nat?.issue_date?.message}>
+            <input {...register("national_id.issue_date")} placeholder="YYYY-MM-DD" className={inp} />
+          </Field>
+          <Field label="Expiry Date" error={nat?.expiry_date?.message}>
+            <input {...register("national_id.expiry_date")} placeholder="YYYY-MM-DD" className={inp} />
+          </Field>
+        </div>
+      )}
+
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">U.S. Permanent Resident Card</h2>
+      <p className="text-sm text-gray-500">Do you currently hold a valid U.S. Permanent Resident Card (Green Card)?</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Has U.S. PR card?" required error={usc?.has_card?.message}>
+          <select {...register("us_pr_card.has_card")} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+      </div>
+      {hasUSCard && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Document Number" error={usc?.doc_number?.message}>
+            <input {...register("us_pr_card.doc_number")} className={inp} />
+          </Field>
+          <Field label="Expiry Date" error={usc?.expiry_date?.message}>
+            <input {...register("us_pr_card.expiry_date")} placeholder="YYYY-MM-DD" className={inp} />
+          </Field>
+        </div>
+      )}
 
       <h2 className="text-lg font-semibold text-gray-800 pt-4">Contact Information</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

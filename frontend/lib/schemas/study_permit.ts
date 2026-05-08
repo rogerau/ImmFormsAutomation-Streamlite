@@ -66,6 +66,33 @@ const studyDetailsSchema = z.object({
   student_number: z.string().default(""),
   start_date: dateStr,
   end_date: dateStr,
+  // Cost of studies
+  tuition_amount: z.string().default(""),
+  room_board_amount: z.string().default(""),
+  other_amount: z.string().default(""),
+  funds_available: z.string().default(""),
+  expenses_paid_by: z.string().default(""),
+  expenses_paid_by_other: z.string().default(""),
+  // PAL / TAL
+  pal_doc_number: z.string().default(""),
+  pal_doc_expiry: z.string().default(""),
+  // CAQ
+  caq_cert_number: z.string().default(""),
+  caq_cert_expiry: z.string().default(""),
+});
+
+const nationalIdSchema = z.object({
+  has_document: requiredBoolFromString,
+  doc_number: z.string().default(""),
+  country_of_issue: z.string().default(""),
+  issue_date: z.string().default(""),
+  expiry_date: z.string().default(""),
+});
+
+const usCardSchema = z.object({
+  has_card: requiredBoolFromString,
+  doc_number: z.string().default(""),
+  expiry_date: z.string().default(""),
 });
 
 const educationEntrySchema = z.object({
@@ -255,10 +282,13 @@ export const StudyPermitSchema = z
       current_country: z.string().min(1, "Required"),
       marital_status: z.string().min(1, "Required"),
       language: LanguageEnum.default("English"),
+      uci: z.string().default(""),
     }),
 
     // Step 2: Passport + contact
     passport: passportSchema,
+    national_id: nationalIdSchema.default({ has_document: false, doc_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
+    us_pr_card: usCardSchema.default({ has_card: false, doc_number: "", expiry_date: "" }),
     contact: z.object({
       mailing_address: addressSchema,
       phone: z.string().min(1, "Required"),
@@ -275,13 +305,17 @@ export const StudyPermitSchema = z
     // Steps 4-5: Family
     family: familyInfoSchema,
 
-    // Background
+    // Background — IRCC IMM 1294 Page 4 verbatim questions
+    tuberculosis: requiredBoolFromString,
     medical_condition: requiredBoolFromString,
     medical_condition_details: z.string().max(1500, "Max 1500 characters").default(""),
     previously_refused_visa: requiredBoolFromString,
     previously_refused_visa_details: z.string().max(1500, "Max 1500 characters").default(""),
+    criminal_record: requiredBoolFromString,
+    criminal_record_details: z.string().max(1500, "Max 1500 characters").default(""),
     military_service: requiredBoolFromString,
     military_service_details: z.string().max(1500, "Max 1500 characters").default(""),
+    consent_to_contact: requiredBoolFromString,
 
     // Signatures
     applicant_signature: z.string().min(1, "Type your full legal name"),

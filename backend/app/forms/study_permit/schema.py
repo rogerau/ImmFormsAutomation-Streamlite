@@ -13,9 +13,11 @@ from pydantic import BaseModel
 from ..imm1294.schema import (
     Imm1294Address,
     Imm1294EducationEntry,
+    Imm1294NationalID,
     Imm1294OccupationEntry,
     Imm1294Passport,
     Imm1294StudyDetails,
+    Imm1294USCard,
     Language,
     Sex,
 )
@@ -46,6 +48,7 @@ class PersonalInfo(BaseModel):
     current_country: str              # current country of residence
     marital_status: str               # text for IMM 1294 (e.g. "Single")
     language: Language = Language.english
+    uci: str = ""                     # UCI / Client ID (8 or 10 digits)
 
 
 class FamilyInfo(BaseModel):
@@ -85,6 +88,8 @@ class StudyPermitData(BaseModel):
 
     # --- Step 2: Passport + contact ---
     passport: Imm1294Passport
+    national_id: Imm1294NationalID = Imm1294NationalID()
+    us_pr_card: Imm1294USCard = Imm1294USCard()
     contact: ContactInfo
 
     # --- Step 3: Study details ---
@@ -97,13 +102,23 @@ class StudyPermitData(BaseModel):
     # --- Steps 4–5: Family data (IMM 5707) ---
     family: FamilyInfo
 
-    # --- Background (IMM 1294 Page 4) ---
+    # --- Background (IMM 1294 Page 4) — verbatim IRCC questions ---
+    # Q86: tuberculosis (no textbox)
+    tuberculosis: bool = False
+    # Q87: medical disorder (with textbox; reuses MedicalDetails)
     medical_condition: bool = False
     medical_condition_details: str = ""
+    # Q88+Q89: visa overstay/refusal (with textbox; reuses refusedDetails)
     previously_refused_visa: bool = False
     previously_refused_visa_details: str = ""
+    # Q90: criminal record (with textbox)
+    criminal_record: bool = False
+    criminal_record_details: str = ""
+    # Q92: military / political-violence
     military_service: bool = False
     military_service_details: str = ""
+    # Q101: consent to be contacted by CIC
+    consent_to_contact: bool = True
 
     # --- Applicant signature (shared across all forms) ---
     applicant_signature: str

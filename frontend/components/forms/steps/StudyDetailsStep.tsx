@@ -26,11 +26,18 @@ const STUDY_LEVELS = ["University", "College", "CEGEP", "High School", "Vocation
 
 const isYes = (v: unknown) => v === true || v === "true";
 
+const PAID_BY_OPTIONS = [
+  "Myself", "Parents", "Other family member", "Employer", "Government", "Sponsor", "Other",
+];
+
 export function StudyDetailsStep({ register, errors, watch }: Props) {
-  const s = errors.study;
+  const s = errors.study as any;
+  const tb = watch("tuberculosis");
   const medical = watch("medical_condition");
   const refused = watch("previously_refused_visa");
+  const criminal = watch("criminal_record");
   const military = watch("military_service");
+  const paidBy = watch("study.expenses_paid_by");
   const e = errors as any;
   return (
     <div className="space-y-4">
@@ -71,41 +78,142 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
         </Field>
       </div>
 
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Cost of Studies</h2>
+      <p className="text-sm text-gray-500">Enter the cost of your studies and how your expenses will be paid. Amounts in CAD.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Field label="Tuition" error={s?.tuition_amount?.message}>
+          <input {...register("study.tuition_amount")} placeholder="20000" className={inp} />
+        </Field>
+        <Field label="Room and Board" error={s?.room_board_amount?.message}>
+          <input {...register("study.room_board_amount")} placeholder="12000" className={inp} />
+        </Field>
+        <Field label="Other" error={s?.other_amount?.message}>
+          <input {...register("study.other_amount")} placeholder="3000" className={inp} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Funds available for my stay (CAD)" error={s?.funds_available?.message}>
+          <input {...register("study.funds_available")} className={inp} />
+        </Field>
+        <Field label="My expenses in Canada will be paid by" error={s?.expenses_paid_by?.message}>
+          <select {...register("study.expenses_paid_by")} className={inp}>
+            <option value="">-- Select --</option>
+            {PAID_BY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </Field>
+        {paidBy === "Other" && (
+          <Field label="Other (specify)" error={s?.expenses_paid_by_other?.message}>
+            <input {...register("study.expenses_paid_by_other")} className={inp} />
+          </Field>
+        )}
+      </div>
+
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Provincial Attestation Letter (PAL/TAL)</h2>
+      <p className="text-sm text-gray-500">If you have been issued a Provincial Attestation Letter (PAL) or Territorial Attestation Letter (TAL), provide the details.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Document Number" error={s?.pal_doc_number?.message}>
+          <input {...register("study.pal_doc_number")} className={inp} />
+        </Field>
+        <Field label="Expiry Date" error={s?.pal_doc_expiry?.message}>
+          <input {...register("study.pal_doc_expiry")} placeholder="YYYY-MM-DD" className={inp} />
+        </Field>
+      </div>
+
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Quebec Acceptance Certificate (CAQ)</h2>
+      <p className="text-sm text-gray-500">If you have been issued a Quebec Acceptance Certificate (CAQ), provide the details.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Certificate Number" error={s?.caq_cert_number?.message}>
+          <input {...register("study.caq_cert_number")} className={inp} />
+        </Field>
+        <Field label="Expiry Date" error={s?.caq_cert_expiry?.message}>
+          <input {...register("study.caq_cert_expiry")} placeholder="YYYY-MM-DD" className={inp} />
+        </Field>
+      </div>
+
       <h2 className="text-lg font-semibold text-gray-800 pt-4">Background Information</h2>
-      <p className="text-sm text-gray-500">If you answer "Yes" to any of the following questions, provide the details in the space provided.</p>
+      <p className="text-sm text-gray-500">If you answer "Yes" to any of the following questions, provide the details in the space provided. (Wording is taken verbatim from the IMM 1294 form.)</p>
       <div className="space-y-4">
-        {[
-          { field: "medical_condition", detailsField: "medical_condition_details",
-            label: "Within the past two years, have you or a family member had tuberculosis of the lungs or been in close contact with a person with tuberculosis of the lungs? Do you have any physical or mental disorder that would require social and/or health services, other than medication, during your stay in Canada?",
-            value: medical },
-          { field: "previously_refused_visa", detailsField: "previously_refused_visa_details",
-            label: "Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada? Have you previously applied to enter or remain in Canada? Have you been refused a visa or permit, denied entry or ordered to leave Canada or any other country?",
-            value: refused },
-          { field: "military_service", detailsField: "military_service_details",
-            label: "Have you ever served in any military, militia, civil defence unit, or served in a security organization or police force (including non-obligatory national service, reserve or volunteer units)?",
-            value: military },
-        ].map(({ field, detailsField, label, value }) => (
-          <div key={field} className="space-y-2">
-            <Field label={label} required error={e?.[field]?.message}>
-              <select {...register(field as any)} className={inp}>
-                <option value="">-- Select --</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
+        {/* Q86 — TB (no textbox) */}
+        <Field label='Within the past two years, have you or a family member ever had tuberculosis of the lungs or been in close contact with a person with tuberculosis?' required error={e?.tuberculosis?.message}>
+          <select {...register("tuberculosis")} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+
+        {/* Q87 — medical disorder (with textbox) */}
+        <div className="space-y-2">
+          <Field label='Do you have any physical or mental disorder that would require social and/or health services, other than medication, during a stay in Canada?' required error={e?.medical_condition?.message}>
+            <select {...register("medical_condition")} className={inp}>
+              <option value="">-- Select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </Field>
+          {isYes(medical) && (
+            <Field label="Details" error={e?.medical_condition_details?.message}>
+              <textarea {...register("medical_condition_details")} rows={4} maxLength={1500} className={inp} />
             </Field>
-            {isYes(value) && (
-              <Field label="Details" required={false} error={e?.[detailsField]?.message}>
-                <textarea
-                  {...register(detailsField as any)}
-                  rows={4}
-                  maxLength={1500}
-                  placeholder="Provide all relevant details (max 1500 characters)"
-                  className={inp}
-                />
-              </Field>
-            )}
-          </div>
-        ))}
+          )}
+        </div>
+
+        {/* Q88 + Q89 — visa overstay/refusal (combined; with textbox) */}
+        <div className="space-y-2">
+          <Field label='Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada? Have you previously applied to enter or remain in Canada? Have you ever been refused a visa or permit, denied entry or ordered to leave Canada or any other country or territory?' required error={e?.previously_refused_visa?.message}>
+            <select {...register("previously_refused_visa")} className={inp}>
+              <option value="">-- Select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </Field>
+          {isYes(refused) && (
+            <Field label="Details" error={e?.previously_refused_visa_details?.message}>
+              <textarea {...register("previously_refused_visa_details")} rows={4} maxLength={1500} className={inp} />
+            </Field>
+          )}
+        </div>
+
+        {/* Q90 — criminal record (with textbox) */}
+        <div className="space-y-2">
+          <Field label='Have you ever committed, been arrested for, or been charged with or convicted of any criminal offence in any country or territory?' required error={e?.criminal_record?.message}>
+            <select {...register("criminal_record")} className={inp}>
+              <option value="">-- Select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </Field>
+          {isYes(criminal) && (
+            <Field label="Details" error={e?.criminal_record_details?.message}>
+              <textarea {...register("criminal_record_details")} rows={4} maxLength={1500} className={inp} />
+            </Field>
+          )}
+        </div>
+
+        {/* Military / political-violence */}
+        <div className="space-y-2">
+          <Field label='Have you ever served in any military, militia, civil defence unit, or served in a security organization or police force (including non-obligatory national service, reserve or volunteer units)?' required error={e?.military_service?.message}>
+            <select {...register("military_service")} className={inp}>
+              <option value="">-- Select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </Field>
+          {isYes(military) && (
+            <Field label="Details" error={e?.military_service_details?.message}>
+              <textarea {...register("military_service_details")} rows={4} maxLength={1500} className={inp} />
+            </Field>
+          )}
+        </div>
+
+        {/* Q101 — consent */}
+        <Field label="Do you consent to be contacted by Citizenship and Immigration Canada (CIC), or an organization at CIC's request, in the future?" required error={e?.consent_to_contact?.message}>
+          <select {...register("consent_to_contact")} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
       </div>
     </div>
   );
