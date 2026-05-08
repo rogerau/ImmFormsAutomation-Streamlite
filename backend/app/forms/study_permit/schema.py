@@ -99,8 +99,11 @@ class StudyPermitData(BaseModel):
 
     # --- Background (IMM 1294 Page 4) ---
     medical_condition: bool = False
+    medical_condition_details: str = ""
     previously_refused_visa: bool = False
+    previously_refused_visa_details: str = ""
     military_service: bool = False
+    military_service_details: str = ""
 
     # --- Applicant signature (shared across all forms) ---
     applicant_signature: str

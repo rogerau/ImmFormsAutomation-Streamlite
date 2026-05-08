@@ -74,15 +74,15 @@ export function StudyPermitWizard({ token, claims }: Props) {
         family: {
           applicant_marital_status: undefined as any,
           applicant_occupation: "",
-          father: { status: "Living", will_accompany: false },
-          mother: { status: "Living", will_accompany: false },
+          father: { status: "Living" },
+          mother: { status: "Living" },
           children: [],
         },
         education_history: [],
         occupation_history: [],
-        medical_condition: false,
-        previously_refused_visa: false,
-        military_service: false,
+        medical_condition_details: "",
+        previously_refused_visa_details: "",
+        military_service_details: "",
       };
     })(),
     mode: "onTouched",
@@ -142,7 +142,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
   // Map step number to component
   const stepComponents: Record<number, React.ReactNode> = {
     1: <PersonalInfoStep register={register} errors={errors} />,
-    2: <StudyDetailsStep register={register} errors={errors} />,
+    2: <StudyDetailsStep register={register} errors={errors} watch={watch} />,
     3: <FamilyBackgroundStep register={register} errors={errors} watch={watch} setValue={setValue} />,
     4: <ChildrenSiblingsStep control={control} register={register} errors={errors} />,
     5: <EmploymentHistoryStep control={control} register={register} errors={errors} />,

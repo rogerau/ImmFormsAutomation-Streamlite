@@ -6,6 +6,16 @@ const dateStr = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format")
   .or(z.literal(""));
 
+// HTML <select> emits string "true"/"false" — coerce to boolean for the schema.
+const boolFromString = z.preprocess(
+  (v) => (v === "true" || v === true ? true : v === "false" || v === false ? false : v === "" || v == null ? null : v),
+  z.boolean().nullable(),
+);
+const requiredBoolFromString = z.preprocess(
+  (v) => (v === "true" || v === true ? true : v === "false" || v === false ? false : v),
+  z.boolean({ required_error: "Required", invalid_type_error: "Required" }),
+);
+
 const yearStr = z.string().regex(/^\d{4}$/, "4-digit year").or(z.literal(""));
 const monthStr = z.string().regex(/^\d{1,2}$/, "Month 1-12").or(z.literal(""));
 
@@ -92,7 +102,7 @@ const person5707Schema = z.object({
   address: z.string().min(1, "Required"),
   occupation: z.string().min(1, "Required"),
   marital_status: MaritalStatusEnum.nullable().optional(),
-  will_accompany: z.boolean().nullable().optional(),
+  will_accompany: boolFromString.optional(),
 });
 
 const parent5707Schema = person5707Schema.extend({
@@ -102,7 +112,7 @@ const parent5707Schema = person5707Schema.extend({
 const child5707Schema = person5707Schema.extend({
   relationship: z.string().min(1, "Required"),
   marital_status: MaritalStatusEnum,
-  will_accompany: z.boolean(),
+  will_accompany: requiredBoolFromString,
 });
 
 // ---- IMM 5409 sub-schema ----
@@ -210,7 +220,6 @@ const representativeSchema = z.object({
 const familyInfoSchema = z.object({
   applicant_marital_status: MaritalStatusEnum,
   applicant_occupation: z.string().min(1, "Required"),
-  married_in_person: z.boolean().nullable().optional(),
   spouse: person5707Schema.nullable().optional(),
   no_spouse_signature: z.string().default(""),
   no_spouse_date: z.string().default(""),
@@ -267,9 +276,12 @@ export const StudyPermitSchema = z
     family: familyInfoSchema,
 
     // Background
-    medical_condition: z.boolean().default(false),
-    previously_refused_visa: z.boolean().default(false),
-    military_service: z.boolean().default(false),
+    medical_condition: requiredBoolFromString,
+    medical_condition_details: z.string().max(1500, "Max 1500 characters").default(""),
+    previously_refused_visa: requiredBoolFromString,
+    previously_refused_visa_details: z.string().max(1500, "Max 1500 characters").default(""),
+    military_service: requiredBoolFromString,
+    military_service_details: z.string().max(1500, "Max 1500 characters").default(""),
 
     // Signatures
     applicant_signature: z.string().min(1, "Type your full legal name"),

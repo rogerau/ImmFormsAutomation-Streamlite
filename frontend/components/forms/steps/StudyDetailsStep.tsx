@@ -1,10 +1,11 @@
 "use client";
-import { FieldErrors, UseFormRegister } from "react-hook-form";
+import { FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  watch: UseFormWatch<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -23,8 +24,12 @@ function Field({ label, required, error, children }: { label: string; required?:
 
 const STUDY_LEVELS = ["University", "College", "CEGEP", "High School", "Vocational / Trade", "Other"];
 
-export function StudyDetailsStep({ register, errors }: Props) {
+export function StudyDetailsStep({ register, errors, watch }: Props) {
   const s = errors.study;
+  const medical = watch("medical_condition");
+  const refused = watch("previously_refused_visa");
+  const military = watch("military_service");
+  const e = errors as any;
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Study Details</h2>
@@ -65,21 +70,39 @@ export function StudyDetailsStep({ register, errors }: Props) {
       </div>
 
       <h2 className="text-lg font-semibold text-gray-800 pt-4">Background Questions</h2>
-      <p className="text-sm text-gray-500">Answer "Yes" if any of the following apply to you.</p>
-      <div className="space-y-3">
+      <p className="text-sm text-gray-500">If you answer "Yes", please provide details below.</p>
+      <div className="space-y-4">
         {[
-          { field: "medical_condition", label: "Do you have a medical condition requiring health care or special assistance?" },
-          { field: "previously_refused_visa", label: "Have you previously been refused a visa, permit, or entry to Canada or any other country?" },
-          { field: "military_service", label: "Have you served in a military, paramilitary, or armed group in any country?" },
-        ].map(({ field, label }) => (
-          <label key={field} className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              {...register(field as any)}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600"
-            />
-            <span className="text-sm text-gray-700">{label}</span>
-          </label>
+          { field: "medical_condition", detailsField: "medical_condition_details",
+            label: "Do you have a medical condition requiring health care or special assistance?",
+            value: medical },
+          { field: "previously_refused_visa", detailsField: "previously_refused_visa_details",
+            label: "Have you previously been refused a visa, permit, or entry to Canada or any other country?",
+            value: refused },
+          { field: "military_service", detailsField: "military_service_details",
+            label: "Have you served in a military, paramilitary, or armed group in any country?",
+            value: military },
+        ].map(({ field, detailsField, label, value }) => (
+          <div key={field} className="space-y-2">
+            <Field label={label} required error={e?.[field]?.message}>
+              <select {...register(field as any)} className={inp}>
+                <option value="">-- Select --</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </Field>
+            {value === true && (
+              <Field label="Details" required={false} error={e?.[detailsField]?.message}>
+                <textarea
+                  {...register(detailsField as any)}
+                  rows={4}
+                  maxLength={1500}
+                  placeholder="Provide all relevant details (max 1500 characters)"
+                  className={inp}
+                />
+              </Field>
+            )}
+          </div>
         ))}
       </div>
     </div>

@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { FieldErrors, UseFormRegister, UseFormWatch, UseFormSetValue } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 
@@ -113,6 +114,16 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
   const maritalStatus = watch("family.applicant_marital_status");
   const hasSpouse = ["Common-law", "Married-physically present", "Married-not physically present"].includes(maritalStatus);
 
+  // Auto-fill occupation = "Deceased" when parent status = Deceased
+  const fatherStatus = watch("family.father.status");
+  const motherStatus = watch("family.mother.status");
+  useEffect(() => {
+    if (fatherStatus === "Deceased") setValue("family.father.occupation", "Deceased");
+  }, [fatherStatus, setValue]);
+  useEffect(() => {
+    if (motherStatus === "Deceased") setValue("family.mother.occupation", "Deceased");
+  }, [motherStatus, setValue]);
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-gray-800">Family Information (IMM 5707)</h2>
@@ -130,15 +141,6 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
           <Field label="Occupation" required error={f?.applicant_occupation?.message}>
             <input {...register("family.applicant_occupation")} className={inp} />
           </Field>
-          {hasSpouse && (
-            <Field label="Marriage in person (not by proxy)?" error={f?.married_in_person?.message}>
-              <select {...register("family.married_in_person" as any)} className={inp}>
-                <option value="">-- Select --</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </Field>
-          )}
         </div>
       </div>
 

@@ -272,6 +272,42 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     if country_el is not None:
                         country_el.text = o.country
 
+    # ---- Page 4 — Background Questions ----
+    page4 = form1.find("Page4")
+    if page4 is not None:
+        # Medical (BackgroundInfo)
+        bg1 = page4.find("BackgroundInfo")
+        if bg1 is not None:
+            choice = bg1.find("Choice")
+            if choice is not None:
+                choice.text = "Y" if data.medical_condition else "N"
+            details_el = _find(bg1, "Details", "MedicalDetails")
+            if details_el is not None:
+                details_el.text = data.medical_condition_details or ""
+
+        # PageWrapper holds the rest
+        wrap = page4.find("PageWrapper")
+        if wrap is not None:
+            # Refused visa (BackgroundInfo2)
+            bg2 = wrap.find("BackgroundInfo2")
+            if bg2 is not None:
+                vc = bg2.find("VisaChoice1")
+                if vc is not None:
+                    vc.text = "Y" if data.previously_refused_visa else "N"
+                ref_details = _find(bg2, "Details", "refusedDetails")
+                if ref_details is not None:
+                    ref_details.text = data.previously_refused_visa_details or ""
+
+            # Military service
+            mil = wrap.find("Military")
+            if mil is not None:
+                mc = mil.find("Choice")
+                if mc is not None:
+                    mc.text = "Y" if data.military_service else "N"
+                mil_details = mil.find("militaryServiceDetails")
+                if mil_details is not None:
+                    mil_details.text = data.military_service_details or ""
+
     # ---- Serialize back to string ----
     ET.register_namespace("xfa", XFA_NS)
     return ET.tostring(root, encoding="unicode", xml_declaration=False)
