@@ -312,6 +312,8 @@ export const StudyPermitSchema = z
     tuberculosis: requiredBoolFromString,
     medical_condition: requiredBoolFromString,
     medical_condition_details: z.string().max(1500, "Max 1500 characters").default(""),
+    previously_remained_status: requiredBoolFromString,
+    previously_applied_canada: requiredBoolFromString,
     previously_refused_visa: requiredBoolFromString,
     previously_refused_visa_details: z.string().max(1500, "Max 1500 characters").default(""),
     criminal_record: requiredBoolFromString,

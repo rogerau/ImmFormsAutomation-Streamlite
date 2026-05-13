@@ -393,17 +393,17 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
         # PageWrapper holds the rest
         wrap = page4.find("PageWrapper")
         if wrap is not None:
-            # Visa-refusal block (BackgroundInfo2): VisaChoice1/2/3 = three Y/N
-            # sub-questions; refusedDetails = combined textbox.
+            # Visa-refusal block (BackgroundInfo2): three independent Y/N
+            # sub-questions sharing one details textbox.
             bg2 = wrap.find("BackgroundInfo2")
             if bg2 is not None:
-                vc1 = bg2.find("VisaChoice1")  # overstay/unauthorized work
+                vc1 = bg2.find("VisaChoice1")  # Q88a: remained beyond status
                 if vc1 is not None:
-                    vc1.text = "Y" if data.previously_refused_visa else "N"
-                vc2 = bg2.find("VisaChoice2")  # previously applied
+                    vc1.text = "Y" if data.previously_remained_status else "N"
+                vc2 = bg2.find("VisaChoice2")  # Q88b: previously applied
                 if vc2 is not None:
-                    vc2.text = "Y" if data.previously_refused_visa else "N"
-                vc3 = bg2.find("VisaChoice3")  # been refused
+                    vc2.text = "Y" if data.previously_applied_canada else "N"
+                vc3 = bg2.find("VisaChoice3")  # Q89: refused a visa / denied entry
                 if vc3 is not None:
                     vc3.text = "Y" if data.previously_refused_visa else "N"
                 ref_details = _find(bg2, "Details", "refusedDetails")

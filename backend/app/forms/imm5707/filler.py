@@ -234,8 +234,8 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 )}
 </Parent2>
 <PaddedEntry>
-<SectionAsignature>{xe(data.applicant_signature)}</SectionAsignature>
-<SectionAdate>{xe(data.applicant_signature_date)}</SectionAdate>
+<SectionAsignature>{xe(f.no_spouse_signature) if not (f.spouse and married) else ""}</SectionAsignature>
+<SectionAdate>{xe(f.no_spouse_date) if not (f.spouse and married) else ""}</SectionAdate>
 </PaddedEntry>
 </SectionA>
 <SectionB>

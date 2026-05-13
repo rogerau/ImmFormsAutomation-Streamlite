@@ -105,7 +105,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
   // Step-level field groups to validate on "Next"
   const STEP_FIELDS: Record<number, string[]> = {
     1: ["personal_info", "passport", "national_id", "us_pr_card", "contact"],
-    2: ["study", "tuberculosis", "medical_condition", "previously_refused_visa", "criminal_record", "military_service", "political_party", "war_crimes", "consent_to_contact"],
+    2: ["study", "tuberculosis", "medical_condition", "previously_remained_status", "previously_applied_canada", "previously_refused_visa", "criminal_record", "military_service", "political_party", "war_crimes", "consent_to_contact"],
     3: ["family.applicant_marital_status", "family.applicant_occupation", "family.father", "family.mother", "family.section_c_signature", "family.section_c_date"],
     4: ["family.children", "family.no_children_signature"],
     5: [],  // education/occupation optional

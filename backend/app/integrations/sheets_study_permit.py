@@ -63,6 +63,7 @@ SUBMISSIONS_HEADERS = [
     # Background — IMM 1294 Page 4
     "tuberculosis",
     "medical_condition", "medical_condition_details",
+    "previously_remained_status", "previously_applied_canada",
     "previously_refused_visa", "previously_refused_visa_details",
     "criminal_record", "criminal_record_details",
     "military_service", "military_service_details",
@@ -173,6 +174,7 @@ def submissions_row(
         # Background — IMM 1294 Page 4
         yn(data.tuberculosis),
         yn(data.medical_condition), data.medical_condition_details,
+        yn(data.previously_remained_status), yn(data.previously_applied_canada),
         yn(data.previously_refused_visa), data.previously_refused_visa_details,
         yn(data.criminal_record), data.criminal_record_details,
         yn(data.military_service), data.military_service_details,

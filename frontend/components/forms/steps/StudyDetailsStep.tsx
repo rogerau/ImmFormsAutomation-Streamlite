@@ -34,7 +34,10 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
   const s = errors.study as any;
   const tb = watch("tuberculosis");
   const medical = watch("medical_condition");
+  const remained = watch("previously_remained_status");
+  const appliedCanada = watch("previously_applied_canada");
   const refused = watch("previously_refused_visa");
+  const visaShowDetails = isYes(remained) || isYes(appliedCanada) || isYes(refused);
   const criminal = watch("criminal_record");
   const military = watch("military_service");
   const paidBy = watch("study.expenses_paid_by");
@@ -158,26 +161,32 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
           )}
         </div>
 
-        {/* Q88 + Q89 — visa overstay/refusal (combined; with textbox) */}
-        <div className="space-y-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <span className="block">Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada?</span>
-              <span className="block mt-1">Have you previously applied to enter or remain in Canada?</span>
-              <span className="block mt-1">Have you ever been refused a visa or permit, denied entry or ordered to leave Canada or any other country or territory?</span>
-              <span className="text-red-600"> *</span>
-            </label>
+        {/* Q88 a/b + Q89 — three independent Y/N; shared details textbox shown if any "Yes" */}
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500 italic">Answer each of the next three questions. If you answer "Yes" to any of them, provide details in the box that appears below.</p>
+          <Field label='a) Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada?' required error={e?.previously_remained_status?.message}>
+            <select {...register("previously_remained_status")} className={inp}>
+              <option value="">-- Select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </Field>
+          <Field label='b) Have you previously applied to enter or remain in Canada?' required error={e?.previously_applied_canada?.message}>
+            <select {...register("previously_applied_canada")} className={inp}>
+              <option value="">-- Select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </Field>
+          <Field label='c) Have you ever been refused a visa or permit, denied entry or ordered to leave Canada or any other country or territory?' required error={e?.previously_refused_visa?.message}>
             <select {...register("previously_refused_visa")} className={inp}>
               <option value="">-- Select --</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
             </select>
-            {e?.previously_refused_visa?.message && (
-              <p className="mt-1 text-xs text-red-600">{e.previously_refused_visa.message}</p>
-            )}
-          </div>
-          {isYes(refused) && (
-            <Field label="Details" error={e?.previously_refused_visa_details?.message}>
+          </Field>
+          {visaShowDetails && (
+            <Field label="Details (covers any 'Yes' answers above)" error={e?.previously_refused_visa_details?.message}>
               <textarea {...register("previously_refused_visa_details")} rows={4} maxLength={1500} className={inp} />
             </Field>
           )}

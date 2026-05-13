@@ -46,6 +46,7 @@ function PersonBlock({
   showAccompany = true,
   showMarital = true,
   showStatus = false,
+  showNativeName = false,
 }: {
   prefix: string;
   label: string;
@@ -55,6 +56,7 @@ function PersonBlock({
   showAccompany?: boolean;
   showMarital?: boolean;
   showStatus?: boolean;
+  showNativeName?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -66,6 +68,11 @@ function PersonBlock({
         <Field label="Given Name(s)" required error={errors?.given_names?.message}>
           <input {...register(`${prefix}.given_names` as any)} className={inp} />
         </Field>
+        {showNativeName && (
+          <Field label="Name in Native Language (optional)" error={errors?.native_name?.message}>
+            <input {...register(`${prefix}.native_name` as any)} className={inp} />
+          </Field>
+        )}
         <Field label="Date of Birth" required error={errors?.date_of_birth?.message}>
           <input {...register(`${prefix}.date_of_birth` as any)} placeholder="YYYY-MM-DD" className={inp} />
         </Field>
@@ -154,6 +161,7 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
           showAddress
           showAccompany
           showMarital
+          showNativeName
         />
       ) : (
         <div className="space-y-3">

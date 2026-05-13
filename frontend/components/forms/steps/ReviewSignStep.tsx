@@ -179,8 +179,10 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
         <Row label="Tuberculosis (Q86)" value={v.tuberculosis} />
         <Row label="Medical disorder (Q87)" value={v.medical_condition} />
         <Row label="Medical details" value={v.medical_condition_details} />
-        <Row label="Visa overstay / refusal (Q88+89)" value={v.previously_refused_visa} />
-        <Row label="Visa refusal details" value={v.previously_refused_visa_details} />
+        <Row label="Remained beyond status (Q88a)" value={(v as any).previously_remained_status} />
+        <Row label="Previously applied to Canada (Q88b)" value={(v as any).previously_applied_canada} />
+        <Row label="Refused visa / denied entry (Q89)" value={v.previously_refused_visa} />
+        <Row label="Q88/Q89 details" value={v.previously_refused_visa_details} />
         <Row label="Criminal record (Q90)" value={v.criminal_record} />
         <Row label="Criminal record details" value={v.criminal_record_details} />
         <Row label="Military / police service (Q4)" value={v.military_service} />

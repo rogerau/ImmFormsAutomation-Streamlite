@@ -110,8 +110,13 @@ class StudyPermitData(BaseModel):
     # Q87: medical disorder (with textbox; reuses MedicalDetails)
     medical_condition: bool = False
     medical_condition_details: str = ""
-    # Q88+Q89: visa overstay/refusal (with textbox; reuses refusedDetails)
+    # Q88a: remained beyond status / unauthorized work or study in Canada
+    previously_remained_status: bool = False
+    # Q88b: previously applied to enter or remain in Canada
+    previously_applied_canada: bool = False
+    # Q89: refused a visa/permit, denied entry, or ordered to leave any country
     previously_refused_visa: bool = False
+    # Shared details textbox (visible if any Q88/Q89 = Yes)
     previously_refused_visa_details: str = ""
     # Q90: criminal record (with textbox)
     criminal_record: bool = False
