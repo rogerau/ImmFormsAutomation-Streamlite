@@ -20,6 +20,8 @@ function fmt(v: unknown): string {
   return String(v);
 }
 
+const isYes = (v: unknown): boolean => v === true || v === "true";
+
 function Row({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="flex gap-2 py-0.5">
@@ -120,7 +122,7 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
 
       <Section title="National Identity Document (IMM 1294)">
         <Row label="Has national ID document?" value={nid.has_document} />
-        {(nid.has_document === true || nid.has_document === "true") && (
+        {isYes(nid.has_document) && (
           <>
             <Row label="Document number" value={nid.doc_number} />
             <Row label="Country of issue" value={nid.country_of_issue} />
@@ -132,7 +134,7 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
 
       <Section title="U.S. Permanent Resident Card (IMM 1294)">
         <Row label="Has U.S. PR card?" value={us.has_card} />
-        {(us.has_card === true || us.has_card === "true") && (
+        {isYes(us.has_card) && (
           <>
             <Row label="Document number" value={us.doc_number} />
             <Row label="Expiry date" value={us.expiry_date} />
