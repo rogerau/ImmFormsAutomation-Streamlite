@@ -451,6 +451,14 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
             if cc is not None:
                 cc.text = "Y" if data.consent_to_contact else "N"
 
+        # Applicant signature + date (bottom of Page 4)
+        sig_el = page4.find("TextField2")
+        if sig_el is not None:
+            sig_el.text = data.applicant_signature or ""
+        date_el = page4.find("C1CertificateIssueDate")
+        if date_el is not None:
+            date_el.text = data.applicant_signature_date or ""
+
     # ---- Serialize back to string ----
     ET.register_namespace("xfa", XFA_NS)
     return ET.tostring(root, encoding="unicode", xml_declaration=False)

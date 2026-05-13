@@ -13,7 +13,15 @@ def _xml_escape(val: object) -> str:
 
 
 def yesno(val: bool | None) -> str:
-    return "1" if val else "0"
+    """IMM 5707 exclGroup items are integer 1 (YES) and integer 2 (NO).
+    "0" matches neither and leaves both checkboxes unticked, so always return
+    the exact item value. Return "" when val is None so the radio stays empty.
+    """
+    if val is True:
+        return "1"
+    if val is False:
+        return "2"
+    return ""
 
 
 def fill_xfa_pdf(template_path: str, new_datasets_xml: str) -> bytes:

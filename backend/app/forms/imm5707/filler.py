@@ -202,6 +202,11 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
     for _ in range(4 - len(f.children or [])):
         children_xml += _empty_child()
 
+    # "I do not have any children" checkbox — ticked (hideChildren=1) when the
+    # applicant declared no children (no_children_signature filled).
+    no_children = not (f.children or []) and bool(f.no_children_signature)
+    hide_children_val = "1" if no_children else "0"
+
     return f"""
 <xfa:datasets {XFA_NS}>
 <xfa:data>
@@ -239,7 +244,7 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 </PaddedEntry>
 </SectionA>
 <SectionB>
-<hideChildren>0</hideChildren>
+<hideChildren>{hide_children_val}</hideChildren>
 {children_xml}
 <Note2>
 <subNote2>
