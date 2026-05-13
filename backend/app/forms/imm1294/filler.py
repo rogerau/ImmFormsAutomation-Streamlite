@@ -118,6 +118,10 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
             uci_el = pd.find("UCIClientID")
             if uci_el is not None:
                 uci_el.text = d.uci or ""
+            # "I want service in" (Page 1 subsection 2)
+            service_in_el = _find(pd, "ServiceIn", "ServiceIn")
+            if service_in_el is not None:
+                service_in_el.text = d.service_in or "English"
             _set_path(pd, "Name", "FamilyName", d.family_name)
             _set_path(pd, "Name", "GivenName", d.given_name)
             if d.alias_family_name:
@@ -416,7 +420,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 if cd is not None:
                     cd.text = data.criminal_record_details or ""
 
-            # Military / political-violence service
+            # Military / police / security service (Q4 on Page 4)
             mil = wrap.find("Military")
             if mil is not None:
                 mc = mil.find("Choice")
@@ -425,6 +429,20 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 mil_details = mil.find("militaryServiceDetails")
                 if mil_details is not None:
                     mil_details.text = data.military_service_details or ""
+
+            # Political party that advocated violence (Q5 on Page 4)
+            pol = wrap.find("Occupation")
+            if pol is not None:
+                pc = pol.find("Choice")
+                if pc is not None:
+                    pc.text = "Y" if data.political_party else "N"
+
+            # War crimes / ill-treatment of prisoners / desecration (Q6 on Page 4)
+            gov = wrap.find("GovPosition")
+            if gov is not None:
+                gc = gov.find("Choice")
+                if gc is not None:
+                    gc.text = "Y" if data.war_crimes else "N"
 
         # Consent (Consent0)
         consent = page4.find("Consent0")

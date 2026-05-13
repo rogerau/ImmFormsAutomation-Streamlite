@@ -49,6 +49,8 @@ class PersonalInfo(BaseModel):
     marital_status: str               # text for IMM 1294 (e.g. "Single")
     language: Language = Language.english
     uci: str = ""                     # UCI / Client ID (8 or 10 digits)
+    # IMM 1294 Page 1, subsection 2 — "I want service in"
+    service_in: str = "English"       # "English" or "French"
 
 
 class FamilyInfo(BaseModel):
@@ -114,9 +116,13 @@ class StudyPermitData(BaseModel):
     # Q90: criminal record (with textbox)
     criminal_record: bool = False
     criminal_record_details: str = ""
-    # Q92: military / political-violence
+    # Q92: military / police / security service
     military_service: bool = False
     military_service_details: str = ""
+    # Q93: political party / group that advocated violence
+    political_party: bool = False
+    # Q94: war crimes / ill-treatment of prisoners / desecration
+    war_crimes: bool = False
     # Q101: consent to be contacted by CIC
     consent_to_contact: bool = True
 

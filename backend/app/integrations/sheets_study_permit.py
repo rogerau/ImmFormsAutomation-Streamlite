@@ -22,7 +22,7 @@ SUBMISSIONS_HEADERS = [
     "uci",
     "family_name", "given_name", "native_name", "alias_family_name", "alias_given_name",
     "sex", "date_of_birth", "place_birth_city", "place_birth_country",
-    "citizenship", "current_country", "marital_status", "applicant_occupation", "language",
+    "citizenship", "current_country", "marital_status", "applicant_occupation", "language", "service_in",
     # Passport
     "passport_number", "passport_country_of_issue", "passport_issue_date", "passport_expiry_date",
     # National Identity Document
@@ -66,6 +66,7 @@ SUBMISSIONS_HEADERS = [
     "previously_refused_visa", "previously_refused_visa_details",
     "criminal_record", "criminal_record_details",
     "military_service", "military_service_details",
+    "political_party", "war_crimes",
     "consent_to_contact",
     # Optional form summaries (key fields inline)
     "common_law_partner_name", "cohabitation_start",
@@ -124,6 +125,7 @@ def submissions_row(
         pi.place_birth_city, pi.place_birth_country,
         pi.citizenship, pi.current_country, pi.marital_status,
         f.applicant_occupation, pi.language.value if pi.language else "",
+        pi.service_in or "",
         # Passport
         data.passport.passport_number,
         data.passport.country_of_issue,
@@ -174,6 +176,7 @@ def submissions_row(
         yn(data.previously_refused_visa), data.previously_refused_visa_details,
         yn(data.criminal_record), data.criminal_record_details,
         yn(data.military_service), data.military_service_details,
+        yn(data.political_party), yn(data.war_crimes),
         yn(data.consent_to_contact),
         # Optional form summaries
         cl_partner, cl_start, cust_name, cust_addr,

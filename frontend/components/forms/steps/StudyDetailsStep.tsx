@@ -160,13 +160,22 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
 
         {/* Q88 + Q89 — visa overstay/refusal (combined; with textbox) */}
         <div className="space-y-2">
-          <Field label='Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada? Have you previously applied to enter or remain in Canada? Have you ever been refused a visa or permit, denied entry or ordered to leave Canada or any other country or territory?' required error={e?.previously_refused_visa?.message}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <span className="block">Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada?</span>
+              <span className="block mt-1">Have you previously applied to enter or remain in Canada?</span>
+              <span className="block mt-1">Have you ever been refused a visa or permit, denied entry or ordered to leave Canada or any other country or territory?</span>
+              <span className="text-red-600"> *</span>
+            </label>
             <select {...register("previously_refused_visa")} className={inp}>
               <option value="">-- Select --</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
             </select>
-          </Field>
+            {e?.previously_refused_visa?.message && (
+              <p className="mt-1 text-xs text-red-600">{e.previously_refused_visa.message}</p>
+            )}
+          </div>
           {isYes(refused) && (
             <Field label="Details" error={e?.previously_refused_visa_details?.message}>
               <textarea {...register("previously_refused_visa_details")} rows={4} maxLength={1500} className={inp} />
@@ -190,9 +199,9 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
           )}
         </div>
 
-        {/* Military / political-violence */}
+        {/* Q4 — Military / police / security service (a + b) */}
         <div className="space-y-2">
-          <Field label='Have you ever served in any military, militia, civil defence unit, or served in a security organization or police force (including non-obligatory national service, reserve or volunteer units)?' required error={e?.military_service?.message}>
+          <Field label='a) Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?' required error={e?.military_service?.message}>
             <select {...register("military_service")} className={inp}>
               <option value="">-- Select --</option>
               <option value="true">Yes</option>
@@ -200,20 +209,50 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
             </select>
           </Field>
           {isYes(military) && (
-            <Field label="Details" error={e?.military_service_details?.message}>
+            <Field label="b) If you answered yes to question 4a), please provide dates of service and countries or territories where you served." error={e?.military_service_details?.message}>
               <textarea {...register("military_service_details")} rows={4} maxLength={1500} className={inp} />
             </Field>
           )}
         </div>
 
-        {/* Q101 — consent */}
-        <Field label="Do you consent to be contacted by Citizenship and Immigration Canada (CIC), or an organization at CIC's request, in the future?" required error={e?.consent_to_contact?.message}>
-          <select {...register("consent_to_contact")} className={inp}>
+        {/* Q5 — political party affiliation */}
+        <Field label='Are you, or have you ever been a member or associated with any political party, or other group or organization which has engaged in or advocated violence as a means to achieving a political or religious objective, or which has been associated with criminal activity at any time?' required error={e?.political_party?.message}>
+          <select {...register("political_party")} className={inp}>
             <option value="">-- Select --</option>
             <option value="true">Yes</option>
             <option value="false">No</option>
           </select>
         </Field>
+
+        {/* Q6 — war crimes / ill-treatment */}
+        <Field label='Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?' required error={e?.war_crimes?.message}>
+          <select {...register("war_crimes")} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+
+        {/* Q101 — consent */}
+        <div className="space-y-2">
+          <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded p-3 leading-relaxed">
+            Citizenship and Immigration Canada (CIC), or an organization at CIC's request, may want to contact
+            you in the future to ask you about any services you received from CIC prior to the application
+            process (such as participation in an information forum), during the application process (including
+            the application process itself as well as orientation or accreditation services), and services
+            received after arriving in Canada (including settlement, integration and citizenship). CIC will use
+            this information, along with the information provided by other individuals, for research,
+            performance measurement or evaluation purposes. CIC will not use this information to make any
+            decisions about you personally.
+          </p>
+          <Field label="Do you consent to be contacted by CIC, or an organization at CIC's request, in the future? (Y/N)" required error={e?.consent_to_contact?.message}>
+            <select {...register("consent_to_contact")} className={inp}>
+              <option value="">-- Select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </Field>
+        </div>
       </div>
     </div>
   );

@@ -96,7 +96,7 @@ function PersonBlock({
           </Field>
         )}
         {showAccompany && (
-          <Field label="Will Accompany to Canada?" error={errors?.will_accompany?.message}>
+          <Field label="Will Accompany to Canada?" required error={errors?.will_accompany?.message}>
             <select {...register(`${prefix}.will_accompany` as any)} className={inp}>
               <option value="">-- Select --</option>
               <option value="true">Yes</option>
@@ -192,6 +192,24 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
         showAccompany
         showMarital
       />
+
+      {/* Section C — Certification (IMM 5707) */}
+      <div className="space-y-3">
+        <h3 className={sectionHeading}>Section C — Certification (IMM 5707)</h3>
+        <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded p-3 leading-relaxed">
+          I certify that the information contained in this document is complete, accurate and factual. I also
+          realize that once this document has been completed and signed that it will form part of my
+          Immigration Record and will be used to verify my family details on future applications.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Signature (type your full legal name)" required error={f?.section_c_signature?.message}>
+            <input {...register("family.section_c_signature")} className={inp} />
+          </Field>
+          <Field label="Date" required error={f?.section_c_date?.message}>
+            <input {...register("family.section_c_date")} placeholder="YYYY-MM-DD" className={inp} />
+          </Field>
+        </div>
+      </div>
     </div>
   );
 }

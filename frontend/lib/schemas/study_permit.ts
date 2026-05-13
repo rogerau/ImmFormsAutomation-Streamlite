@@ -34,6 +34,7 @@ export type MaritalStatus = z.infer<typeof MaritalStatusEnum>;
 
 export const SexEnum = z.enum(["Male", "Female"]);
 export const LanguageEnum = z.enum(["English", "French", "Both", "Neither"]);
+export const ServiceInEnum = z.enum(["English", "French"]);
 export const ParentStatusEnum = z.enum(["Living", "Deceased"]);
 export const RepTypeEnum = z.enum(["paid_member", "paid_other", "unpaid", "cancel"]);
 
@@ -134,6 +135,7 @@ const person5707Schema = z.object({
 
 const parent5707Schema = person5707Schema.extend({
   status: ParentStatusEnum.default("Living"),
+  will_accompany: requiredBoolFromString,
 });
 
 const child5707Schema = person5707Schema.extend({
@@ -257,8 +259,8 @@ const familyInfoSchema = z.object({
   children: z.array(child5707Schema).max(4).default([]),
   no_children_signature: z.string().default(""),
   no_children_date: z.string().default(""),
-  section_c_signature: z.string().default(""),
-  section_c_date: z.string().default(""),
+  section_c_signature: z.string().min(1, "Type your full legal name to certify"),
+  section_c_date: dateStr.refine((s) => s.length > 0, "Required"),
 });
 
 // ---- Master schema ----
@@ -283,6 +285,7 @@ export const StudyPermitSchema = z
       marital_status: z.string().min(1, "Required"),
       language: LanguageEnum.default("English"),
       uci: z.string().default(""),
+      service_in: ServiceInEnum.default("English"),
     }),
 
     // Step 2: Passport + contact
@@ -315,6 +318,8 @@ export const StudyPermitSchema = z
     criminal_record_details: z.string().max(1500, "Max 1500 characters").default(""),
     military_service: requiredBoolFromString,
     military_service_details: z.string().max(1500, "Max 1500 characters").default(""),
+    political_party: requiredBoolFromString,
+    war_crimes: requiredBoolFromString,
     consent_to_contact: requiredBoolFromString,
 
     // Signatures

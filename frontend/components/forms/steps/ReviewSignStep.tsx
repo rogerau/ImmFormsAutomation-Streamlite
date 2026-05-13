@@ -13,18 +13,33 @@ interface Props {
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-function ReviewRow({ label, value }: { label: string; value: string | undefined | null }) {
-  return value ? (
-    <div className="flex gap-2">
-      <span className="text-sm text-gray-500 w-40 shrink-0">{label}:</span>
-      <span className="text-sm text-gray-800">{value}</span>
+function fmt(v: unknown): string {
+  if (v === true || v === "true") return "Yes";
+  if (v === false || v === "false") return "No";
+  if (v === null || v === undefined || v === "") return "—";
+  return String(v);
+}
+
+function Row({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div className="flex gap-2 py-0.5">
+      <span className="text-xs text-gray-500 w-48 shrink-0">{label}</span>
+      <span className="text-xs text-gray-800 break-words">{fmt(value)}</span>
     </div>
-  ) : null;
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-gray-50 rounded border p-4">
+      <h3 className="text-sm font-semibold text-gray-700 mb-2">{title}</h3>
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
 }
 
 export function ReviewSignStep({ register, errors, getValues, isSubmitting, submitError, submitResult }: Props) {
   const v = getValues();
-  const pi = v.personal_info;
 
   if (submitResult) {
     const forms = submitResult.forms || {};
@@ -57,39 +72,283 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
     );
   }
 
+  const pi = v.personal_info ?? ({} as any);
+  const p = v.passport ?? ({} as any);
+  const nid = v.national_id ?? ({} as any);
+  const us = v.us_pr_card ?? ({} as any);
+  const c = v.contact ?? ({} as any);
+  const a = c.mailing_address ?? {};
+  const s = v.study ?? ({} as any);
+  const f = v.family ?? ({} as any);
+  const edu = v.education_history ?? [];
+  const occ = v.occupation_history ?? [];
+  const cl = v.common_law as any;
+  const cust = v.custodian as any;
+  const rep = v.representative as any;
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-gray-800">Review & Sign</h2>
+      <p className="text-sm text-gray-600">
+        Please review every section below. Click "Back" to correct any field before submitting.
+      </p>
 
-      <div className="bg-gray-50 rounded border p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Personal Information</h3>
-        <ReviewRow label="Name" value={`${pi?.family_name}, ${pi?.given_name}`} />
-        <ReviewRow label="Date of Birth" value={pi?.date_of_birth} />
-        <ReviewRow label="Citizenship" value={pi?.citizenship} />
-        <ReviewRow label="Passport #" value={v.passport?.passport_number} />
-        <ReviewRow label="Email" value={v.contact?.email} />
-      </div>
+      <Section title="Personal Information (IMM 1294, IMM 5707)">
+        <Row label="Family name" value={pi.family_name} />
+        <Row label="Given name(s)" value={pi.given_name} />
+        <Row label="Name in native language" value={pi.native_name} />
+        <Row label="Alias family name" value={pi.alias_family_name} />
+        <Row label="Alias given name" value={pi.alias_given_name} />
+        <Row label="Sex" value={pi.sex} />
+        <Row label="Date of birth" value={pi.date_of_birth} />
+        <Row label="City of birth" value={pi.place_birth_city} />
+        <Row label="Country of birth" value={pi.place_birth_country} />
+        <Row label="Country of citizenship" value={pi.citizenship} />
+        <Row label="Current country of residence" value={pi.current_country} />
+        <Row label="Marital status" value={pi.marital_status} />
+        <Row label="Language you communicate in" value={pi.language} />
+        <Row label="I want service in" value={(pi as any).service_in} />
+        <Row label="UCI / Client ID" value={pi.uci} />
+      </Section>
 
-      <div className="bg-gray-50 rounded border p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Study Details</h3>
-        <ReviewRow label="School" value={v.study?.school_name} />
-        <ReviewRow label="Program" value={v.study?.program} />
-        <ReviewRow label="DLI" value={v.study?.dli_number} />
-        <ReviewRow label="Dates" value={v.study?.start_date && v.study?.end_date ? `${v.study.start_date} → ${v.study.end_date}` : undefined} />
-      </div>
+      <Section title="Passport (IMM 1294)">
+        <Row label="Passport number" value={p.passport_number} />
+        <Row label="Country of issue" value={p.country_of_issue} />
+        <Row label="Issue date" value={p.issue_date} />
+        <Row label="Expiry date" value={p.expiry_date} />
+      </Section>
 
-      <div className="bg-gray-50 rounded border p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Family (IMM 5707)</h3>
-        <ReviewRow label="Marital status" value={v.family?.applicant_marital_status} />
-        <ReviewRow label="Children" value={v.family?.children?.length ? `${v.family.children.length} child(ren)` : "None"} />
-        <ReviewRow label="Father" value={v.family?.father?.family_name ? `${v.family.father.family_name}, ${v.family.father.given_names}` : undefined} />
-        <ReviewRow label="Mother" value={v.family?.mother?.family_name ? `${v.family.mother.family_name}, ${v.family.mother.given_names}` : undefined} />
-      </div>
+      <Section title="National Identity Document (IMM 1294)">
+        <Row label="Has national ID document?" value={nid.has_document} />
+        {(nid.has_document === true || nid.has_document === "true") && (
+          <>
+            <Row label="Document number" value={nid.doc_number} />
+            <Row label="Country of issue" value={nid.country_of_issue} />
+            <Row label="Issue date" value={nid.issue_date} />
+            <Row label="Expiry date" value={nid.expiry_date} />
+          </>
+        )}
+      </Section>
+
+      <Section title="U.S. Permanent Resident Card (IMM 1294)">
+        <Row label="Has U.S. PR card?" value={us.has_card} />
+        {(us.has_card === true || us.has_card === "true") && (
+          <>
+            <Row label="Document number" value={us.doc_number} />
+            <Row label="Expiry date" value={us.expiry_date} />
+          </>
+        )}
+      </Section>
+
+      <Section title="Contact Information (IMM 1294)">
+        <Row label="Unit / Apt" value={a.unit} />
+        <Row label="Street number" value={a.street_number} />
+        <Row label="Street name" value={a.street_name} />
+        <Row label="City" value={a.city} />
+        <Row label="Province / State" value={a.province_state} />
+        <Row label="Country" value={a.country} />
+        <Row label="Postal / ZIP code" value={a.postal_code} />
+        <Row label="Phone" value={c.phone} />
+        <Row label="Email" value={c.email} />
+      </Section>
+
+      <Section title="Study Details (IMM 1294)">
+        <Row label="School / Institution" value={s.school_name} />
+        <Row label="Level of study" value={s.level} />
+        <Row label="Program / Field" value={s.program} />
+        <Row label="School city" value={s.city} />
+        <Row label="School province / state" value={s.province_state} />
+        <Row label="School address" value={s.address} />
+        <Row label="DLI number" value={s.dli_number} />
+        <Row label="Student ID" value={s.student_number} />
+        <Row label="Start date" value={s.start_date} />
+        <Row label="End date" value={s.end_date} />
+        <Row label="Tuition (CAD)" value={s.tuition_amount} />
+        <Row label="Room & board (CAD)" value={s.room_board_amount} />
+        <Row label="Other (CAD)" value={s.other_amount} />
+        <Row label="Funds available (CAD)" value={s.funds_available} />
+        <Row label="Expenses paid by" value={s.expenses_paid_by} />
+        <Row label="Expenses paid by (other)" value={s.expenses_paid_by_other} />
+        <Row label="PAL / TAL doc number" value={s.pal_doc_number} />
+        <Row label="PAL / TAL expiry" value={s.pal_doc_expiry} />
+        <Row label="CAQ certificate number" value={s.caq_cert_number} />
+        <Row label="CAQ expiry" value={s.caq_cert_expiry} />
+      </Section>
+
+      <Section title="Background Information (IMM 1294)">
+        <Row label="Tuberculosis (Q86)" value={v.tuberculosis} />
+        <Row label="Medical disorder (Q87)" value={v.medical_condition} />
+        <Row label="Medical details" value={v.medical_condition_details} />
+        <Row label="Visa overstay / refusal (Q88+89)" value={v.previously_refused_visa} />
+        <Row label="Visa refusal details" value={v.previously_refused_visa_details} />
+        <Row label="Criminal record (Q90)" value={v.criminal_record} />
+        <Row label="Criminal record details" value={v.criminal_record_details} />
+        <Row label="Military / police service (Q4)" value={v.military_service} />
+        <Row label="Military service details" value={v.military_service_details} />
+        <Row label="Political party (Q5)" value={(v as any).political_party} />
+        <Row label="War crimes / ill-treatment (Q6)" value={(v as any).war_crimes} />
+        <Row label="Consent to be contacted by CIC" value={v.consent_to_contact} />
+      </Section>
+
+      <Section title="Family — About You (IMM 5707)">
+        <Row label="Marital status" value={f.applicant_marital_status} />
+        <Row label="Occupation" value={f.applicant_occupation} />
+      </Section>
+
+      {f.spouse ? (
+        <Section title="Spouse / Common-law Partner (IMM 5707)">
+          <Row label="Family name" value={f.spouse.family_name} />
+          <Row label="Given names" value={f.spouse.given_names} />
+          <Row label="Date of birth" value={f.spouse.date_of_birth} />
+          <Row label="Country of birth" value={f.spouse.country_of_birth} />
+          <Row label="Address" value={f.spouse.address} />
+          <Row label="Occupation" value={f.spouse.occupation} />
+          <Row label="Marital status" value={f.spouse.marital_status} />
+          <Row label="Will accompany?" value={f.spouse.will_accompany} />
+        </Section>
+      ) : (
+        <Section title="No Spouse / Partner Declaration (IMM 5707)">
+          <Row label="Signature" value={f.no_spouse_signature} />
+          <Row label="Date" value={f.no_spouse_date} />
+        </Section>
+      )}
+
+      <Section title="Father (IMM 5707)">
+        <Row label="Family name" value={f.father?.family_name} />
+        <Row label="Given names" value={f.father?.given_names} />
+        <Row label="Date of birth" value={f.father?.date_of_birth} />
+        <Row label="Country of birth" value={f.father?.country_of_birth} />
+        <Row label="Status" value={f.father?.status} />
+        <Row label="Address" value={f.father?.address} />
+        <Row label="Occupation" value={f.father?.occupation} />
+        <Row label="Marital status" value={f.father?.marital_status} />
+        <Row label="Will accompany?" value={f.father?.will_accompany} />
+      </Section>
+
+      <Section title="Mother (IMM 5707)">
+        <Row label="Family name" value={f.mother?.family_name} />
+        <Row label="Given names" value={f.mother?.given_names} />
+        <Row label="Date of birth" value={f.mother?.date_of_birth} />
+        <Row label="Country of birth" value={f.mother?.country_of_birth} />
+        <Row label="Status" value={f.mother?.status} />
+        <Row label="Address" value={f.mother?.address} />
+        <Row label="Occupation" value={f.mother?.occupation} />
+        <Row label="Marital status" value={f.mother?.marital_status} />
+        <Row label="Will accompany?" value={f.mother?.will_accompany} />
+      </Section>
+
+      <Section title="Children (IMM 5707)">
+        {(f.children ?? []).length === 0 ? (
+          <>
+            <Row label="Children" value="None" />
+            <Row label="No-children signature" value={f.no_children_signature} />
+            <Row label="No-children date" value={f.no_children_date} />
+          </>
+        ) : (
+          (f.children ?? []).map((c: any, i: number) => (
+            <div key={i} className="border-t border-gray-200 pt-1 mt-1 first:border-0 first:pt-0 first:mt-0">
+              <Row label={`Child ${i + 1} — Relationship`} value={c.relationship} />
+              <Row label={`Child ${i + 1} — Name`} value={`${c.family_name ?? ""}, ${c.given_names ?? ""}`} />
+              <Row label={`Child ${i + 1} — DOB`} value={c.date_of_birth} />
+              <Row label={`Child ${i + 1} — Country of birth`} value={c.country_of_birth} />
+              <Row label={`Child ${i + 1} — Address`} value={c.address} />
+              <Row label={`Child ${i + 1} — Marital status`} value={c.marital_status} />
+              <Row label={`Child ${i + 1} — Occupation`} value={c.occupation} />
+              <Row label={`Child ${i + 1} — Will accompany?`} value={c.will_accompany} />
+            </div>
+          ))
+        )}
+      </Section>
+
+      <Section title="Section C — Certification (IMM 5707)">
+        <Row label="Signature" value={f.section_c_signature} />
+        <Row label="Date" value={f.section_c_date} />
+      </Section>
+
+      <Section title="Education History (IMM 1294)">
+        {edu.length === 0 ? (
+          <Row label="Entries" value="None" />
+        ) : (
+          edu.map((e: any, i: number) => (
+            <div key={i} className="border-t border-gray-200 pt-1 mt-1 first:border-0 first:pt-0 first:mt-0">
+              <Row label={`#${i + 1} — School`} value={e.school} />
+              <Row label={`#${i + 1} — Field of study`} value={e.field_of_study} />
+              <Row label={`#${i + 1} — From`} value={`${e.from_year ?? ""}-${e.from_month ?? ""}`} />
+              <Row label={`#${i + 1} — To`} value={`${e.to_year ?? ""}-${e.to_month ?? ""}`} />
+              <Row label={`#${i + 1} — City`} value={e.city} />
+              <Row label={`#${i + 1} — Province / State`} value={e.province_state} />
+              <Row label={`#${i + 1} — Country`} value={e.country} />
+            </div>
+          ))
+        )}
+      </Section>
+
+      <Section title="Employment History (IMM 1294)">
+        {occ.length === 0 ? (
+          <Row label="Entries" value="None" />
+        ) : (
+          occ.map((o: any, i: number) => (
+            <div key={i} className="border-t border-gray-200 pt-1 mt-1 first:border-0 first:pt-0 first:mt-0">
+              <Row label={`#${i + 1} — Employer`} value={o.employer} />
+              <Row label={`#${i + 1} — Occupation`} value={o.occupation} />
+              <Row label={`#${i + 1} — From`} value={`${o.from_year ?? ""}-${o.from_month ?? ""}`} />
+              <Row label={`#${i + 1} — To`} value={`${o.to_year ?? ""}-${o.to_month ?? ""}`} />
+              <Row label={`#${i + 1} — City`} value={o.city} />
+              <Row label={`#${i + 1} — Province / State`} value={o.province_state} />
+              <Row label={`#${i + 1} — Country`} value={o.country} />
+            </div>
+          ))
+        )}
+      </Section>
+
+      {cl && (
+        <Section title="Common-Law Declaration (IMM 5409)">
+          <Row label="Applicant name" value={cl.applicant_name} />
+          <Row label="Partner name" value={cl.partner_name} />
+          <Row label="Jurisdiction country" value={cl.jurisdiction_country} />
+          <Row label="Jurisdiction province" value={cl.jurisdiction_province} />
+          <Row label="Cohabitation city" value={cl.cohabitation_city} />
+          <Row label="Cohabitation country" value={cl.cohabitation_country} />
+          <Row label="Years together" value={cl.years_together} />
+          <Row label="Start date" value={cl.start_date} />
+          <Row label="Declaration city" value={cl.declaration_city} />
+          <Row label="Declaration date" value={`${cl.declaration_year}-${cl.declaration_month}-${cl.declaration_day}`} />
+          <Row label="Applicant signature" value={cl.applicant_signature} />
+          <Row label="Partner signature" value={cl.partner_signature} />
+        </Section>
+      )}
+
+      {cust && (
+        <Section title="Custodian Declaration (IMM 5646)">
+          <Row label="Student name" value={`${cust.student_family_name}, ${cust.student_given_names}`} />
+          <Row label="Student DOB" value={cust.student_dob} />
+          <Row label="Custodian name" value={`${cust.custodian_family_name}, ${cust.custodian_given_names}`} />
+          <Row label="Custodian phone" value={cust.custodian_phone} />
+          <Row label="Custodian address" value={cust.custodian_address} />
+          <Row label="Sworn city" value={cust.sworn_city} />
+          <Row label="Sworn date" value={`${cust.sworn_year}-${cust.sworn_month}-${cust.sworn_day}`} />
+        </Section>
+      )}
+
+      {rep && (
+        <Section title="Use of Representative (IMM 5476)">
+          <Row label="Rep type" value={rep.rep_type} />
+          <Row label="Rep name" value={`${rep.rep_family_name}, ${rep.rep_given_name}`} />
+          <Row label="ICCRC number" value={rep.iccrc_number} />
+          <Row label="Provincial law society" value={rep.provincial_law_society} />
+          <Row label="Organization" value={rep.organization_name} />
+          <Row label="Email" value={rep.email} />
+          <Row label="Phone" value={`+${rep.phone_country_code ?? ""} ${rep.phone_number ?? ""}`} />
+          <Row label="Address" value={`${rep.street_number ?? ""} ${rep.street_name ?? ""}, ${rep.city ?? ""} ${rep.province ?? ""}, ${rep.country ?? ""} ${rep.postal_code ?? ""}`} />
+          <Row label="Applicant signature" value={rep.applicant_signature} />
+          <Row label="Applicant date signed" value={rep.applicant_date_signed} />
+        </Section>
+      )}
 
       <div className="space-y-3 border-t pt-4">
         <h3 className="text-base font-semibold text-gray-700">Declaration & Signature</h3>
         <p className="text-sm text-gray-600">
-          I certify that all the information I have given on this application is complete, truthful, and correct.
+          I declare that the information I have given in this application is truthful, complete and correct.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

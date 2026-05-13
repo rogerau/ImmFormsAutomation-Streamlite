@@ -92,6 +92,12 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
             <option value="Neither">Neither</option>
           </select>
         </Field>
+        <Field label="I want service in" required error={(pi as any)?.service_in?.message}>
+          <select {...register("personal_info.service_in")} className={inp}>
+            <option value="English">English</option>
+            <option value="French">French</option>
+          </select>
+        </Field>
         <Field label="UCI / Client ID Number (if known)" error={pi?.uci?.message}>
           <input {...register("personal_info.uci")} placeholder="e.g. 12345678" className={inp} />
         </Field>

@@ -70,13 +70,15 @@ export function StudyPermitWizard({ token, claims }: Props) {
       return {
         case_id: claims.case_id,
         optional_forms: optionalForms,
-        personal_info: { language: "English", sex: undefined as any, marital_status: "" },
+        personal_info: { language: "English", sex: undefined as any, marital_status: "", service_in: "English" },
         family: {
           applicant_marital_status: undefined as any,
           applicant_occupation: "",
           father: { status: "Living" },
           mother: { status: "Living" },
           children: [],
+          section_c_signature: "",
+          section_c_date: "",
         },
         education_history: [],
         occupation_history: [],
@@ -103,8 +105,8 @@ export function StudyPermitWizard({ token, claims }: Props) {
   // Step-level field groups to validate on "Next"
   const STEP_FIELDS: Record<number, string[]> = {
     1: ["personal_info", "passport", "national_id", "us_pr_card", "contact"],
-    2: ["study", "tuberculosis", "medical_condition", "previously_refused_visa", "criminal_record", "military_service", "consent_to_contact"],
-    3: ["family.applicant_marital_status", "family.applicant_occupation", "family.father", "family.mother"],
+    2: ["study", "tuberculosis", "medical_condition", "previously_refused_visa", "criminal_record", "military_service", "political_party", "war_crimes", "consent_to_contact"],
+    3: ["family.applicant_marital_status", "family.applicant_occupation", "family.father", "family.mother", "family.section_c_signature", "family.section_c_date"],
     4: ["family.children", "family.no_children_signature"],
     5: [],  // education/occupation optional
     6: optionalForms.includes("imm5409") ? ["common_law"] : [],
