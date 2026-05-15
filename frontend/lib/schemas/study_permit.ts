@@ -343,7 +343,7 @@ export const StudyPermitSchema = z
       applying_country_same_as_current: boolFromString.optional(),
       applying_country: residenceRowSchema.nullable().optional(),
       // Passport extras
-      taiwan_pin: z.string().default(""),
+      taiwan_passport: boolFromString.optional(),
       israel_passport_not_valid: boolFromString.optional(),
     }),
 

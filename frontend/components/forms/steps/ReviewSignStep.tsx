@@ -140,8 +140,8 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
         <Row label="Country of issue" value={p.country_of_issue} />
         <Row label="Issue date" value={p.issue_date} />
         <Row label="Expiry date" value={p.expiry_date} />
-        <Row label="Taiwan PIN" value={(pi as any).taiwan_pin} />
-        <Row label="Passport not valid for Israel?" value={(pi as any).israel_passport_not_valid} />
+        <Row label="Taiwan MOFA passport (Q5)" value={(pi as any).taiwan_passport} />
+        <Row label="National Israeli passport (Q6)" value={(pi as any).israel_passport_not_valid} />
       </Section>
 
       <Section title="National Identity Document (IMM 1294)">

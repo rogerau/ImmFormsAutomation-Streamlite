@@ -92,6 +92,54 @@ def _split_date(date_str: str) -> tuple[str, str, str]:
     return parts[0], parts[1], parts[2]
 
 
+def _fill_phone(phone_el, full_number: str, type_str: str = "",
+                country_code: str = "", ext: str = "") -> None:
+    """Fill a Phone/AltPhone/FaxEmail-Phone subform with parsed values.
+    Handles CanadaUS / Other / NumberCountry / NANumber breakdown and IntlNumber.
+    Always sets ActualNumber as a fallback."""
+    if phone_el is None or not (full_number or country_code):
+        return
+    digits = "".join(c for c in (full_number or "") if c.isdigit())
+    # Strip leading "1" for NA numbers passed as 11 digits.
+    is_na = (country_code or "").lstrip("+") in ("1", "")
+    if is_na and (len(digits) >= 11 and digits.startswith("1")):
+        digits = digits[1:]
+    if is_na and len(digits) == 10:
+        area, first3, last5 = digits[:3], digits[3:6], digits[6:11]
+        for tag, val in [("CanadaUS", "1"), ("Other", "0"), ("NumberCountry", "1")]:
+            el = phone_el.find(tag)
+            if el is not None:
+                el.text = val
+        na = phone_el.find("NANumber")
+        if na is not None:
+            for tag, val in [("AreaCode", area), ("FirstThree", first3), ("LastFive", last5)]:
+                el = na.find(tag)
+                if el is not None:
+                    el.text = val
+    else:
+        for tag, val in [("CanadaUS", "0"), ("Other", "1"), ("NumberCountry", (country_code or "").lstrip("+"))]:
+            el = phone_el.find(tag)
+            if el is not None:
+                el.text = val
+        intl = phone_el.find("IntlNumber")
+        if intl is not None:
+            inner = intl.find("IntlNumber")
+            if inner is not None:
+                inner.text = digits
+    # Fallback: always populate ActualNumber with the raw string.
+    actual = phone_el.find("ActualNumber")
+    if actual is not None:
+        actual.text = full_number or ""
+    if type_str:
+        t = phone_el.find("Type")
+        if t is not None:
+            t.text = type_str
+    if ext:
+        ne = phone_el.find("NumberExt")
+        if ne is not None:
+            ne.text = ext
+
+
 def _fill_residence_row(row_el, residence, date_parts_el=None) -> None:
     """Fill a CurrentCOR/PreviousCOR/CountryWhereApplying Row with one residence."""
     if row_el is None or residence is None:
@@ -246,13 +294,20 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
     # ---- Page 2 — Passport + Contact ----
     page2 = form1.find("Page2")
     if page2 is not None:
-        # Language: separate "able to communicate" from "most at ease" + has-taken-test Y/N
-        lang_el = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "ableToCommunicate", "ableToCommunicate")
-        if lang_el is not None:
-            lang_el.text = d.language.value
+        # Languages:
+        #   1a) Native language       -> Languages/languages/nativeLang/nativeLang
+        #   1b) Able to communicate   -> Languages/languages/ableToCommunicate/ableToCommunicate
+        #   1c) Most at ease          -> Languages/languages/lov (sibling element)
+        #   1d) Taken English/French test -> Languages/LanguageTest (Y/N)
         native_lang = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "nativeLang", "nativeLang")
         if native_lang is not None:
-            native_lang.text = (d.language_most_at_ease.value if d.language_most_at_ease else d.language.value)
+            native_lang.text = d.language.value
+        comm_lang = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "ableToCommunicate", "ableToCommunicate")
+        if comm_lang is not None:
+            comm_lang.text = d.language.value
+        most_at_ease = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "lov")
+        if most_at_ease is not None:
+            most_at_ease.text = (d.language_most_at_ease.value if d.language_most_at_ease else d.language.value)
         lang_test_el = _find(page2, "MaritalStatus", "SectionA", "Languages", "LanguageTest")
         if lang_test_el is not None:
             lang_test_el.text = "Y" if d.taken_language_test else "N"
@@ -303,10 +358,11 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
         # Passport
         pp = _find(page2, "MaritalStatus", "SectionA", "Passport")
         if pp is not None:
-            # Taiwan PIN + Israel "not valid for return" indicator (subsections 6/7)
+            # Q5 — Taiwan passport (Y/N exclGroup; the dataset node TaiwanPIN takes "Y"/"N")
             tw = pp.find("TaiwanPIN")
             if tw is not None:
-                tw.text = d.taiwan_pin or ""
+                tw.text = "Y" if d.taiwan_passport else "N"
+            # Q6 — Israel passport indicator (Y/N exclGroup)
             isr = pp.find("IsraelPassportIndicator")
             if isr is not None:
                 isr.text = "Y" if d.israel_passport_not_valid else "N"
@@ -317,6 +373,10 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
             for field_path, val in [
                 (("PassportNum", "PassportNum"), p.passport_number),
                 (("CountryofIssue", "CountryofIssue"), p.country_of_issue),
+                # Composite date widgets (what the form actually renders)
+                (("IssueDate", "IssueDate"), p.issue_date),
+                (("ExpiryDate",), p.expiry_date),
+                # Date-part triples (kept in sync, some revisions render these)
                 (("IssueYYYY",), iy), (("IssueMM",), im), (("IssueDD",), iday),
                 (("expiryYYYY",), ey), (("expiryMM",), em), (("expiryDD",), eday),
             ]:
@@ -416,42 +476,27 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
     # ---- Page 3 — Phone, Study Details, Education, Occupation ----
     page3 = form1.find("Page3")
     if page3 is not None:
-        # Primary phone — number + type
-        phone_el = _find(page3, "PhoneNumbers", "Phone", "ActualNumber")
-        if phone_el is not None:
-            phone_el.text = data.contact.phone
-        ptype_el = _find(page3, "PhoneNumbers", "Phone", "Type")
-        if ptype_el is not None and data.contact.primary_phone_type:
-            ptype_el.text = data.contact.primary_phone_type
+        # Primary phone — number + type (+ Canada/US vs Other vs NA breakdown)
+        primary_phone_el = _find(page3, "PhoneNumbers", "Phone")
+        # Heuristic country code for primary: assume "1" when no parser hint.
+        primary_country = "1" if (data.contact.phone or "").strip().startswith("+1") or (data.contact.phone or "").strip().startswith("1") else ""
+        _fill_phone(primary_phone_el, data.contact.phone, data.contact.primary_phone_type or "", primary_country)
 
         # Alternate phone (optional)
         if data.contact.has_alt_phone and data.contact.alt_phone is not None:
             alt = data.contact.alt_phone
-            alt_el = _find(page3, "PhoneNumbers", "AltPhone")
-            if alt_el is not None:
-                for tag, val in [
-                    ("Type", alt.phone_type),
-                    ("NumberCountry", alt.country_code),
-                    ("ActualNumber", alt.number),
-                    ("NumberExt", alt.ext),
-                ]:
-                    el = alt_el.find(tag)
-                    if el is not None and val:
-                        el.text = val
+            _fill_phone(
+                _find(page3, "PhoneNumbers", "AltPhone"),
+                alt.number, alt.phone_type, alt.country_code, alt.ext,
+            )
 
-        # Fax (optional)
+        # Fax (optional) — same parser; FaxEmail/Phone has identical shape.
         if data.contact.has_fax and data.contact.fax is not None:
             fax = data.contact.fax
-            fax_el = _find(page3, "FaxEmail", "Phone")
-            if fax_el is not None:
-                for tag, val in [
-                    ("NumberCountry", fax.country_code),
-                    ("ActualNumber", fax.number),
-                    ("NumberExt", fax.ext),
-                ]:
-                    el = fax_el.find(tag)
-                    if el is not None and val:
-                        el.text = val
+            _fill_phone(
+                _find(page3, "FaxEmail", "Phone"),
+                fax.number, "", fax.country_code, fax.ext,
+            )
 
         # Email
         email_el = _find(page3, "FaxEmail", "Email")

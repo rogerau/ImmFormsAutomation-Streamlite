@@ -70,8 +70,8 @@ class PersonalInfo(BaseModel):
     applying_country_same_as_current: bool = True
     applying_country: Optional[Imm1294ResidenceRow] = None
 
-    # IMM 1294 Passport extras (Taiwan / Israel indicators)
-    taiwan_pin: str = ""
+    # IMM 1294 Passport extras (Taiwan / Israel Y/N indicators)
+    taiwan_passport: bool = False
     israel_passport_not_valid: bool = False
 
 

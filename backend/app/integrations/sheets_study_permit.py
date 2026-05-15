@@ -74,7 +74,7 @@ SUBMISSIONS_HEADERS = [
     "custodian_name", "custodian_address",
     # Phase B additions — IMM 1294 full coverage
     "language_most_at_ease", "taken_language_test",
-    "taiwan_pin", "israel_passport_not_valid",
+    "taiwan_passport", "israel_passport_not_valid",
     "us_pr_uscis_number",
     "current_residence_country", "current_residence_status", "current_residence_status_other",
     "current_residence_from", "current_residence_to",
@@ -210,7 +210,7 @@ def submissions_row(
         # Phase B additions — IMM 1294 full coverage
         (pi.language_most_at_ease.value if pi.language_most_at_ease else ""),
         yn(pi.taken_language_test),
-        pi.taiwan_pin or "", yn(pi.israel_passport_not_valid),
+        yn(pi.taiwan_passport), yn(pi.israel_passport_not_valid),
         usc.uscis_number or "",
         (pi.current_residence.country if pi.current_residence else ""),
         (pi.current_residence.status if pi.current_residence else ""),

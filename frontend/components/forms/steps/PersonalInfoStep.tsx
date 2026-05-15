@@ -222,10 +222,14 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
         <Field label="Expiry Date" required error={errors.passport?.expiry_date?.message}>
           <input {...register("passport.expiry_date")} placeholder="YYYY-MM-DD" className={inp} />
         </Field>
-        <Field label="Taiwan Passport — Personal Identification Number (if applicable)" error={(pi as any)?.taiwan_pin?.message}>
-          <input {...register("personal_info.taiwan_pin")} className={inp} />
+        <Field label="For this trip, will you use a passport issued by the Ministry of Foreign Affairs in Taiwan that includes your personal identification number?" error={(pi as any)?.taiwan_passport?.message}>
+          <select {...register("personal_info.taiwan_passport")} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
         </Field>
-        <Field label='Does your passport indicate "not valid for travel to Israel"?' error={(pi as any)?.israel_passport_not_valid?.message}>
+        <Field label="For this trip, will you use a National Israeli passport?" error={(pi as any)?.israel_passport_not_valid?.message}>
           <select {...register("personal_info.israel_passport_not_valid")} className={inp}>
             <option value="">-- Select --</option>
             <option value="true">Yes</option>
