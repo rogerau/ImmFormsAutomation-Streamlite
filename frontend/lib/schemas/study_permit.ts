@@ -50,6 +50,18 @@ const addressSchema = z.object({
   district: z.string().default(""),
 });
 
+// Relaxed variant for residential address — all fields optional (user may leave blank).
+const residentialAddressSchema = z.object({
+  unit: z.string().default(""),
+  street_number: z.string().default(""),
+  street_name: z.string().default(""),
+  city: z.string().default(""),
+  country: z.string().default(""),
+  province_state: z.string().default(""),
+  postal_code: z.string().default(""),
+  district: z.string().default(""),
+});
+
 const residenceRowSchema = z.object({
   country: z.string().default(""),
   status: z.string().default(""),
@@ -146,7 +158,10 @@ const person5707Schema = z.object({
   country_of_birth: z.string().min(1, "Required"),
   address: z.string().min(1, "Required"),
   occupation: z.string().min(1, "Required"),
-  marital_status: MaritalStatusEnum.nullable().optional(),
+  marital_status: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    MaritalStatusEnum.nullable().optional(),
+  ),
   will_accompany: boolFromString.optional(),
 });
 
@@ -314,7 +329,10 @@ export const StudyPermitSchema = z
       current_country: z.string().min(1, "Required"),
       marital_status: z.string().min(1, "Required"),
       language: LanguageEnum.default("English"),
-      language_most_at_ease: LanguageEnum.nullable().optional(),
+      language_most_at_ease: z.preprocess(
+        (v) => (v === "" || v == null ? null : v),
+        LanguageEnum.nullable().optional(),
+      ),
       taken_language_test: boolFromString.optional(),
       uci: z.string().default(""),
       service_in: ServiceInEnum.default("English"),
@@ -336,7 +354,7 @@ export const StudyPermitSchema = z
     contact: z.object({
       mailing_address: addressSchema,
       residential_address_same_as_mailing: boolFromString.optional(),
-      residential_address: addressSchema.nullable().optional(),
+      residential_address: residentialAddressSchema.nullable().optional(),
       phone: z.string().min(1, "Required"),
       primary_phone_type: z.string().default(""),
       has_alt_phone: boolFromString.optional(),
