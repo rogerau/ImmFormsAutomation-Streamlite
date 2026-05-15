@@ -34,6 +34,24 @@ class Imm1294Address(BaseModel):
     country: str
     province_state: str = ""
     postal_code: str = ""
+    district: str = ""                # IMM 1294 mailing/residential address district
+
+
+class Imm1294ResidenceRow(BaseModel):
+    """One residence-history row used for current / previous / applying-from sections."""
+    country: str = ""
+    status: str = ""                  # "Citizen" / "Permanent resident" / "Visitor" / "Worker" / "Student" / "Other"
+    status_other: str = ""            # free-text when status == "Other"
+    from_date: str = ""               # YYYY-MM-DD
+    to_date: str = ""                 # YYYY-MM-DD
+
+
+class Imm1294Phone(BaseModel):
+    """Simplified phone for primary / alternate / fax fields."""
+    phone_type: str = ""              # "Residence" / "Work" / "Cell"
+    country_code: str = ""            # "1" for NA, country code for international
+    number: str = ""                  # the actual digits (E.164 minus '+')
+    ext: str = ""                     # extension
 
 
 class Imm1294StudyDetails(BaseModel):
@@ -80,6 +98,7 @@ class Imm1294USCard(BaseModel):
     """US Permanent Resident Card / Green Card — IMM 1294 Page 2 'USCard' section."""
     has_card: bool = False          # usCardIndicator: Y/N
     doc_number: str = ""
+    uscis_number: str = ""          # 9-digit USCIS number (the "A-Number")
     expiry_date: str = ""           # YYYY-MM-DD
 
 

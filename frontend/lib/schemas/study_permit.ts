@@ -47,6 +47,22 @@ const addressSchema = z.object({
   country: z.string().min(1, "Required"),
   province_state: z.string().default(""),
   postal_code: z.string().default(""),
+  district: z.string().default(""),
+});
+
+const residenceRowSchema = z.object({
+  country: z.string().default(""),
+  status: z.string().default(""),
+  status_other: z.string().default(""),
+  from_date: z.string().default(""),
+  to_date: z.string().default(""),
+});
+
+const phoneSchema = z.object({
+  phone_type: z.string().default(""),
+  country_code: z.string().default(""),
+  number: z.string().default(""),
+  ext: z.string().default(""),
 });
 
 const passportSchema = z.object({
@@ -93,6 +109,7 @@ const nationalIdSchema = z.object({
 const usCardSchema = z.object({
   has_card: requiredBoolFromString,
   doc_number: z.string().default(""),
+  uscis_number: z.string().default(""),
   expiry_date: z.string().default(""),
 });
 
@@ -245,13 +262,26 @@ const representativeSchema = z.object({
   rep_date_signed: z.string().default(""),
 });
 
+// ---- Previous marriage (IMM 1294 subsection 11) ----
+const previousMarriageSchema = z.object({
+  had_previous: requiredBoolFromString,
+  family_name: z.string().default(""),
+  given_names: z.string().default(""),
+  date_of_birth: z.string().default(""),
+  relationship_type: z.string().default(""),
+  from_date: z.string().default(""),
+  to_date: z.string().default(""),
+});
+
 // ---- FamilyInfo ----
 const familyInfoSchema = z.object({
   applicant_marital_status: MaritalStatusEnum,
   applicant_occupation: z.string().min(1, "Required"),
+  marriage_date: z.string().default(""),
   spouse: person5707Schema.nullable().optional(),
   no_spouse_signature: z.string().default(""),
   no_spouse_date: z.string().default(""),
+  previous_marriage: previousMarriageSchema.nullable().optional(),
   father: parent5707Schema,
   mother: parent5707Schema,
   section_a_signature: z.string().default(""),
@@ -284,8 +314,19 @@ export const StudyPermitSchema = z
       current_country: z.string().min(1, "Required"),
       marital_status: z.string().min(1, "Required"),
       language: LanguageEnum.default("English"),
+      language_most_at_ease: LanguageEnum.nullable().optional(),
+      taken_language_test: boolFromString.optional(),
       uci: z.string().default(""),
       service_in: ServiceInEnum.default("English"),
+      // Residence history (subsections 7, 8, 9)
+      current_residence: residenceRowSchema.nullable().optional(),
+      has_previous_residence: boolFromString.optional(),
+      previous_residences: z.array(residenceRowSchema).max(2).default([]),
+      applying_country_same_as_current: boolFromString.optional(),
+      applying_country: residenceRowSchema.nullable().optional(),
+      // Passport extras
+      taiwan_pin: z.string().default(""),
+      israel_passport_not_valid: boolFromString.optional(),
     }),
 
     // Step 2: Passport + contact
@@ -294,7 +335,14 @@ export const StudyPermitSchema = z
     us_pr_card: usCardSchema.default({ has_card: false, doc_number: "", expiry_date: "" }),
     contact: z.object({
       mailing_address: addressSchema,
+      residential_address_same_as_mailing: boolFromString.optional(),
+      residential_address: addressSchema.nullable().optional(),
       phone: z.string().min(1, "Required"),
+      primary_phone_type: z.string().default(""),
+      has_alt_phone: boolFromString.optional(),
+      alt_phone: phoneSchema.nullable().optional(),
+      has_fax: boolFromString.optional(),
+      fax: phoneSchema.nullable().optional(),
       email: z.string().email("Valid email required"),
     }),
 
@@ -302,6 +350,7 @@ export const StudyPermitSchema = z
     study: studyDetailsSchema,
 
     // Step 6: History
+    has_education_history: boolFromString.optional(),
     education_history: z.array(educationEntrySchema).default([]),
     occupation_history: z.array(occupationEntrySchema).default([]),
 

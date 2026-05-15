@@ -16,6 +16,8 @@ from ..imm1294.schema import (
     Imm1294NationalID,
     Imm1294OccupationEntry,
     Imm1294Passport,
+    Imm1294Phone,
+    Imm1294ResidenceRow,
     Imm1294StudyDetails,
     Imm1294USCard,
     Language,
@@ -29,7 +31,14 @@ from ..imm5707.schema import Child5707, MaritalStatus, Parent5707, Person5707
 
 class ContactInfo(BaseModel):
     mailing_address: Imm1294Address
-    phone: str
+    residential_address_same_as_mailing: bool = True
+    residential_address: Optional[Imm1294Address] = None
+    phone: str                                  # primary phone (E.164 string)
+    primary_phone_type: str = ""                # "Residence" / "Work" / "Cell"
+    has_alt_phone: bool = False
+    alt_phone: Optional[Imm1294Phone] = None
+    has_fax: bool = False
+    fax: Optional[Imm1294Phone] = None
     email: str
 
 
@@ -47,10 +56,34 @@ class PersonalInfo(BaseModel):
     citizenship: str                  # country of citizenship
     current_country: str              # current country of residence
     marital_status: str               # text for IMM 1294 (e.g. "Single")
-    language: Language = Language.english
+    language: Language = Language.english          # IMM 1294 — able to communicate
+    language_most_at_ease: Optional[Language] = None  # IMM 1294 — most at ease in
+    taken_language_test: bool = False              # IMM 1294 — has taken language test
     uci: str = ""                     # UCI / Client ID (8 or 10 digits)
     # IMM 1294 Page 1, subsection 2 — "I want service in"
     service_in: str = "English"       # "English" or "French"
+
+    # IMM 1294 Page 1 — residence history (subsections 7, 8, 9)
+    current_residence: Optional[Imm1294ResidenceRow] = None
+    has_previous_residence: bool = False
+    previous_residences: list[Imm1294ResidenceRow] = []   # max 2
+    applying_country_same_as_current: bool = True
+    applying_country: Optional[Imm1294ResidenceRow] = None
+
+    # IMM 1294 Passport extras (Taiwan / Israel indicators)
+    taiwan_pin: str = ""
+    israel_passport_not_valid: bool = False
+
+
+class PreviousMarriage(BaseModel):
+    """IMM 1294 subsection 11 — previous spouse / common-law partner."""
+    had_previous: bool = False
+    family_name: str = ""
+    given_names: str = ""
+    date_of_birth: str = ""           # YYYY-MM-DD
+    relationship_type: str = ""       # "Married" or "Common-law"
+    from_date: str = ""               # YYYY-MM-DD
+    to_date: str = ""                 # YYYY-MM-DD
 
 
 class FamilyInfo(BaseModel):
@@ -59,10 +92,16 @@ class FamilyInfo(BaseModel):
     applicant_occupation: str
     married_in_person: Optional[bool] = None
 
+    # IMM 1294 subsection 10 — date of marriage / common-law relationship
+    marriage_date: str = ""           # YYYY-MM-DD; only when married / common-law
+
     # Spouse (conditional)
     spouse: Optional[Person5707] = None
     no_spouse_signature: str = ""
     no_spouse_date: str = ""
+
+    # IMM 1294 subsection 11 — previous marriage / common-law (optional)
+    previous_marriage: Optional[PreviousMarriage] = None
 
     # Parents
     father: Parent5707
@@ -98,6 +137,7 @@ class StudyPermitData(BaseModel):
     study: Imm1294StudyDetails
 
     # --- Step 6: Education + Occupation history ---
+    has_education_history: bool = False    # IMM 1294 Page 3 EducationIndicator Y/N
     education_history: list[Imm1294EducationEntry] = []
     occupation_history: list[Imm1294OccupationEntry] = []
 

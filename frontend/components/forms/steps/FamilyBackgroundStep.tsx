@@ -116,10 +116,13 @@ function PersonBlock({
   );
 }
 
+const isYes = (v: unknown) => v === true || v === "true";
+
 export function FamilyBackgroundStep({ register, errors, watch, setValue }: Props) {
   const f = errors.family;
   const maritalStatus = watch("family.applicant_marital_status");
   const hasSpouse = ["Common-law", "Married-physically present", "Married-not physically present"].includes(maritalStatus);
+  const hadPrevious = isYes(watch("family.previous_marriage.had_previous"));
 
   // Auto-fill occupation = "Deceased" when parent status = Deceased
   const fatherStatus = watch("family.father.status");
@@ -150,6 +153,18 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
           </Field>
         </div>
       </div>
+
+      {/* Marriage / common-law date (IMM 1294 subsection 10) */}
+      {hasSpouse && (
+        <div className="space-y-3">
+          <h3 className={sectionHeading}>Date of marriage / common-law relationship (IMM 1294)</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Date" required error={(f as any)?.marriage_date?.message}>
+              <input {...register("family.marriage_date")} placeholder="YYYY-MM-DD" className={inp} />
+            </Field>
+          </div>
+        </div>
+      )}
 
       {/* Spouse (conditional) */}
       {hasSpouse ? (
@@ -200,6 +215,44 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
         showAccompany
         showMarital
       />
+
+      {/* Previously married / common-law (IMM 1294 subsection 11) */}
+      <div className="space-y-3">
+        <h3 className={sectionHeading}>Previous Marriage / Common-law (IMM 1294)</h3>
+        <Field label="Have you previously been married or in a common-law relationship?" required error={(f as any)?.previous_marriage?.had_previous?.message}>
+          <select {...register("family.previous_marriage.had_previous")} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+        {hadPrevious && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 rounded border">
+            <Field label="Family Name (of previous partner)" error={(f as any)?.previous_marriage?.family_name?.message}>
+              <input {...register("family.previous_marriage.family_name")} className={inp} />
+            </Field>
+            <Field label="Given Name(s)" error={(f as any)?.previous_marriage?.given_names?.message}>
+              <input {...register("family.previous_marriage.given_names")} className={inp} />
+            </Field>
+            <Field label="Date of Birth" error={(f as any)?.previous_marriage?.date_of_birth?.message}>
+              <input {...register("family.previous_marriage.date_of_birth")} placeholder="YYYY-MM-DD" className={inp} />
+            </Field>
+            <Field label="Type of Relationship" error={(f as any)?.previous_marriage?.relationship_type?.message}>
+              <select {...register("family.previous_marriage.relationship_type")} className={inp}>
+                <option value="">-- Select --</option>
+                <option value="Married">Married</option>
+                <option value="Common-law">Common-law</option>
+              </select>
+            </Field>
+            <Field label="From Date" error={(f as any)?.previous_marriage?.from_date?.message}>
+              <input {...register("family.previous_marriage.from_date")} placeholder="YYYY-MM-DD" className={inp} />
+            </Field>
+            <Field label="To Date" error={(f as any)?.previous_marriage?.to_date?.message}>
+              <input {...register("family.previous_marriage.to_date")} placeholder="YYYY-MM-DD" className={inp} />
+            </Field>
+          </div>
+        )}
+      </div>
 
       {/* Section C — Certification (IMM 5707) */}
       <div className="space-y-3">

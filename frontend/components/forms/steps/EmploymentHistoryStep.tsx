@@ -1,12 +1,15 @@
 "use client";
-import { Control, FieldErrors, UseFormRegister, useFieldArray } from "react-hook-form";
+import { Control, FieldErrors, UseFormRegister, UseFormWatch, useFieldArray } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 
 interface Props {
   control: Control<StudyPermitData>;
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  watch?: UseFormWatch<StudyPermitData>;
 }
+
+const isYes = (v: unknown) => v === true || v === "true";
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
 
@@ -25,17 +28,28 @@ function Field({ label, required, error, children }: { label: string; required?:
 const EMPTY_EDU = { from_year: "", from_month: "", to_year: "", to_month: "", field_of_study: "", school: "", city: "", country: "", province_state: "" };
 const EMPTY_OCC = { from_year: "", from_month: "", to_year: "", to_month: "", occupation: "", employer: "", city: "", country: "", province_state: "" };
 
-export function EmploymentHistoryStep({ control, register, errors }: Props) {
+export function EmploymentHistoryStep({ control, register, errors, watch }: Props) {
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control, name: "education_history" });
   const { fields: occFields, append: appendOcc, remove: removeOcc } = useFieldArray({ control, name: "occupation_history" });
+  const hasEducation = isYes(watch?.("has_education_history"));
 
   return (
     <div className="space-y-8">
       {/* Education */}
       <div>
         <h2 className="text-lg font-semibold text-gray-800 mb-3">Education History (IMM 1294)</h2>
-        <p className="text-sm text-gray-500 mb-4">Add your most recent education. At least one entry is recommended.</p>
-        {eduFields.map((field, idx) => (
+        <p className="text-sm text-gray-500 mb-2">Have you ever attended or completed a post-secondary educational institution (e.g. university, college, vocational school)?</p>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Has post-secondary education? <span className="text-red-600">*</span>
+          </label>
+          <select {...register("has_education_history")} className={inp + " max-w-xs"}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        {hasEducation && eduFields.map((field, idx) => (
           <div key={field.id} className="border border-gray-200 rounded p-4 mb-3 space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-gray-700">Education {idx + 1}</span>
@@ -64,15 +78,23 @@ export function EmploymentHistoryStep({ control, register, errors }: Props) {
             </div>
           </div>
         ))}
-        <button type="button" onClick={() => appendEdu(EMPTY_EDU)} className="text-sm text-blue-600 hover:underline border border-blue-300 rounded px-3 py-1">
-          + Add Education
-        </button>
+        {hasEducation && (
+          <button type="button" onClick={() => appendEdu(EMPTY_EDU)} className="text-sm text-blue-600 hover:underline border border-blue-300 rounded px-3 py-1">
+            + Add Education
+          </button>
+        )}
       </div>
 
       {/* Occupation */}
       <div>
         <h2 className="text-lg font-semibold text-gray-800 mb-3">Work / Activity History (IMM 1294)</h2>
-        <p className="text-sm text-gray-500 mb-4">Add employment, self-employment, or other activities. Up to 3 entries.</p>
+        <p className="text-sm text-gray-500 mb-2">
+          Provide details of your personal history for the last <strong>10 years</strong>. List your most recent
+          activity first; include all employment, self-employment, unemployment, studies, travel, etc. If you have more
+          entries than space allows (the IMM 1294 supports up to 3 rows), let your representative know so the remainder
+          can be communicated separately.
+        </p>
+        <p className="text-sm text-gray-500 mb-4">Up to 3 entries on the PDF.</p>
         {occFields.map((field, idx) => (
           <div key={field.id} className="border border-gray-200 rounded p-4 mb-3 space-y-3">
             <div className="flex justify-between items-center">

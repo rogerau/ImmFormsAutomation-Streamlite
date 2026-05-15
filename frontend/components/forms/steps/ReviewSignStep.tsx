@@ -108,9 +108,31 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
         <Row label="Country of citizenship" value={pi.citizenship} />
         <Row label="Current country of residence" value={pi.current_country} />
         <Row label="Marital status" value={pi.marital_status} />
-        <Row label="Language you communicate in" value={pi.language} />
+        <Row label="Language able to communicate in" value={pi.language} />
+        <Row label="Most at ease in" value={(pi as any).language_most_at_ease} />
+        <Row label="Taken English/French test" value={(pi as any).taken_language_test} />
         <Row label="I want service in" value={(pi as any).service_in} />
         <Row label="UCI / Client ID" value={pi.uci} />
+      </Section>
+
+      <Section title="Residence History (IMM 1294)">
+        <Row label="Current — country" value={(pi as any).current_residence?.country} />
+        <Row label="Current — status" value={(pi as any).current_residence?.status} />
+        <Row label="Current — other status" value={(pi as any).current_residence?.status_other} />
+        <Row label="Current — from" value={(pi as any).current_residence?.from_date} />
+        <Row label="Current — to" value={(pi as any).current_residence?.to_date} />
+        <Row label="Any previous residences?" value={(pi as any).has_previous_residence} />
+        {((pi as any).previous_residences ?? []).map((r: any, i: number) => (
+          <div key={i} className="border-t border-gray-200 pt-1 mt-1">
+            <Row label={`Previous #${i + 1} country`} value={r?.country} />
+            <Row label={`Previous #${i + 1} status`} value={r?.status} />
+            <Row label={`Previous #${i + 1} from`} value={r?.from_date} />
+            <Row label={`Previous #${i + 1} to`} value={r?.to_date} />
+          </div>
+        ))}
+        <Row label="Applying from same country as current?" value={(pi as any).applying_country_same_as_current} />
+        <Row label="Applying — country" value={(pi as any).applying_country?.country} />
+        <Row label="Applying — status" value={(pi as any).applying_country?.status} />
       </Section>
 
       <Section title="Passport (IMM 1294)">
@@ -118,6 +140,8 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
         <Row label="Country of issue" value={p.country_of_issue} />
         <Row label="Issue date" value={p.issue_date} />
         <Row label="Expiry date" value={p.expiry_date} />
+        <Row label="Taiwan PIN" value={(pi as any).taiwan_pin} />
+        <Row label="Passport not valid for Israel?" value={(pi as any).israel_passport_not_valid} />
       </Section>
 
       <Section title="National Identity Document (IMM 1294)">
@@ -137,20 +161,59 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
         {isYes(us.has_card) && (
           <>
             <Row label="Document number" value={us.doc_number} />
+            <Row label="USCIS number" value={us.uscis_number} />
             <Row label="Expiry date" value={us.expiry_date} />
           </>
         )}
       </Section>
 
-      <Section title="Contact Information (IMM 1294)">
+      <Section title="Contact — Mailing Address (IMM 1294)">
         <Row label="Unit / Apt" value={a.unit} />
         <Row label="Street number" value={a.street_number} />
         <Row label="Street name" value={a.street_name} />
         <Row label="City" value={a.city} />
+        <Row label="District" value={(a as any).district} />
         <Row label="Province / State" value={a.province_state} />
         <Row label="Country" value={a.country} />
         <Row label="Postal / ZIP code" value={a.postal_code} />
-        <Row label="Phone" value={c.phone} />
+      </Section>
+
+      <Section title="Contact — Residential Address (IMM 1294)">
+        <Row label="Same as mailing?" value={(c as any).residential_address_same_as_mailing} />
+        {!((c as any).residential_address_same_as_mailing === true || (c as any).residential_address_same_as_mailing === "true") && (
+          <>
+            <Row label="Unit / Apt" value={(c as any).residential_address?.unit} />
+            <Row label="Street number" value={(c as any).residential_address?.street_number} />
+            <Row label="Street name" value={(c as any).residential_address?.street_name} />
+            <Row label="City" value={(c as any).residential_address?.city} />
+            <Row label="District" value={(c as any).residential_address?.district} />
+            <Row label="Province / State" value={(c as any).residential_address?.province_state} />
+            <Row label="Country" value={(c as any).residential_address?.country} />
+            <Row label="Postal / ZIP" value={(c as any).residential_address?.postal_code} />
+          </>
+        )}
+      </Section>
+
+      <Section title="Contact — Phone & Fax (IMM 1294)">
+        <Row label="Primary phone" value={c.phone} />
+        <Row label="Primary phone type" value={(c as any).primary_phone_type} />
+        <Row label="Has alternate phone?" value={(c as any).has_alt_phone} />
+        {((c as any).has_alt_phone === true || (c as any).has_alt_phone === "true") && (
+          <>
+            <Row label="Alt phone type" value={(c as any).alt_phone?.phone_type} />
+            <Row label="Alt country code" value={(c as any).alt_phone?.country_code} />
+            <Row label="Alt number" value={(c as any).alt_phone?.number} />
+            <Row label="Alt ext" value={(c as any).alt_phone?.ext} />
+          </>
+        )}
+        <Row label="Has fax?" value={(c as any).has_fax} />
+        {((c as any).has_fax === true || (c as any).has_fax === "true") && (
+          <>
+            <Row label="Fax country code" value={(c as any).fax?.country_code} />
+            <Row label="Fax number" value={(c as any).fax?.number} />
+            <Row label="Fax ext" value={(c as any).fax?.ext} />
+          </>
+        )}
         <Row label="Email" value={c.email} />
       </Section>
 
@@ -194,9 +257,24 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
         <Row label="Consent to be contacted by CIC" value={v.consent_to_contact} />
       </Section>
 
-      <Section title="Family — About You (IMM 5707)">
+      <Section title="Family — About You (IMM 5707 / IMM 1294)">
         <Row label="Marital status" value={f.applicant_marital_status} />
         <Row label="Occupation" value={f.applicant_occupation} />
+        <Row label="Date of marriage / common-law" value={(f as any).marriage_date} />
+      </Section>
+
+      <Section title="Previous Marriage / Common-law (IMM 1294)">
+        <Row label="Had a previous marriage / common-law?" value={(f as any).previous_marriage?.had_previous} />
+        {((f as any).previous_marriage?.had_previous === true || (f as any).previous_marriage?.had_previous === "true") && (
+          <>
+            <Row label="Family name" value={(f as any).previous_marriage?.family_name} />
+            <Row label="Given names" value={(f as any).previous_marriage?.given_names} />
+            <Row label="Date of birth" value={(f as any).previous_marriage?.date_of_birth} />
+            <Row label="Type" value={(f as any).previous_marriage?.relationship_type} />
+            <Row label="From" value={(f as any).previous_marriage?.from_date} />
+            <Row label="To" value={(f as any).previous_marriage?.to_date} />
+          </>
+        )}
       </Section>
 
       {f.spouse ? (
@@ -270,6 +348,7 @@ export function ReviewSignStep({ register, errors, getValues, isSubmitting, subm
       </Section>
 
       <Section title="Education History (IMM 1294)">
+        <Row label="Has post-secondary education?" value={(v as any).has_education_history} />
         {edu.length === 0 ? (
           <Row label="Entries" value="None" />
         ) : (

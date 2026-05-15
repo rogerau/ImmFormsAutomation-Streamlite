@@ -85,6 +85,39 @@ def _set_path(root: ET.Element, *tags_and_value: str) -> None:
     node.text = value
 
 
+def _split_date(date_str: str) -> tuple[str, str, str]:
+    """Return (year, month, day) from 'YYYY-MM-DD' or empty triple."""
+    parts = (date_str or "").split("-")
+    parts = parts + ["", "", ""]
+    return parts[0], parts[1], parts[2]
+
+
+def _fill_residence_row(row_el, residence, date_parts_el=None) -> None:
+    """Fill a CurrentCOR/PreviousCOR/CountryWhereApplying Row with one residence."""
+    if row_el is None or residence is None:
+        return
+    for tag, val in [
+        ("Country", residence.country),
+        ("Status", residence.status or ""),
+        ("Other", residence.status_other or ""),
+        ("FromDate", residence.from_date),
+        ("ToDate", residence.to_date),
+    ]:
+        el = row_el.find(tag)
+        if el is not None:
+            el.text = val
+    if date_parts_el is not None:
+        fy, fm, fd = _split_date(residence.from_date)
+        ty, tm, td = _split_date(residence.to_date)
+        for tag, val in [
+            ("FromYr", fy), ("FromMM", fm), ("FromDD", fd),
+            ("ToYr", ty), ("ToMM", tm), ("ToDD", td),
+        ]:
+            el = date_parts_el.find(tag)
+            if el is not None:
+                el.text = val
+
+
 def _build_datasets_xml(data: "StudyPermitData") -> str:
     """
     Read the template datasets XML, modify the form1 section with our data,
@@ -148,29 +181,135 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
             cit_el = _find(pd, "Citizenship", "Citizenship")
             if cit_el is not None:
                 cit_el.text = d.citizenship
-            # Current country of residence
-            cor_el = _find(pd, "CurrentCOR", "Row2", "Country")
-            if cor_el is not None:
-                cor_el.text = d.current_country
-        # Marital status
-        ms_el = _find(page1, "MaritalStatus", "SectionA", "MaritalStatus")
-        if ms_el is not None:
-            ms_el.text = d.marital_status
+
+            # Current country of residence (subsection 7)
+            if d.current_residence:
+                _fill_residence_row(
+                    _find(pd, "CurrentCOR", "Row2"),
+                    d.current_residence,
+                    pd.find("CORDates"),
+                )
+            else:
+                cor_el = _find(pd, "CurrentCOR", "Row2", "Country")
+                if cor_el is not None:
+                    cor_el.text = d.current_country
+
+            # Previous countries of residence (subsection 8)
+            pcr_ind = pd.find("PCRIndicator")
+            if pcr_ind is not None:
+                pcr_ind.text = "Y" if d.has_previous_residence else "N"
+            if d.has_previous_residence and d.previous_residences:
+                pcr = pd.find("PreviousCOR")
+                rows_dates = [
+                    (pcr.find("Row2") if pcr is not None else None, pd.find("PCRDatesR1")),
+                    (pcr.find("Row3") if pcr is not None else None, pd.find("PCRDatesR2")),
+                ]
+                for (row_el, dates_el), residence in zip(rows_dates, d.previous_residences[:2]):
+                    _fill_residence_row(row_el, residence, dates_el)
+
+            # Country where applying (subsection 9)
+            same_ind = pd.find("SameAsCORIndicator")
+            if same_ind is not None:
+                same_ind.text = "Y" if d.applying_country_same_as_current else "N"
+            if not d.applying_country_same_as_current and d.applying_country:
+                _fill_residence_row(
+                    _find(pd, "CountryWhereApplying", "Row2"),
+                    d.applying_country,
+                    pd.find("CWADates"),
+                )
+
+        # Marital status (subsection 10): status text + date of marriage + spouse name
+        ms_section = _find(page1, "MaritalStatus", "SectionA")
+        if ms_section is not None:
+            ms_el = ms_section.find("MaritalStatus")
+            if ms_el is not None:
+                ms_el.text = d.marital_status
+            fam = data.family
+            if fam.spouse and fam.marriage_date:
+                md_el = ms_section.find("DateOfMarriage")
+                if md_el is not None:
+                    md_el.text = fam.marriage_date
+                my, mm, mdy = _split_date(fam.marriage_date)
+                md_parts = ms_section.find("MarriageDate")
+                if md_parts is not None:
+                    for tag, val in [("FromYr", my), ("FromMM", mm), ("FromDD", mdy)]:
+                        el = md_parts.find(tag)
+                        if el is not None:
+                            el.text = val
+                fn_el = ms_section.find("FamilyName")
+                if fn_el is not None:
+                    fn_el.text = fam.spouse.family_name
+                gn_el = ms_section.find("GivenName")
+                if gn_el is not None:
+                    gn_el.text = fam.spouse.given_names
 
     # ---- Page 2 — Passport + Contact ----
     page2 = form1.find("Page2")
     if page2 is not None:
-        # Language
+        # Language: separate "able to communicate" from "most at ease" + has-taken-test Y/N
         lang_el = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "ableToCommunicate", "ableToCommunicate")
         if lang_el is not None:
             lang_el.text = d.language.value
         native_lang = _find(page2, "MaritalStatus", "SectionA", "Languages", "languages", "nativeLang", "nativeLang")
         if native_lang is not None:
-            native_lang.text = d.language.value
+            native_lang.text = (d.language_most_at_ease.value if d.language_most_at_ease else d.language.value)
+        lang_test_el = _find(page2, "MaritalStatus", "SectionA", "Languages", "LanguageTest")
+        if lang_test_el is not None:
+            lang_test_el.text = "Y" if d.taken_language_test else "N"
+
+        # Previously married / common-law (subsection 11) — datasets path is Page2 even though
+        # the form renders this on page 1. The IRCC structure puts it under Page2 MaritalStatus.
+        ms2 = _find(page2, "MaritalStatus", "SectionA")
+        if ms2 is not None:
+            pm = data.family.previous_marriage if data.family else None
+            pm_ind = ms2.find("PrevMarriedIndicator")
+            if pm_ind is not None:
+                pm_ind.text = "Y" if (pm and pm.had_previous) else "N"
+            if pm and pm.had_previous:
+                pmf = ms2.find("PMFamilyName")
+                if pmf is not None:
+                    pmf.text = pm.family_name
+                pmg = _find(ms2, "GivenName", "PMGivenName")
+                if pmg is not None:
+                    pmg.text = pm.given_names
+                psdob = ms2.find("PrevSpouseDOB")
+                if psdob is not None:
+                    psy, psm, psd = _split_date(pm.date_of_birth)
+                    for tag, val in [("DOBYear", psy), ("DOBMonth", psm), ("DOBDay", psd)]:
+                        el = psdob.find(tag)
+                        if el is not None:
+                            el.text = val
+                tor = ms2.find("TypeOfRelationship")
+                if tor is not None:
+                    tor.text = pm.relationship_type
+                fd = ms2.find("FromDate")
+                if fd is not None:
+                    fd.text = pm.from_date
+                td = _find(ms2, "ToDate", "ToDate")
+                if td is not None:
+                    td.text = pm.to_date
+                pmd = ms2.find("PreviouslyMarriedDates")
+                if pmd is not None:
+                    fy, fm, fdy = _split_date(pm.from_date)
+                    ty, tm, tdy = _split_date(pm.to_date)
+                    for tag, val in [
+                        ("FromYr", fy), ("FromMM", fm), ("FromDD", fdy),
+                        ("ToYr", ty), ("ToMM", tm), ("ToDD", tdy),
+                    ]:
+                        el = pmd.find(tag)
+                        if el is not None:
+                            el.text = val
 
         # Passport
         pp = _find(page2, "MaritalStatus", "SectionA", "Passport")
         if pp is not None:
+            # Taiwan PIN + Israel "not valid for return" indicator (subsections 6/7)
+            tw = pp.find("TaiwanPIN")
+            if tw is not None:
+                tw.text = d.taiwan_pin or ""
+            isr = pp.find("IsraelPassportIndicator")
+            if isr is not None:
+                isr.text = "Y" if d.israel_passport_not_valid else "N"
             issue_parts = p.issue_date.split("-") if p.issue_date else ["", "", ""]
             exp_parts = p.expiry_date.split("-") if p.expiry_date else ["", "", ""]
             iy, im, iday = (issue_parts + ["", "", ""])[:3]
@@ -229,8 +368,12 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     exp = docs.find("ExpiryDate")
                     if exp is not None:
                         exp.text = us.expiry_date
+                    # Some IMM 1294 revisions have a USCIS_Number sibling; write defensively.
+                    uscis = docs.find("USCIS_Number")
+                    if uscis is not None:
+                        uscis.text = us.uscis_number or ""
 
-        # Contact — mailing address
+        # Contact — mailing address (+ district), residential address (when not same)
         contact = page2.find("contact")
         if contact is not None:
             addr = data.contact.mailing_address
@@ -243,18 +386,73 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 ("AddressRow2/Country/Country", addr.country),
                 ("AddressRow2/ProvinceState/ProvinceState", addr.province_state),
                 ("AddressRow2/PostalCode/PostalCode", postal),
+                ("AddressRow2/District", addr.district or ""),
             ]:
                 el = contact.find(tag)
                 if el is not None:
                     el.text = val
 
+            # Residential-same-as-mailing indicator + optional residential block
+            same_mail = contact.find("SameAsMailingIndicator")
+            if same_mail is not None:
+                same_mail.text = "Y" if data.contact.residential_address_same_as_mailing else "N"
+            res = data.contact.residential_address
+            if not data.contact.residential_address_same_as_mailing and res is not None:
+                res_postal = _normalize_postal(res.postal_code, res.country)
+                for tag, val in [
+                    ("ResidentialAddressRow1/AptUnit/AptUnit", res.unit),
+                    ("ResidentialAddressRow1/StreetNum/StreetNum", res.street_number),
+                    ("ResidentialAddressRow1/StreetName/Streetname", res.street_name),
+                    ("ResidentialAddressRow1/CityTown/CityTown", res.city),
+                    ("ResidentialAddressRow2/Country/Country", res.country),
+                    ("ResidentialAddressRow2/ProvinceState/ProvinceState", res.province_state),
+                    ("ResidentialAddressRow2/PostalCode/PostalCode", res_postal),
+                    ("ResidentialAddressRow2/District", res.district or ""),
+                ]:
+                    el = contact.find(tag)
+                    if el is not None:
+                        el.text = val
+
     # ---- Page 3 — Phone, Study Details, Education, Occupation ----
     page3 = form1.find("Page3")
     if page3 is not None:
-        # Phone
+        # Primary phone — number + type
         phone_el = _find(page3, "PhoneNumbers", "Phone", "ActualNumber")
         if phone_el is not None:
             phone_el.text = data.contact.phone
+        ptype_el = _find(page3, "PhoneNumbers", "Phone", "Type")
+        if ptype_el is not None and data.contact.primary_phone_type:
+            ptype_el.text = data.contact.primary_phone_type
+
+        # Alternate phone (optional)
+        if data.contact.has_alt_phone and data.contact.alt_phone is not None:
+            alt = data.contact.alt_phone
+            alt_el = _find(page3, "PhoneNumbers", "AltPhone")
+            if alt_el is not None:
+                for tag, val in [
+                    ("Type", alt.phone_type),
+                    ("NumberCountry", alt.country_code),
+                    ("ActualNumber", alt.number),
+                    ("NumberExt", alt.ext),
+                ]:
+                    el = alt_el.find(tag)
+                    if el is not None and val:
+                        el.text = val
+
+        # Fax (optional)
+        if data.contact.has_fax and data.contact.fax is not None:
+            fax = data.contact.fax
+            fax_el = _find(page3, "FaxEmail", "Phone")
+            if fax_el is not None:
+                for tag, val in [
+                    ("NumberCountry", fax.country_code),
+                    ("ActualNumber", fax.number),
+                    ("NumberExt", fax.ext),
+                ]:
+                    el = fax_el.find(tag)
+                    if el is not None and val:
+                        el.text = val
+
         # Email
         email_el = _find(page3, "FaxEmail", "Email")
         if email_el is not None:
@@ -326,8 +524,12 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 if ce is not None:
                     ce.text = study.caq_cert_expiry
 
-        # Education history (first entry)
+        # Education indicator + history (first entry)
         edu_section = page3.find("Education")
+        if edu_section is not None:
+            edu_ind = edu_section.find("EducationIndicator")
+            if edu_ind is not None:
+                edu_ind.text = "Y" if data.has_education_history else "N"
         if edu_section is not None and data.education_history:
             e = data.education_history[0]
             edu_row = edu_section.find("Edu_Row1")

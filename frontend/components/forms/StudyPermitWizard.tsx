@@ -88,7 +88,20 @@ export function StudyPermitWizard({ token, claims }: Props) {
         military_service_details: "",
         consent_to_contact: true as any,
         national_id: { has_document: false as any, doc_number: "", country_of_issue: "", issue_date: "", expiry_date: "" },
-        us_pr_card: { has_card: false as any, doc_number: "", expiry_date: "" },
+        us_pr_card: { has_card: false as any, doc_number: "", uscis_number: "", expiry_date: "" },
+        contact: {
+          mailing_address: { unit: "", street_number: "", street_name: "", city: "", country: "", province_state: "", postal_code: "", district: "" },
+          residential_address_same_as_mailing: true as any,
+          residential_address: null,
+          phone: "",
+          primary_phone_type: "",
+          has_alt_phone: false as any,
+          alt_phone: null,
+          has_fax: false as any,
+          fax: null,
+          email: "",
+        },
+        has_education_history: false as any,
       };
     })(),
     mode: "onTouched",
@@ -151,7 +164,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
     2: <StudyDetailsStep register={register} errors={errors} watch={watch} />,
     3: <FamilyBackgroundStep register={register} errors={errors} watch={watch} setValue={setValue} />,
     4: <ChildrenSiblingsStep control={control} register={register} errors={errors} />,
-    5: <EmploymentHistoryStep control={control} register={register} errors={errors} />,
+    5: <EmploymentHistoryStep control={control} register={register} errors={errors} watch={watch} />,
   };
 
   // Dynamically add optional steps
