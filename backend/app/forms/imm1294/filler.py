@@ -769,6 +769,76 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
     return ET.tostring(root, encoding="unicode", xml_declaration=False)
 
 
+def _is_na_phone(country_code: str, number: str = "") -> bool:
+    """Heuristic: a phone is North American when the country code is 1 (or blank)."""
+    cc = (country_code or "").lstrip("+").strip()
+    if cc in ("1", ""):
+        return True
+    return False
+
+
+def _patch_phone_visibility(template_xml: str, data: "StudyPermitData") -> str:
+    """Flip NANumber/IntlNumber default presence per phone.
+
+    The IMM 1294 template marks the NA-digit-breakdown subform invisible by
+    default; only the CanadaUS checkbox's click handler flips it visible at
+    runtime. Pre-filled PDFs never trigger that handler, so the digits stay
+    hidden. Patch the template so each Phone/AltPhone/Fax block defaults to
+    the layout that matches its data — NA shows NANumber + hides IntlNumber,
+    international does the opposite.
+    """
+    primary_cc = ""
+    if (data.contact.phone or "").strip().startswith("+"):
+        # extract the country code after '+': simple parse
+        primary_cc = (data.contact.phone or "").strip().lstrip("+").split("-", 1)[0]
+    elif (data.contact.phone or "").strip().startswith("1"):
+        primary_cc = "1"
+
+    primary_na = _is_na_phone(primary_cc, data.contact.phone or "")
+    alt_na = (
+        data.contact.has_alt_phone
+        and data.contact.alt_phone is not None
+        and _is_na_phone(data.contact.alt_phone.country_code, data.contact.alt_phone.number)
+    )
+    fax_na = (
+        data.contact.has_fax
+        and data.contact.fax is not None
+        and _is_na_phone(data.contact.fax.country_code, data.contact.fax.number)
+    )
+
+    # NANumber subforms by their (unique) x/y coordinates
+    na_coords = [
+        ("49.53mm", "9.029mm", primary_na),   # Phone
+        ("48.26mm", "9.466mm", alt_na),       # AltPhone
+        ("49.53mm", "5.666mm", fax_na),       # Fax
+    ]
+    intl_coords = [
+        ("35.56mm", "8.972mm", primary_na),   # Phone
+        ("34.29mm", "8.89mm", alt_na),        # AltPhone
+        ("35.56mm", "5.09mm", fax_na),        # Fax
+    ]
+
+    for x, y, is_na in na_coords:
+        old = f'<subform presence="invisible" minH="10.313mm" name="NANumber" w="50.8mm" x="{x}" y="{y}"'
+        new = (
+            f'<subform minH="10.313mm" name="NANumber" w="50.8mm" x="{x}" y="{y}"'
+            if is_na
+            else old
+        )
+        template_xml = template_xml.replace(old, new, 1)
+
+    for x, y, is_na in intl_coords:
+        old = f'<subform minH="10.16mm" name="IntlNumber" w="53.34mm" x="{x}" y="{y}"'
+        new = (
+            f'<subform presence="invisible" minH="10.16mm" name="IntlNumber" w="53.34mm" x="{x}" y="{y}"'
+            if is_na
+            else old
+        )
+        template_xml = template_xml.replace(old, new, 1)
+
+    return template_xml
+
+
 def fill_pdf(data: "StudyPermitData") -> bytes:
     if not os.path.exists(TEMPLATE):
         raise FileNotFoundError(f"IMM 1294 template not found: {TEMPLATE}")
@@ -776,4 +846,8 @@ def fill_pdf(data: "StudyPermitData") -> bytes:
         raise FileNotFoundError(f"IMM 1294 unencrypted copy not found: {UNENC}")
 
     xml_str = _build_datasets_xml(data)
-    return fill_xfa_pdf(TEMPLATE, xml_str)
+    return fill_xfa_pdf(
+        TEMPLATE,
+        xml_str,
+        template_xml_transform=lambda xml: _patch_phone_visibility(xml, data),
+    )
