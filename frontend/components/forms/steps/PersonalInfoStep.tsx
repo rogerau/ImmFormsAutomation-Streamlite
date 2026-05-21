@@ -2,6 +2,7 @@
 import { FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
+import { CityInput } from "@/components/forms/fields/CityInput";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
@@ -122,7 +123,11 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
           <CountrySelect {...register("personal_info.place_birth_country")} className={inp} />
         </Field>
         <Field label="City of Birth" required error={pi?.place_birth_city?.message}>
-          <input {...register("personal_info.place_birth_city")} className={inp} />
+          <CityInput
+            {...register("personal_info.place_birth_city")}
+            countryName={watch("personal_info.place_birth_country") as string | undefined}
+            className={inp}
+          />
         </Field>
         <Field label="Country of Citizenship" required error={pi?.citizenship?.message}>
           <CountrySelect {...register("personal_info.citizenship")} className={inp} />

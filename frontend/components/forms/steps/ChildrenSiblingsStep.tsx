@@ -38,7 +38,7 @@ export function ChildrenSiblingsStep({ control, register, errors }: Props) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-800">Children (Section B — IMM 5707)</h2>
+      <h2 className="text-lg font-semibold text-gray-800">Children (IMM 5707)</h2>
 
       {fields.map((field, idx) => (
         <div key={field.id} className="border border-gray-200 rounded p-4 space-y-3">

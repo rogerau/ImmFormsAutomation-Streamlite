@@ -137,7 +137,7 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-gray-800">Family Information (IMM 5707)</h2>
+      <h2 className="text-lg font-semibold text-gray-800">Marital Status &amp; Family (IMM 1294, IMM 5707)</h2>
 
       {/* Applicant IMM 5707 fields */}
       <div className="space-y-3">

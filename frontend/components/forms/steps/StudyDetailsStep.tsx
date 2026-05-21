@@ -44,7 +44,7 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
   const e = errors as any;
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-800">Study Details</h2>
+      <h2 className="text-lg font-semibold text-gray-800">Study Details (IMM 1294)</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="School / Institution Name" required error={s?.school_name?.message}>
           <input {...register("study.school_name")} className={inp} />
@@ -81,7 +81,7 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
         </Field>
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-800 pt-4">Cost of Studies</h2>
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Cost of Studies (IMM 1294)</h2>
       <p className="text-sm text-gray-500">Enter the cost of your studies and how your expenses will be paid. Amounts in CAD.</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Field label="Tuition" error={s?.tuition_amount?.message}>
@@ -111,7 +111,7 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
         )}
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-800 pt-4">Provincial Attestation Letter (PAL/TAL)</h2>
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Provincial Attestation Letter / Territorial Attestation Letter (IMM 1294)</h2>
       <p className="text-sm text-gray-500">If you have been issued a Provincial Attestation Letter (PAL) or Territorial Attestation Letter (TAL), provide the details.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Document Number" error={s?.pal_doc_number?.message}>
@@ -122,7 +122,7 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
         </Field>
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-800 pt-4">Quebec Acceptance Certificate (CAQ)</h2>
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Quebec Acceptance Certificate / CAQ (IMM 1294)</h2>
       <p className="text-sm text-gray-500">If you have been issued a Quebec Acceptance Certificate (CAQ), provide the details.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Certificate Number" error={s?.caq_cert_number?.message}>
@@ -133,7 +133,7 @@ export function StudyDetailsStep({ register, errors, watch }: Props) {
         </Field>
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-800 pt-4">Background Information</h2>
+      <h2 className="text-lg font-semibold text-gray-800 pt-4">Background Information (IMM 1294)</h2>
       <p className="text-sm text-gray-500">If you answer "Yes" to any of the following questions, provide the details in the space provided. (Wording is taken verbatim from the IMM 1294 form.)</p>
       <div className="space-y-4">
         {/* Q86 — TB (no textbox) */}
