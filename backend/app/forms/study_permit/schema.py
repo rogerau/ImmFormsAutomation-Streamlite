@@ -33,8 +33,10 @@ class ContactInfo(BaseModel):
     mailing_address: Imm1294Address
     residential_address_same_as_mailing: bool = True
     residential_address: Optional[Imm1294Address] = None
-    phone: str                                  # primary phone (E.164 string)
+    phone: str                                  # primary phone (digits — number portion)
     primary_phone_type: str = ""                # "Residence" / "Work" / "Cell"
+    primary_phone_country_code: str = ""        # e.g. "1" for NA, "44" for UK
+    primary_phone_ext: str = ""
     has_alt_phone: bool = False
     alt_phone: Optional[Imm1294Phone] = None
     has_fax: bool = False

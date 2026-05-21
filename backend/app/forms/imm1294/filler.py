@@ -532,11 +532,15 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
     # ---- Page 3 — Phone, Study Details, Education, Occupation ----
     page3 = form1.find("Page3")
     if page3 is not None:
-        # Primary phone — number + type (+ Canada/US vs Other vs NA breakdown)
+        # Primary phone — number + type + explicit country code + extension.
         primary_phone_el = _find(page3, "PhoneNumbers", "Phone")
-        # Heuristic country code for primary: assume "1" when no parser hint.
-        primary_country = "1" if (data.contact.phone or "").strip().startswith("+1") or (data.contact.phone or "").strip().startswith("1") else ""
-        _fill_phone(primary_phone_el, data.contact.phone, data.contact.primary_phone_type or "", primary_country)
+        _fill_phone(
+            primary_phone_el,
+            data.contact.phone,
+            data.contact.primary_phone_type or "",
+            data.contact.primary_phone_country_code or "",
+            data.contact.primary_phone_ext or "",
+        )
 
         # Alternate phone (optional)
         if data.contact.has_alt_phone and data.contact.alt_phone is not None:
@@ -787,14 +791,10 @@ def _patch_phone_visibility(template_xml: str, data: "StudyPermitData") -> str:
     the layout that matches its data — NA shows NANumber + hides IntlNumber,
     international does the opposite.
     """
-    primary_cc = ""
-    if (data.contact.phone or "").strip().startswith("+"):
-        # extract the country code after '+': simple parse
-        primary_cc = (data.contact.phone or "").strip().lstrip("+").split("-", 1)[0]
-    elif (data.contact.phone or "").strip().startswith("1"):
-        primary_cc = "1"
-
-    primary_na = _is_na_phone(primary_cc, data.contact.phone or "")
+    primary_na = _is_na_phone(
+        data.contact.primary_phone_country_code or "",
+        data.contact.phone or "",
+    )
     alt_na = (
         data.contact.has_alt_phone
         and data.contact.alt_phone is not None

@@ -13,6 +13,7 @@ import { CommonLawStep } from "./steps/CommonLawStep";
 import { CustodianStep } from "./steps/CustodianStep";
 import { RepresentativeStep } from "./steps/RepresentativeStep";
 import { ReviewSignStep } from "./steps/ReviewSignStep";
+import { FormsGuidance } from "./FormsGuidance";
 import type { TokenClaims } from "@/lib/token";
 
 interface Props {
@@ -95,6 +96,8 @@ export function StudyPermitWizard({ token, claims }: Props) {
           residential_address: null,
           phone: "",
           primary_phone_type: "",
+          primary_phone_country_code: "",
+          primary_phone_ext: "",
           has_alt_phone: false as any,
           alt_phone: null,
           has_fax: false as any,
@@ -202,6 +205,9 @@ export function StudyPermitWizard({ token, claims }: Props) {
       )}
 
       <div className="min-h-[400px]">
+        {currentStep === 1 && !submitResult && (
+          <FormsGuidance activeOptionalForms={optionalForms} />
+        )}
         {stepComponents[currentStep] ?? (
           <p className="text-gray-500 text-sm">Step not found.</p>
         )}

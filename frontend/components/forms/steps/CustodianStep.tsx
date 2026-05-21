@@ -27,7 +27,11 @@ export function CustodianStep({ register, errors }: Props) {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Custodian Declaration (IMM 5646)</h2>
-      <p className="text-sm text-gray-500">Required when a minor will study in Canada without their parents.</p>
+      <div className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>When to complete:</strong> Only fill in this section if the minor studying
+        in Canada is less than 17 years old. The custodian must be a Canadian citizen or
+        permanent resident at least 19 years of age.
+      </div>
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Student Information</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

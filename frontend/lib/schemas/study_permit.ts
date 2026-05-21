@@ -357,6 +357,8 @@ export const StudyPermitSchema = z
       residential_address: residentialAddressSchema.nullable().optional(),
       phone: z.string().min(1, "Required"),
       primary_phone_type: z.string().default(""),
+      primary_phone_country_code: z.string().default(""),
+      primary_phone_ext: z.string().default(""),
       has_alt_phone: boolFromString.optional(),
       alt_phone: phoneSchema.nullable().optional(),
       has_fax: boolFromString.optional(),

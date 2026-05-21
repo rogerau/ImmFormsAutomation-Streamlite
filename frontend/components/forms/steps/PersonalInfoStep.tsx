@@ -364,20 +364,26 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
       )}
 
       <h3 className="text-sm font-medium text-gray-700 pt-2">Phone & Email</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Primary Phone Number" required error={contactErr?.phone?.message}>
-          <input {...register("contact.phone")} placeholder="+1-555-000-0000" className={inp} />
-        </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Field label="Phone Type" error={contactErr?.primary_phone_type?.message}>
           <select {...register("contact.primary_phone_type")} className={inp}>
             <option value="">-- Select --</option>
             {PHONE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </Field>
-        <Field label="Email" required error={contactErr?.email?.message}>
-          <input {...register("contact.email")} type="email" className={inp} />
+        <Field label="Country code" error={(contactErr as any)?.primary_phone_country_code?.message}>
+          <input {...register("contact.primary_phone_country_code")} placeholder="1" className={inp} />
+        </Field>
+        <Field label="Primary Phone Number" required error={contactErr?.phone?.message}>
+          <input {...register("contact.phone")} placeholder="5550000000" className={inp} />
+        </Field>
+        <Field label="Extension" error={(contactErr as any)?.primary_phone_ext?.message}>
+          <input {...register("contact.primary_phone_ext")} className={inp} />
         </Field>
       </div>
+      <Field label="Email" required error={contactErr?.email?.message}>
+        <input {...register("contact.email")} type="email" className={inp} />
+      </Field>
 
       <Field label="Do you have an alternate phone number?" error={contactErr?.has_alt_phone?.message}>
         <select {...register("contact.has_alt_phone")} className={inp}>

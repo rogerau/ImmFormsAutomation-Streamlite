@@ -38,7 +38,11 @@ export function RepresentativeStep({ register, errors, getValues, setValue }: Pr
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Use of a Representative (IMM 5476)</h2>
-      <p className="text-sm text-gray-500">Authorize an immigration consultant or lawyer to act on your behalf.</p>
+      <div className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>When to complete:</strong> Only fill in this section if you are using the
+        services of an authorized representative, or if you are appointing or cancelling a
+        representative.
+      </div>
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Representative Type</h3>
       <div>
