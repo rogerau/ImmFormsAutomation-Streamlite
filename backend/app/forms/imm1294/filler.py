@@ -23,6 +23,58 @@ UNENC = os.path.join(os.path.dirname(__file__), "template", "imm1294e_unenc.pdf"
 
 XFA_NS = "http://www.xfa.org/schema/xfa-data/1.0/"
 
+# IRCC dropdown LOV codes. Dropdowns bind `valueRef="lic"` so the saved value
+# must be the lic code, not the human-readable label. ProvinceState fields also
+# trigger setProvinceBasedOnCountry which only populates Canadian provinces /
+# US states when Country.rawValue == "511" (Canada) or "461" (USA).
+_COUNTRY_LIC = {
+    "canada": "511", "ca": "511",
+    "united states": "461", "united states of america": "461",
+    "usa": "461", "us": "461", "u.s.a.": "461", "u.s.": "461", "america": "461",
+}
+
+_PROVINCE_LIC = {
+    "ab": "09", "bc": "11", "mb": "07", "nb": "04", "nl": "01",
+    "ns": "03", "nt": "10", "nu": "64", "on": "06", "pe": "02",
+    "qc": "05", "sk": "08", "yt": "12",
+}
+
+_STATE_LIC = {
+    "al": "13", "ak": "14", "az": "15", "ar": "16", "ca": "17", "co": "18",
+    "ct": "19", "de": "20", "dc": "21", "fl": "22", "ga": "23", "hi": "24",
+    "id": "25", "il": "26", "in": "27", "ia": "28", "ks": "29", "ky": "30",
+    "la": "31", "me": "32", "md": "33", "ma": "34", "mi": "35", "mn": "36",
+    "ms": "37", "mo": "38", "mt": "39", "ne": "40", "nv": "41", "nh": "42",
+    "nj": "43", "nm": "44", "ny": "45", "nc": "46", "nd": "47", "oh": "48",
+    "ok": "49", "or": "50", "pa": "51", "ri": "52", "sc": "53", "sd": "54",
+    "tn": "55", "tx": "56", "ut": "57", "vt": "58", "va": "59", "wa": "60",
+    "wv": "61", "wi": "62", "wy": "63", "as": "66", "fm": "67", "gu": "68",
+    "mh": "69", "mp": "70", "pw": "71", "vi": "72", "pr": "PR",
+}
+
+
+def _country_lic(name: str) -> str:
+    """Return LOV lic code for a country name, or the original text if unknown."""
+    if not name:
+        return ""
+    return _COUNTRY_LIC.get(name.strip().lower(), name)
+
+
+def _province_lic(country: str, prov: str) -> str:
+    """Return ProvinceAbbrev/StateAbbrev lic code for Canadian provinces / US
+    states. Returns empty when the country isn't Canada or USA — those fields
+    are blocked out by the form's design."""
+    if not prov:
+        return ""
+    c = (country or "").strip().lower()
+    p = prov.strip().lower()
+    if c in ("canada", "ca"):
+        return _PROVINCE_LIC.get(p, "")
+    if c in ("united states", "united states of america", "usa", "us",
+             "u.s.a.", "u.s.", "america"):
+        return _STATE_LIC.get(p, "")
+    return ""
+
 
 def _get_raw_datasets(pdf_path: str) -> bytes:
     """Return the raw (compressed) bytes of the XFA datasets stream."""
@@ -105,7 +157,7 @@ def _fill_phone(phone_el, full_number: str, type_str: str = "",
     if is_na and (len(digits) >= 11 and digits.startswith("1")):
         digits = digits[1:]
     if is_na and len(digits) == 10:
-        area, first3, last5 = digits[:3], digits[3:6], digits[6:11]
+        area, first3, last5 = digits[:3], digits[3:6], digits[6:10]
         for tag, val in [("CanadaUS", "1"), ("Other", "0"), ("NumberCountry", "1")]:
             el = phone_el.find(tag)
             if el is not None:
@@ -116,6 +168,10 @@ def _fill_phone(phone_el, full_number: str, type_str: str = "",
                 el = na.find(tag)
                 if el is not None:
                     el.text = val
+        # ActualNumber is a calculated field that concatenates AreaCode+FirstThree+
+        # LastFive+Ext. Seed it with the same value so it renders before Adobe
+        # re-runs the calculate.
+        actual_value = area + first3 + last5
     else:
         for tag, val in [("CanadaUS", "0"), ("Other", "1"), ("NumberCountry", (country_code or "").lstrip("+"))]:
             el = phone_el.find(tag)
@@ -126,10 +182,10 @@ def _fill_phone(phone_el, full_number: str, type_str: str = "",
             inner = intl.find("IntlNumber")
             if inner is not None:
                 inner.text = digits
-    # Fallback: always populate ActualNumber with the raw string.
+        actual_value = digits
     actual = phone_el.find("ActualNumber")
     if actual is not None:
-        actual.text = full_number or ""
+        actual.text = actual_value
     if type_str:
         t = phone_el.find("Type")
         if t is not None:
@@ -443,8 +499,8 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 ("AddressRow1/Streetname/Streetname", addr.street_name),
                 ("AddressRow1/Apt/AptUnit", addr.unit),
                 ("AddressRow2/CityTow/CityTown", addr.city),
-                ("AddressRow2/Country/Country", addr.country),
-                ("AddressRow2/ProvinceState/ProvinceState", addr.province_state),
+                ("AddressRow2/Country/Country", _country_lic(addr.country)),
+                ("AddressRow2/ProvinceState/ProvinceState", _province_lic(addr.country, addr.province_state)),
                 ("AddressRow2/PostalCode/PostalCode", postal),
                 ("AddressRow2/District", addr.district or ""),
             ]:
@@ -464,8 +520,8 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     ("ResidentialAddressRow1/StreetNum/StreetNum", res.street_number),
                     ("ResidentialAddressRow1/StreetName/Streetname", res.street_name),
                     ("ResidentialAddressRow1/CityTown/CityTown", res.city),
-                    ("ResidentialAddressRow2/Country/Country", res.country),
-                    ("ResidentialAddressRow2/ProvinceState/ProvinceState", res.province_state),
+                    ("ResidentialAddressRow2/Country/Country", _country_lic(res.country)),
+                    ("ResidentialAddressRow2/ProvinceState/ProvinceState", _province_lic(res.country, res.province_state)),
                     ("ResidentialAddressRow2/PostalCode/PostalCode", res_postal),
                     ("ResidentialAddressRow2/District", res.district or ""),
                 ]:
@@ -512,7 +568,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 _set_path(row, "schoolName", "SchoolName", study.school_name)
                 _set_path(row, "schoolName", "Level", study.level)
                 _set_path(row, "schoolName", "Program", study.program)
-                _set_path(row, "ProvinceState", "Prov", study.province_state)
+                _set_path(row, "ProvinceState", "Prov", _province_lic("Canada", study.province_state))
                 _set_path(row, "CityTown", "CityTown", study.city)
                 _set_path(row, "Address", "Address", study.address)
                 dli_el = row.find("DLI")
@@ -583,14 +639,15 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     ("FromYear", e.from_year), ("FromMonth", e.from_month),
                     ("ToYear", e.to_year), ("ToMonth", e.to_month),
                     ("FieldOfStudy", e.field_of_study), ("School", e.school),
-                    ("CityTown", e.city), ("ProvState", e.province_state),
+                    ("CityTown", e.city),
+                    ("ProvState", _province_lic(e.country, e.province_state)),
                 ]:
                     el = edu_row.find(tag)
                     if el is not None:
                         el.text = val
                 country_el = _find(edu_row, "Country", "Country")
                 if country_el is not None:
-                    country_el.text = e.country
+                    country_el.text = _country_lic(e.country)
 
         # Occupation history (up to 3 rows)
         occ_section = page3.find("Occupation")
@@ -604,7 +661,8 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     for tag, val in [
                         ("FromYear", o.from_year), ("FromMonth", o.from_month),
                         ("ToYear", o.to_year), ("ToMonth", o.to_month),
-                        ("Employer", o.employer), ("ProvState", o.province_state),
+                        ("Employer", o.employer),
+                        ("ProvState", _province_lic(o.country, o.province_state)),
                     ]:
                         el = occ_row.find(tag)
                         if el is not None:
@@ -617,7 +675,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                         city_el.text = o.city
                     country_el = _find(occ_row, "Country", "Country")
                     if country_el is not None:
-                        country_el.text = o.country
+                        country_el.text = _country_lic(o.country)
 
     # ---- Page 4 — Background Questions ----
     page4 = form1.find("Page4")
