@@ -24,6 +24,7 @@ from ..imm1294.schema import (
     Sex,
 )
 from ..imm5409.schema import Imm5409Data
+from ..imm5475.schema import Imm5475Data
 from ..imm5476.schema import Imm5476Data
 from ..imm5646.schema import Imm5646Data
 from ..imm5707.schema import Child5707, MaritalStatus, Parent5707, Person5707
@@ -181,3 +182,4 @@ class StudyPermitData(BaseModel):
     common_law: Optional[Imm5409Data] = None
     custodian: Optional[Imm5646Data] = None
     representative: Optional[Imm5476Data] = None
+    release_authority: Optional[Imm5475Data] = None

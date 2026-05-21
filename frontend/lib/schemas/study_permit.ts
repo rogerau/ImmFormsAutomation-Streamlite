@@ -277,6 +277,32 @@ const representativeSchema = z.object({
   rep_date_signed: z.string().default(""),
 });
 
+// ---- IMM 5475 — Authority to Release Personal Information ----
+const releaseAuthoritySchema = z.object({
+  designated_family_name: z.string().min(1, "Required"),
+  designated_given_names: z.string().min(1, "Required"),
+  designated_relationship: z.string().default(""),
+  designated_unit: z.string().default(""),
+  designated_street_number: z.string().default(""),
+  designated_street_name: z.string().default(""),
+  designated_city: z.string().default(""),
+  designated_province_state: z.string().default(""),
+  designated_country: z.string().default(""),
+  designated_postal_code: z.string().default(""),
+  designated_phone_country_code: z.string().default(""),
+  designated_phone: z.string().default(""),
+  designated_email: z.string().default(""),
+  release_scope: z.enum(["all", "specific"]).default("all"),
+  specific_info: z.string().default(""),
+  effective_from: z.string().default(""),
+  effective_to: z.string().default(""),
+  cancel_previous: boolFromString.optional(),
+  applicant_signature: z.string().min(1, "Required"),
+  signed_date: dateStr,
+  signed_city: z.string().default(""),
+  signed_country: z.string().default(""),
+});
+
 // ---- Previous marriage (IMM 1294 subsection 11) ----
 const previousMarriageSchema = z.object({
   had_previous: requiredBoolFromString,
@@ -401,6 +427,7 @@ export const StudyPermitSchema = z
     common_law: commonLawSchema.nullable().optional(),
     custodian: custodianSchema.nullable().optional(),
     representative: representativeSchema.nullable().optional(),
+    release_authority: releaseAuthoritySchema.nullable().optional(),
   })
   .superRefine((d, ctx) => {
     const partnered = [

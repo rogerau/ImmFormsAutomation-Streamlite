@@ -12,6 +12,7 @@ import { EmploymentHistoryStep } from "./steps/EmploymentHistoryStep";
 import { CommonLawStep } from "./steps/CommonLawStep";
 import { CustodianStep } from "./steps/CustodianStep";
 import { RepresentativeStep } from "./steps/RepresentativeStep";
+import { ReleaseAuthorityStep } from "./steps/ReleaseAuthorityStep";
 import { ReviewSignStep } from "./steps/ReviewSignStep";
 import { FormsGuidance } from "./FormsGuidance";
 import type { TokenClaims } from "@/lib/token";
@@ -40,6 +41,7 @@ const OPT_STEPS: Record<string, string> = {
   imm5409: "Common-law Declaration",
   imm5646: "Custodian Declaration",
   imm5476: "Representative",
+  imm5475: "Authority to Release Info",
 };
 
 export function StudyPermitWizard({ token, claims }: Props) {
@@ -128,6 +130,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
     6: optionalForms.includes("imm5409") ? ["common_law"] : [],
     7: optionalForms.includes("imm5646") ? ["custodian"] : [],
     8: optionalForms.includes("imm5476") ? ["representative"] : [],
+    9: optionalForms.includes("imm5475") ? ["release_authority"] : [],
   };
 
   const handleNext = useCallback(async () => {
@@ -180,6 +183,9 @@ export function StudyPermitWizard({ token, claims }: Props) {
   }
   if (optionalForms.includes("imm5476")) {
     stepComponents[optIdx++] = <RepresentativeStep register={register} errors={errors} getValues={getValues} setValue={setValue} />;
+  }
+  if (optionalForms.includes("imm5475")) {
+    stepComponents[optIdx++] = <ReleaseAuthorityStep register={register} errors={errors} watch={watch} />;
   }
   stepComponents[totalSteps] = (
     <ReviewSignStep

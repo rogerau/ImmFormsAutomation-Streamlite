@@ -40,7 +40,6 @@ const GUIDANCE = [
     key: "imm5475",
     note:
       "Complete only if you authorize IRCC / CBSA to release information from your case file to someone other than yourself.",
-    notImplemented: true,
   },
   {
     code: "IMM 5646",
@@ -84,7 +83,6 @@ export function FormsGuidance({ activeOptionalForms }: Props) {
                 {g.required && " — required."}
                 {!g.required && enabled && " — included in your wizard."}
                 {!g.required && !enabled && " — not included in your wizard."}
-                {g.notImplemented && " (filling not yet automated; ask your lawyer.)"}
                 <span className="block text-blue-800">{g.note}</span>
               </span>
             </li>

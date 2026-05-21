@@ -69,9 +69,6 @@ SUBMISSIONS_HEADERS = [
     "military_service", "military_service_details",
     "political_party", "war_crimes",
     "consent_to_contact",
-    # Optional form summaries (key fields inline)
-    "common_law_partner_name", "cohabitation_start",
-    "custodian_name", "custodian_address",
     # Phase B additions — IMM 1294 full coverage
     "language_most_at_ease", "taken_language_test",
     "taiwan_passport", "israel_passport_not_valid",
@@ -102,6 +99,7 @@ SUBMISSIONS_HEADERS = [
     "pdf_imm5409_id", "pdf_imm5409_url",
     "pdf_imm5646_id", "pdf_imm5646_url",
     "pdf_imm5476_id", "pdf_imm5476_url",
+    "pdf_imm5475_id", "pdf_imm5475_url",
 ]
 
 
@@ -115,15 +113,6 @@ def submissions_row(
     s = f.spouse
     fa = f.father
     mo = f.mother
-
-    # Optional form summaries
-    cl_partner = data.common_law.partner_name if data.common_law else ""
-    cl_start = data.common_law.start_date if data.common_law else ""
-    cust_name = (
-        f"{data.custodian.custodian_family_name} {data.custodian.custodian_given_names}"
-        if data.custodian else ""
-    )
-    cust_addr = data.custodian.custodian_address if data.custodian else ""
 
     def _drive(form_id: str, key: str) -> str:
         return drive_results.get(form_id, {}).get(key, "")
@@ -205,8 +194,6 @@ def submissions_row(
         yn(data.military_service), data.military_service_details,
         yn(data.political_party), yn(data.war_crimes),
         yn(data.consent_to_contact),
-        # Optional form summaries
-        cl_partner, cl_start, cust_name, cust_addr,
         # Phase B additions — IMM 1294 full coverage
         (pi.language_most_at_ease.value if pi.language_most_at_ease else ""),
         yn(pi.taken_language_test),
@@ -268,6 +255,7 @@ def submissions_row(
         _drive("imm5409", "id"), _drive("imm5409", "webViewLink"),
         _drive("imm5646", "id"), _drive("imm5646", "webViewLink"),
         _drive("imm5476", "id"), _drive("imm5476", "webViewLink"),
+        _drive("imm5475", "id"), _drive("imm5475", "webViewLink"),
     ]
 
 
@@ -356,9 +344,7 @@ def education_rows(data: StudyPermitData) -> list[list]:
 
 REPRESENTATIVES_HEADERS = [
     "submission_id",
-    # Applicant (Section A of IMM 5476)
-    "applicant_family_name", "applicant_given_name", "applicant_dob", "uci_number",
-    # Representative identity + accreditation
+    # Representative identity + accreditation (applicant identity lives in Submissions)
     "rep_type", "rep_family_name", "rep_given_name",
     "iccrc_number", "provincial_law_society", "membership_id",
     "organization_name", "lawyer_name",
@@ -370,7 +356,6 @@ REPRESENTATIVES_HEADERS = [
     "fax_country_code", "fax_number",
     "email",
     # Signatures
-    "applicant_signature", "applicant_date_signed",
     "rep_signature", "rep_date_signed",
 ]
 
@@ -381,22 +366,129 @@ def representatives_row(data: StudyPermitData) -> Optional[list]:
         return None
     return [
         data.submission_id,
-        # Applicant
-        rep.applicant_family_name, rep.applicant_given_name,
-        rep.applicant_dob, rep.uci_number,
-        # Rep identity
         rep.rep_type.value if rep.rep_type else "",
         rep.rep_family_name, rep.rep_given_name,
         rep.iccrc_number, rep.provincial_law_society, rep.membership_id,
         rep.organization_name, rep.lawyer_name,
-        # Address
         rep.unit, rep.street_number, rep.street_name,
         rep.city, rep.province, rep.country, rep.postal_code,
-        # Phone / fax / email
         rep.phone_country_code, rep.phone_number,
         rep.fax_country_code, rep.fax_number,
         rep.email,
-        # Signatures
-        rep.applicant_signature, rep.applicant_date_signed,
         rep.rep_signature, rep.rep_date_signed,
+    ]
+
+
+# ---------------------------------------------------------------------------
+# CommonLaw tab (IMM 5409, conditional) — partner identity + relationship facts
+# ---------------------------------------------------------------------------
+
+COMMON_LAW_HEADERS = [
+    "submission_id",
+    "partner_name",
+    "cohabitation_city", "cohabitation_province", "cohabitation_country",
+    "years_together", "cohabitation_start", "cohabitation_end",
+    "section1_continuous", "section1_shared_financials",
+    "section1_represent_as_couple", "section1_primary_residence",
+    "has_children_of_union", "previous_declaration",
+    "additional_details",
+    "jurisdiction_country", "jurisdiction_province",
+    "declaration_city", "declaration_province", "declaration_country",
+    "declaration_day", "declaration_month", "declaration_year",
+    "partner_signature",
+]
+
+
+def common_law_row(data: StudyPermitData) -> Optional[list]:
+    cl = data.common_law
+    if not cl:
+        return None
+    return [
+        data.submission_id,
+        cl.partner_name,
+        cl.cohabitation_city, cl.cohabitation_province, cl.cohabitation_country,
+        cl.years_together, cl.start_date, cl.end_date,
+        cl.section1_q1, cl.section1_q2, cl.section1_q3, cl.section1_q4,
+        cl.has_children, cl.previous_declaration,
+        cl.additional_details,
+        cl.jurisdiction_country, cl.jurisdiction_province,
+        cl.declaration_city, cl.declaration_province, cl.declaration_country,
+        cl.declaration_day, cl.declaration_month, cl.declaration_year,
+        cl.partner_signature,
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Custodian tab (IMM 5646, conditional)
+# The custodian is a distinct person who is not necessarily a parent — so
+# their identity, status, and address get their own row. Student and parent
+# data already live in Submissions (applicant identity, father/mother).
+# ---------------------------------------------------------------------------
+
+CUSTODIAN_HEADERS = [
+    "submission_id",
+    "custodian_family_name", "custodian_given_names",
+    "custodian_status", "custodian_dob",
+    "custodian_address", "custodian_phone",
+    "sworn_city", "sworn_province", "sworn_country",
+    "sworn_day", "sworn_month", "sworn_year",
+    "parent_signature", "notary_signature",
+    "other_parent_name",
+]
+
+
+def custodian_row(data: StudyPermitData) -> Optional[list]:
+    c = data.custodian
+    if not c:
+        return None
+    return [
+        data.submission_id,
+        c.custodian_family_name, c.custodian_given_names,
+        c.custodian_status, c.custodian_dob,
+        c.custodian_address, c.custodian_phone,
+        c.sworn_city, c.sworn_province, c.sworn_country,
+        c.sworn_day, c.sworn_month, c.sworn_year,
+        c.parent_signature, c.notary_signature,
+        c.other_parent_name,
+    ]
+
+
+# ---------------------------------------------------------------------------
+# ReleaseAuthority tab (IMM 5475, conditional)
+# The designated individual is a distinct person. Applicant identity stays in
+# Submissions; signed_date/applicant_signature for this form are also stored
+# here because they are scope-specific to the release authorization.
+# ---------------------------------------------------------------------------
+
+RELEASE_AUTHORITY_HEADERS = [
+    "submission_id",
+    "designated_family_name", "designated_given_names",
+    "designated_relationship",
+    "designated_unit", "designated_street_number", "designated_street_name",
+    "designated_city", "designated_province_state",
+    "designated_country", "designated_postal_code",
+    "designated_phone_country_code", "designated_phone", "designated_email",
+    "release_scope", "specific_info",
+    "effective_from", "effective_to",
+    "cancel_previous",
+    "applicant_signature", "signed_date", "signed_city", "signed_country",
+]
+
+
+def release_authority_row(data: StudyPermitData) -> Optional[list]:
+    ra = data.release_authority
+    if not ra:
+        return None
+    return [
+        data.submission_id,
+        ra.designated_family_name, ra.designated_given_names,
+        ra.designated_relationship,
+        ra.designated_unit, ra.designated_street_number, ra.designated_street_name,
+        ra.designated_city, ra.designated_province_state,
+        ra.designated_country, ra.designated_postal_code,
+        ra.designated_phone_country_code, ra.designated_phone, ra.designated_email,
+        ra.release_scope, ra.specific_info,
+        ra.effective_from, ra.effective_to,
+        ra.cancel_previous,
+        ra.applicant_signature, ra.signed_date, ra.signed_city, ra.signed_country,
     ]

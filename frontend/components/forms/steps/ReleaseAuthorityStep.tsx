@@ -1,0 +1,282 @@
+"use client";
+import { FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
+import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
+
+interface Props {
+  register: UseFormRegister<StudyPermitData>;
+  errors: FieldErrors<StudyPermitData>;
+  watch: UseFormWatch<StudyPermitData>;
+}
+
+const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
+
+function Field({
+  label,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-600">*</span>}
+      </label>
+      {children}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+export function ReleaseAuthorityStep({ register, errors, watch }: Props) {
+  const ra = errors.release_authority as any;
+  const scope = watch("release_authority.release_scope" as any) as
+    | "all"
+    | "specific"
+    | undefined;
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold text-gray-800">
+        Authority to Release Personal Information (IMM 5475)
+      </h2>
+      <div className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>When to complete:</strong> Only fill in this section if you
+        authorize Immigration, Refugees and Citizenship Canada (IRCC) and the
+        Canada Border Services Agency (CBSA) to release information from your
+        case file to someone other than yourself.
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">
+        Designated individual
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field
+          label="Family Name"
+          required
+          error={ra?.designated_family_name?.message}
+        >
+          <input
+            {...register("release_authority.designated_family_name")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Given Name(s)"
+          required
+          error={ra?.designated_given_names?.message}
+        >
+          <input
+            {...register("release_authority.designated_given_names")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Relationship to applicant"
+          error={ra?.designated_relationship?.message}
+        >
+          <input
+            {...register("release_authority.designated_relationship")}
+            placeholder="e.g. Spouse, Lawyer, Parent"
+            className={inp}
+          />
+        </Field>
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1 pt-2">
+        Designated individual address
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Field label="Apt / Unit" error={ra?.designated_unit?.message}>
+          <input
+            {...register("release_authority.designated_unit")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Street Number"
+          error={ra?.designated_street_number?.message}
+        >
+          <input
+            {...register("release_authority.designated_street_number")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Street Name"
+          error={ra?.designated_street_name?.message}
+        >
+          <input
+            {...register("release_authority.designated_street_name")}
+            className={inp}
+          />
+        </Field>
+        <Field label="City" error={ra?.designated_city?.message}>
+          <input
+            {...register("release_authority.designated_city")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Country / Territory"
+          error={ra?.designated_country?.message}
+        >
+          <CountrySelect
+            {...register("release_authority.designated_country")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Province / State"
+          error={ra?.designated_province_state?.message}
+        >
+          <input
+            {...register("release_authority.designated_province_state")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Postal / Zip code"
+          error={ra?.designated_postal_code?.message}
+        >
+          <input
+            {...register("release_authority.designated_postal_code")}
+            className={inp}
+          />
+        </Field>
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1 pt-2">
+        Designated individual contact
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Field
+          label="Phone country code"
+          error={ra?.designated_phone_country_code?.message}
+        >
+          <input
+            {...register("release_authority.designated_phone_country_code")}
+            placeholder="1"
+            className={inp}
+          />
+        </Field>
+        <Field label="Phone number" error={ra?.designated_phone?.message}>
+          <input
+            {...register("release_authority.designated_phone")}
+            className={inp}
+          />
+        </Field>
+        <Field label="Email" error={ra?.designated_email?.message}>
+          <input
+            {...register("release_authority.designated_email")}
+            type="email"
+            className={inp}
+          />
+        </Field>
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1 pt-2">
+        Scope of authorization
+      </h3>
+      <Field label="Information to release" error={ra?.release_scope?.message}>
+        <select
+          {...register("release_authority.release_scope")}
+          className={inp}
+        >
+          <option value="all">All information on file</option>
+          <option value="specific">Only specific information (describe below)</option>
+        </select>
+      </Field>
+      {scope === "specific" && (
+        <Field label="Specific information" error={ra?.specific_info?.message}>
+          <textarea
+            {...register("release_authority.specific_info")}
+            rows={3}
+            className={inp}
+          />
+        </Field>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field
+          label="Effective from (YYYY-MM-DD)"
+          error={ra?.effective_from?.message}
+        >
+          <input
+            {...register("release_authority.effective_from")}
+            placeholder="YYYY-MM-DD"
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Effective to (YYYY-MM-DD)"
+          error={ra?.effective_to?.message}
+        >
+          <input
+            {...register("release_authority.effective_to")}
+            placeholder="YYYY-MM-DD"
+            className={inp}
+          />
+        </Field>
+      </div>
+
+      <Field
+        label="Cancel previous designation?"
+        error={ra?.cancel_previous?.message}
+      >
+        <select
+          {...register("release_authority.cancel_previous")}
+          className={inp}
+        >
+          <option value="">-- Select --</option>
+          <option value="true">Yes — cancel previous</option>
+          <option value="false">No — this is a new designation</option>
+        </select>
+      </Field>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1 pt-2">
+        Applicant declaration
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field
+          label="Applicant signature (typed name)"
+          required
+          error={ra?.applicant_signature?.message}
+        >
+          <input
+            {...register("release_authority.applicant_signature")}
+            className={inp}
+          />
+        </Field>
+        <Field
+          label="Date signed (YYYY-MM-DD)"
+          required
+          error={ra?.signed_date?.message}
+        >
+          <input
+            {...register("release_authority.signed_date")}
+            placeholder="YYYY-MM-DD"
+            className={inp}
+          />
+        </Field>
+        <Field label="City signed" error={ra?.signed_city?.message}>
+          <input
+            {...register("release_authority.signed_city")}
+            className={inp}
+          />
+        </Field>
+        <Field label="Country signed" error={ra?.signed_country?.message}>
+          <CountrySelect
+            {...register("release_authority.signed_country")}
+            className={inp}
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}

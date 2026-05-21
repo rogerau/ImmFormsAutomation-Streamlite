@@ -22,9 +22,12 @@ from .forms.study_permit.schema import StudyPermitData
 from .integrations.google import append_rows, upload_pdf_to_drive
 from .integrations.sheets_study_permit import (
     children_rows,
+    common_law_row,
+    custodian_row,
     education_rows,
     employment_rows,
     new_submission_id,
+    release_authority_row,
     representatives_row,
     submissions_row,
 )
@@ -196,6 +199,15 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
         rep_row = representatives_row(payload)
         if rep_row:
             append_rows(sheet_id, "Representatives", [rep_row])
+        cl_row = common_law_row(payload)
+        if cl_row:
+            append_rows(sheet_id, "CommonLaw", [cl_row])
+        cust_row = custodian_row(payload)
+        if cust_row:
+            append_rows(sheet_id, "Custodian", [cust_row])
+        ra_row = release_authority_row(payload)
+        if ra_row:
+            append_rows(sheet_id, "ReleaseAuthority", [ra_row])
     except Exception as e:
         log.exception("Sheets append failed")
         sheets_warning = str(e)
