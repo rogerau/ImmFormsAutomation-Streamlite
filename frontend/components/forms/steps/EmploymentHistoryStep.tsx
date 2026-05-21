@@ -1,6 +1,7 @@
 "use client";
 import { Control, FieldErrors, UseFormRegister, UseFormWatch, useFieldArray } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   control: Control<StudyPermitData>;
@@ -73,7 +74,7 @@ export function EmploymentHistoryStep({ control, register, errors, watch }: Prop
                 <input {...register(`education_history.${idx}.city`)} className={inp} />
               </Field>
               <Field label="Country" required error={errors.education_history?.[idx]?.country?.message}>
-                <input {...register(`education_history.${idx}.country`)} className={inp} />
+                <CountrySelect {...register(`education_history.${idx}.country`)} className={inp} />
               </Field>
             </div>
           </div>
@@ -119,7 +120,7 @@ export function EmploymentHistoryStep({ control, register, errors, watch }: Prop
                 <input {...register(`occupation_history.${idx}.city`)} className={inp} />
               </Field>
               <Field label="Country" required error={errors.occupation_history?.[idx]?.country?.message}>
-                <input {...register(`occupation_history.${idx}.country`)} className={inp} />
+                <CountrySelect {...register(`occupation_history.${idx}.country`)} className={inp} />
               </Field>
             </div>
           </div>

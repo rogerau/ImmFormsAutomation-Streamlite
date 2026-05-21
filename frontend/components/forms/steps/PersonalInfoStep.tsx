@@ -1,6 +1,7 @@
 "use client";
 import { FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
@@ -59,7 +60,7 @@ function ResidenceRow({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3 bg-gray-50 rounded border">
       <Field label="Country / Territory" error={errors?.country?.message}>
-        <input {...register(`${prefix}.country` as any)} className={inp} />
+        <CountrySelect {...register(`${prefix}.country` as any)} className={inp} />
       </Field>
       <Field label="Status" error={errors?.status?.message}>
         <select {...register(`${prefix}.status` as any)} className={inp}>
@@ -118,16 +119,16 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
           </select>
         </Field>
         <Field label="Country of Birth" required error={pi?.place_birth_country?.message}>
-          <input {...register("personal_info.place_birth_country")} className={inp} />
+          <CountrySelect {...register("personal_info.place_birth_country")} className={inp} />
         </Field>
         <Field label="City of Birth" required error={pi?.place_birth_city?.message}>
           <input {...register("personal_info.place_birth_city")} className={inp} />
         </Field>
         <Field label="Country of Citizenship" required error={pi?.citizenship?.message}>
-          <input {...register("personal_info.citizenship")} className={inp} />
+          <CountrySelect {...register("personal_info.citizenship")} className={inp} />
         </Field>
         <Field label="Current Country of Residence" required error={pi?.current_country?.message}>
-          <input {...register("personal_info.current_country")} className={inp} />
+          <CountrySelect {...register("personal_info.current_country")} className={inp} />
         </Field>
         <Field label="Marital Status" required error={pi?.marital_status?.message}>
           <select {...register("personal_info.marital_status")} className={inp}>
@@ -214,7 +215,7 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
           <input {...register("passport.passport_number")} className={inp} />
         </Field>
         <Field label="Country of Issue" required error={errors.passport?.country_of_issue?.message}>
-          <input {...register("passport.country_of_issue")} className={inp} />
+          <CountrySelect {...register("passport.country_of_issue")} className={inp} />
         </Field>
         <Field label="Issue Date" required error={errors.passport?.issue_date?.message}>
           <input {...register("passport.issue_date")} placeholder="YYYY-MM-DD" className={inp} />
@@ -255,7 +256,7 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
             <input {...register("national_id.doc_number")} className={inp} />
           </Field>
           <Field label="Country of Issue" error={nat?.country_of_issue?.message}>
-            <input {...register("national_id.country_of_issue")} className={inp} />
+            <CountrySelect {...register("national_id.country_of_issue")} className={inp} />
           </Field>
           <Field label="Issue Date" error={nat?.issue_date?.message}>
             <input {...register("national_id.issue_date")} placeholder="YYYY-MM-DD" className={inp} />
@@ -310,7 +311,7 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
           <input {...register("contact.mailing_address.district")} className={inp} />
         </Field>
         <Field label="Country" required error={contactErr?.mailing_address?.country?.message}>
-          <input {...register("contact.mailing_address.country")} className={inp} />
+          <CountrySelect {...register("contact.mailing_address.country")} className={inp} />
         </Field>
         <Field label="Province / State" error={contactErr?.mailing_address?.province_state?.message}>
           <input {...register("contact.mailing_address.province_state")} className={inp} />
@@ -346,7 +347,7 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
             <input {...register("contact.residential_address.district")} className={inp} />
           </Field>
           <Field label="Country" error={contactErr?.residential_address?.country?.message}>
-            <input {...register("contact.residential_address.country")} className={inp} />
+            <CountrySelect {...register("contact.residential_address.country")} className={inp} />
           </Field>
           <Field label="Province / State" error={contactErr?.residential_address?.province_state?.message}>
             <input {...register("contact.residential_address.province_state")} className={inp} />

@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { FieldErrors, UseFormRegister, UseFormGetValues, UseFormSetValue } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
@@ -74,7 +75,7 @@ export function RepresentativeStep({ register, errors, getValues, setValue }: Pr
           <input {...register("representative.province")} className={inp} />
         </Field>
         <Field label="Country" required error={r?.country?.message}>
-          <input {...register("representative.country")} className={inp} />
+          <CountrySelect {...register("representative.country")} className={inp} />
         </Field>
         <Field label="Postal Code" error={r?.postal_code?.message}>
           <input {...register("representative.postal_code")} className={inp} />

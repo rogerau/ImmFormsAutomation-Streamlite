@@ -1,6 +1,7 @@
 "use client";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
@@ -31,7 +32,7 @@ export function CommonLawStep({ register, errors }: Props) {
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Jurisdiction</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Country where declaration is made" required error={(cl as any)?.jurisdiction_country?.message}>
-          <input {...register("common_law.jurisdiction_country")} className={inp} />
+          <CountrySelect {...register("common_law.jurisdiction_country")} className={inp} />
         </Field>
         <Field label="Province / State" error={(cl as any)?.jurisdiction_province?.message}>
           <input {...register("common_law.jurisdiction_province")} className={inp} />
@@ -56,7 +57,7 @@ export function CommonLawStep({ register, errors }: Props) {
           <input {...register("common_law.cohabitation_city")} className={inp} />
         </Field>
         <Field label="Cohabitation Country" required error={(cl as any)?.cohabitation_country?.message}>
-          <input {...register("common_law.cohabitation_country")} className={inp} />
+          <CountrySelect {...register("common_law.cohabitation_country")} className={inp} />
         </Field>
       </div>
 
@@ -66,7 +67,7 @@ export function CommonLawStep({ register, errors }: Props) {
           <input {...register("common_law.declaration_city")} className={inp} />
         </Field>
         <Field label="Country" required error={(cl as any)?.declaration_country?.message}>
-          <input {...register("common_law.declaration_country")} className={inp} />
+          <CountrySelect {...register("common_law.declaration_country")} className={inp} />
         </Field>
         <Field label="Day" required error={(cl as any)?.declaration_day?.message}>
           <input {...register("common_law.declaration_day")} placeholder="DD" className={inp} />

@@ -1,6 +1,7 @@
 "use client";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
@@ -103,7 +104,7 @@ export function CustodianStep({ register, errors }: Props) {
           <input {...register("custodian.sworn_city")} className={inp} />
         </Field>
         <Field label="Sworn in Country" required error={c?.sworn_country?.message}>
-          <input {...register("custodian.sworn_country")} className={inp} />
+          <CountrySelect {...register("custodian.sworn_country")} className={inp} />
         </Field>
         <Field label="Day" required error={c?.sworn_day?.message}><input {...register("custodian.sworn_day")} placeholder="DD" className={inp} /></Field>
         <Field label="Month" required error={c?.sworn_month?.message}><input {...register("custodian.sworn_month")} placeholder="MM" className={inp} /></Field>

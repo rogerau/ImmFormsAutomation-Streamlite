@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { FieldErrors, UseFormRegister, UseFormWatch, UseFormSetValue } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 const MARITAL_STATUSES = [
   "Annulled marriage",
@@ -77,7 +78,7 @@ function PersonBlock({
           <input {...register(`${prefix}.date_of_birth` as any)} placeholder="YYYY-MM-DD" className={inp} />
         </Field>
         <Field label="Country of Birth" required error={errors?.country_of_birth?.message}>
-          <input {...register(`${prefix}.country_of_birth` as any)} className={inp} />
+          <CountrySelect {...register(`${prefix}.country_of_birth` as any)} className={inp} />
         </Field>
         {showStatus && (
           <Field label="Status" required error={errors?.status?.message}>

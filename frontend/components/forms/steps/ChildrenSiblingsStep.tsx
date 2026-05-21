@@ -1,6 +1,7 @@
 "use client";
 import { Control, FieldErrors, UseFormRegister, useFieldArray } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 const MARITAL_STATUSES = [
   "Annulled marriage", "Common-law", "Divorced", "Legally separated",
@@ -64,7 +65,7 @@ export function ChildrenSiblingsStep({ control, register, errors }: Props) {
               <input {...register(`family.children.${idx}.date_of_birth`)} placeholder="YYYY-MM-DD" className={inp} />
             </Field>
             <Field label="Country of Birth" required error={f?.children?.[idx]?.country_of_birth?.message}>
-              <input {...register(`family.children.${idx}.country_of_birth`)} className={inp} />
+              <CountrySelect {...register(`family.children.${idx}.country_of_birth`)} className={inp} />
             </Field>
             <Field label="Current Address" required error={f?.children?.[idx]?.address?.message}>
               <input {...register(`family.children.${idx}.address`)} className={inp} />
