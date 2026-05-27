@@ -74,7 +74,10 @@ def fill_pdf(data: "StudyPermitData") -> bytes:
     reader = PdfReader(UNENC)
     writer = PdfWriter()
     writer.clone_reader_document_root(reader)
-    writer.update_page_form_field_values(writer.pages[0], fields, auto_regenerate=False)
+    # `page=None` updates every page and `auto_regenerate=True` (default) sets
+    # /NeedAppearances so Adobe regenerates field appearance streams on open —
+    # without both, fields show blank even though /V is populated.
+    writer.update_page_form_field_values(None, fields)
     buf = io.BytesIO()
     writer.write(buf)
     return buf.getvalue()

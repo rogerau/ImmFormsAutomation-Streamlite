@@ -45,10 +45,9 @@ class Imm5646Data(BaseModel):
     sworn_day: str
     sworn_month: str
     sworn_year: str
-    parent_signature: str          # parent/guardian typed name
-    notary_signature: str = ""     # optional notary
+    parent_signature: str          # parent/guardian (1) typed name
+    parent2_signature: str = ""    # parent/guardian (2) typed name (optional)
 
     # Page 2 additional declarations (if applicable)
-    other_parent_name: str = ""    # other parent's name
     parent1_name_decl: str = ""
     parent2_name_decl: str = ""

@@ -388,14 +388,17 @@ COMMON_LAW_HEADERS = [
     "partner_name",
     "cohabitation_city", "cohabitation_province", "cohabitation_country",
     "years_together", "cohabitation_start", "cohabitation_end",
+    "cohabitation_county",
     "section1_continuous", "section1_shared_financials",
     "section1_represent_as_couple", "section1_primary_residence",
     "has_children_of_union", "previous_declaration",
     "additional_details",
     "jurisdiction_country", "jurisdiction_province",
-    "declaration_city", "declaration_province", "declaration_country",
+    "declaration_city", "declaration_county",
+    "declaration_province", "declaration_country",
     "declaration_day", "declaration_month", "declaration_year",
     "partner_signature",
+    "admin_name", "admin_signature",
 ]
 
 
@@ -408,13 +411,16 @@ def common_law_row(data: StudyPermitData) -> Optional[list]:
         cl.partner_name,
         cl.cohabitation_city, cl.cohabitation_province, cl.cohabitation_country,
         cl.years_together, cl.start_date, cl.end_date,
+        cl.cohabitation_county,
         cl.section1_q1, cl.section1_q2, cl.section1_q3, cl.section1_q4,
         cl.has_children, cl.previous_declaration,
         cl.additional_details,
         cl.jurisdiction_country, cl.jurisdiction_province,
-        cl.declaration_city, cl.declaration_province, cl.declaration_country,
+        cl.declaration_city, cl.declaration_county,
+        cl.declaration_province, cl.declaration_country,
         cl.declaration_day, cl.declaration_month, cl.declaration_year,
         cl.partner_signature,
+        cl.admin_name, cl.admin_signature,
     ]
 
 
@@ -432,8 +438,9 @@ CUSTODIAN_HEADERS = [
     "custodian_address", "custodian_phone",
     "sworn_city", "sworn_province", "sworn_country",
     "sworn_day", "sworn_month", "sworn_year",
-    "parent_signature", "notary_signature",
-    "other_parent_name",
+    "parent_signature",
+    "parent2_family_name", "parent2_given_names", "parent2_dob",
+    "parent2_address", "parent2_phone", "parent2_signature",
 ]
 
 
@@ -448,8 +455,9 @@ def custodian_row(data: StudyPermitData) -> Optional[list]:
         c.custodian_address, c.custodian_phone,
         c.sworn_city, c.sworn_province, c.sworn_country,
         c.sworn_day, c.sworn_month, c.sworn_year,
-        c.parent_signature, c.notary_signature,
-        c.other_parent_name,
+        c.parent_signature,
+        c.parent2_family_name, c.parent2_given_names, c.parent2_dob,
+        c.parent2_address, c.parent2_phone, c.parent2_signature,
     ]
 
 
@@ -468,8 +476,6 @@ RELEASE_AUTHORITY_HEADERS = [
     "designated_city", "designated_province_state",
     "designated_country", "designated_postal_code",
     "designated_phone_country_code", "designated_phone", "designated_email",
-    "release_scope", "specific_info",
-    "effective_from", "effective_to",
     "cancel_previous",
     "applicant_signature", "signed_date", "signed_city", "signed_country",
 ]
@@ -487,8 +493,6 @@ def release_authority_row(data: StudyPermitData) -> Optional[list]:
         ra.designated_city, ra.designated_province_state,
         ra.designated_country, ra.designated_postal_code,
         ra.designated_phone_country_code, ra.designated_phone, ra.designated_email,
-        ra.release_scope, ra.specific_info,
-        ra.effective_from, ra.effective_to,
         ra.cancel_previous,
         ra.applicant_signature, ra.signed_date, ra.signed_city, ra.signed_country,
     ]

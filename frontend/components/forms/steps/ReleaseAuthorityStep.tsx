@@ -1,12 +1,11 @@
 "use client";
-import { FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
+import { FieldErrors, UseFormRegister } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
-  watch: UseFormWatch<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -33,12 +32,8 @@ function Field({
   );
 }
 
-export function ReleaseAuthorityStep({ register, errors, watch }: Props) {
+export function ReleaseAuthorityStep({ register, errors }: Props) {
   const ra = errors.release_authority as any;
-  const scope = watch("release_authority.release_scope" as any) as
-    | "all"
-    | "specific"
-    | undefined;
 
   return (
     <div className="space-y-4">
@@ -180,51 +175,6 @@ export function ReleaseAuthorityStep({ register, errors, watch }: Props) {
         </Field>
       </div>
 
-      <h3 className="text-base font-medium text-gray-700 border-b pb-1 pt-2">
-        Scope of authorization
-      </h3>
-      <Field label="Information to release" error={ra?.release_scope?.message}>
-        <select
-          {...register("release_authority.release_scope")}
-          className={inp}
-        >
-          <option value="all">All information on file</option>
-          <option value="specific">Only specific information (describe below)</option>
-        </select>
-      </Field>
-      {scope === "specific" && (
-        <Field label="Specific information" error={ra?.specific_info?.message}>
-          <textarea
-            {...register("release_authority.specific_info")}
-            rows={3}
-            className={inp}
-          />
-        </Field>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field
-          label="Effective from (YYYY-MM-DD)"
-          error={ra?.effective_from?.message}
-        >
-          <input
-            {...register("release_authority.effective_from")}
-            placeholder="YYYY-MM-DD"
-            className={inp}
-          />
-        </Field>
-        <Field
-          label="Effective to (YYYY-MM-DD)"
-          error={ra?.effective_to?.message}
-        >
-          <input
-            {...register("release_authority.effective_to")}
-            placeholder="YYYY-MM-DD"
-            className={inp}
-          />
-        </Field>
-      </div>
-
       <Field
         label="Cancel previous designation?"
         error={ra?.cancel_previous?.message}
@@ -234,7 +184,7 @@ export function ReleaseAuthorityStep({ register, errors, watch }: Props) {
           className={inp}
         >
           <option value="">-- Select --</option>
-          <option value="true">Yes — cancel previous</option>
+          <option value="true">Yes — withdraw previous authorization</option>
           <option value="false">No — this is a new designation</option>
         </select>
       </Field>

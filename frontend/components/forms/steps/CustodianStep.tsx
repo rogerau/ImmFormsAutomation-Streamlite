@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
@@ -10,7 +11,17 @@ interface Props {
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -24,6 +35,9 @@ function Field({ label, required, error, children }: { label: string; required?:
 
 export function CustodianStep({ register, errors }: Props) {
   const c = errors.custodian as any;
+  // UI-only gate; not persisted. When toggled on, parent2_* inputs reveal.
+  const [hasParent2, setHasParent2] = useState(false);
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Custodian Declaration (IMM 5646)</h2>
@@ -45,7 +59,7 @@ export function CustodianStep({ register, errors }: Props) {
           <input {...register("custodian.student_dob")} placeholder="YYYY-MM-DD" className={inp} />
         </Field>
         <Field label="Citizenship" required error={c?.student_citizenship?.message}>
-          <input {...register("custodian.student_citizenship")} className={inp} />
+          <CountrySelect {...register("custodian.student_citizenship")} className={inp} />
         </Field>
         <Field label="Sex" required error={c?.student_sex?.message}>
           <select {...register("custodian.student_sex")} className={inp}>
@@ -64,12 +78,60 @@ export function CustodianStep({ register, errors }: Props) {
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Parent / Guardian 1</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {[["parent1_family_name","Family Name"],["parent1_given_names","Given Name(s)"],["parent1_dob","Date of Birth (YYYY-MM-DD)"],["parent1_address","Address"],["parent1_phone","Phone"]].map(([k, lbl]) => (
-          <Field key={k} label={lbl} required error={c?.[k]?.message}>
-            <input {...register(`custodian.${k}` as any)} className={inp} />
-          </Field>
-        ))}
+        <Field label="Family Name" required error={c?.parent1_family_name?.message}>
+          <input {...register("custodian.parent1_family_name")} className={inp} />
+        </Field>
+        <Field label="Given Name(s)" required error={c?.parent1_given_names?.message}>
+          <input {...register("custodian.parent1_given_names")} className={inp} />
+        </Field>
+        <Field label="Date of Birth (YYYY-MM-DD)" required error={c?.parent1_dob?.message}>
+          <input {...register("custodian.parent1_dob")} placeholder="YYYY-MM-DD" className={inp} />
+        </Field>
+        <Field label="Address" required error={c?.parent1_address?.message}>
+          <input {...register("custodian.parent1_address")} className={inp} />
+        </Field>
+        <Field label="Phone" required error={c?.parent1_phone?.message}>
+          <input {...register("custodian.parent1_phone")} className={inp} />
+        </Field>
       </div>
+
+      <div className="pt-2">
+        <label className="inline-flex items-center text-sm font-medium text-gray-700">
+          <input
+            type="checkbox"
+            className="mr-2"
+            checked={hasParent2}
+            onChange={(e) => setHasParent2(e.target.checked)}
+          />
+          Add a second parent / guardian (optional)
+        </label>
+        <p className="text-xs text-gray-500 ml-6 mt-1">
+          IMM 5646 lets you list two parents / guardians and capture both signatures on
+          page 2. Leave unchecked if there is only one parent / guardian.
+        </p>
+      </div>
+      {hasParent2 && (
+        <>
+          <h3 className="text-base font-medium text-gray-700 border-b pb-1">Parent / Guardian 2</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Family Name" error={c?.parent2_family_name?.message}>
+              <input {...register("custodian.parent2_family_name")} className={inp} />
+            </Field>
+            <Field label="Given Name(s)" error={c?.parent2_given_names?.message}>
+              <input {...register("custodian.parent2_given_names")} className={inp} />
+            </Field>
+            <Field label="Date of Birth (YYYY-MM-DD)" error={c?.parent2_dob?.message}>
+              <input {...register("custodian.parent2_dob")} placeholder="YYYY-MM-DD" className={inp} />
+            </Field>
+            <Field label="Address" error={c?.parent2_address?.message}>
+              <input {...register("custodian.parent2_address")} className={inp} />
+            </Field>
+            <Field label="Phone" error={c?.parent2_phone?.message}>
+              <input {...register("custodian.parent2_phone")} className={inp} />
+            </Field>
+          </div>
+        </>
+      )}
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Custodian Information</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -82,7 +144,7 @@ export function CustodianStep({ register, errors }: Props) {
         <Field label="Date of Birth" required error={c?.custodian_dob?.message}>
           <input {...register("custodian.custodian_dob")} placeholder="YYYY-MM-DD" className={inp} />
         </Field>
-        <Field label="Status in Canada" error={c?.custodian_status?.message}>
+        <Field label="Status in Canada" required error={c?.custodian_status?.message}>
           <select {...register("custodian.custodian_status")} className={inp}>
             <option value="Canadian Citizen">Canadian Citizen</option>
             <option value="Permanent Resident">Permanent Resident</option>
@@ -107,15 +169,29 @@ export function CustodianStep({ register, errors }: Props) {
         <Field label="Sworn in City" required error={c?.sworn_city?.message}>
           <input {...register("custodian.sworn_city")} className={inp} />
         </Field>
+        <Field label="Sworn in Province / State" error={c?.sworn_province?.message}>
+          <input {...register("custodian.sworn_province")} className={inp} />
+        </Field>
         <Field label="Sworn in Country" required error={c?.sworn_country?.message}>
           <CountrySelect {...register("custodian.sworn_country")} className={inp} />
         </Field>
-        <Field label="Day" required error={c?.sworn_day?.message}><input {...register("custodian.sworn_day")} placeholder="DD" className={inp} /></Field>
-        <Field label="Month" required error={c?.sworn_month?.message}><input {...register("custodian.sworn_month")} placeholder="MM" className={inp} /></Field>
-        <Field label="Year" required error={c?.sworn_year?.message}><input {...register("custodian.sworn_year")} placeholder="YYYY" className={inp} /></Field>
-        <Field label="Parent Signature (type full name)" required error={c?.parent_signature?.message}>
+        <Field label="Day" required error={c?.sworn_day?.message}>
+          <input {...register("custodian.sworn_day")} placeholder="DD" className={inp} />
+        </Field>
+        <Field label="Month" required error={c?.sworn_month?.message}>
+          <input {...register("custodian.sworn_month")} placeholder="MM" className={inp} />
+        </Field>
+        <Field label="Year" required error={c?.sworn_year?.message}>
+          <input {...register("custodian.sworn_year")} placeholder="YYYY" className={inp} />
+        </Field>
+        <Field label="Parent / Guardian 1 Signature (type full name)" required error={c?.parent_signature?.message}>
           <input {...register("custodian.parent_signature")} className={inp} />
         </Field>
+        {hasParent2 && (
+          <Field label="Parent / Guardian 2 Signature (type full name)" error={c?.parent2_signature?.message}>
+            <input {...register("custodian.parent2_signature")} className={inp} />
+          </Field>
+        )}
       </div>
     </div>
   );

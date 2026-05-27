@@ -30,6 +30,7 @@ def build_field_dict(data: "StudyPermitData") -> dict:
         "IMM_5409[0].Page1[0].Info[0].FirstName[0]": d.applicant_name,
         "IMM_5409[0].Page1[0].Info[0].SecondName[0]": d.partner_name,
         "IMM_5409[0].Page1[0].Info[0].City[0]": d.cohabitation_city,
+        "IMM_5409[0].Page1[0].Info[0].County[0]": d.cohabitation_county,
         "IMM_5409[0].Page1[0].Info[0].Province[0]": d.cohabitation_province,
         "IMM_5409[0].Page1[0].Info[0].Country[0]": d.cohabitation_country,
         "IMM_5409[0].Page1[0].Info[0].YearsTogether[0]": d.years_together,
@@ -52,11 +53,15 @@ def build_field_dict(data: "StudyPermitData") -> dict:
         "IMM_5409[0].Page1[0].Section5[0].NamePartner[0]": d.partner_name,
         "IMM_5409[0].Page1[0].Section5[0].SignaturePartner[0]": d.partner_signature,
         "IMM_5409[0].Page1[0].Section5[0].City[0]": d.declaration_city,
+        "IMM_5409[0].Page1[0].Section5[0].County[0]": d.declaration_county,
         "IMM_5409[0].Page1[0].Section5[0].Province[0]": d.declaration_province,
         "IMM_5409[0].Page1[0].Section5[0].Country[0]": d.declaration_country,
         "IMM_5409[0].Page1[0].Section5[0].Day[0]": d.declaration_day,
         "IMM_5409[0].Page1[0].Section5[0].Month[0]": d.declaration_month,
         "IMM_5409[0].Page1[0].Section5[0].Year[0]": d.declaration_year,
+        # Commissioner / notary witnessing the declaration (optional)
+        "IMM_5409[0].Page1[0].Section5[0].AdminDecl[0]": d.admin_name,
+        "IMM_5409[0].Page1[0].Section5[0].SignatureAdminDecl[0]": d.admin_signature,
     }
     return fields
 
@@ -71,7 +76,9 @@ def fill_pdf(data: "StudyPermitData") -> bytes:
     reader = PdfReader(UNENC)
     writer = PdfWriter()
     writer.clone_reader_document_root(reader)
-    writer.update_page_form_field_values(writer.pages[0], fields, auto_regenerate=False)
+    # Same fix as IMM 5476: process all pages and let pypdf set /NeedAppearances
+    # so Adobe regenerates field appearance streams on open.
+    writer.update_page_form_field_values(None, fields)
     buf = io.BytesIO()
     writer.write(buf)
     return buf.getvalue()

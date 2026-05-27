@@ -15,6 +15,7 @@ class Imm5409Data(BaseModel):
 
     # Cohabitation details
     cohabitation_city: str
+    cohabitation_county: str = ""
     cohabitation_province: str = ""
     cohabitation_country: str
     years_together: str
@@ -39,6 +40,7 @@ class Imm5409Data(BaseModel):
 
     # Section 5 — declarations and signatures
     declaration_city: str
+    declaration_county: str = ""
     declaration_province: str = ""
     declaration_country: str
     declaration_day: str
@@ -46,3 +48,6 @@ class Imm5409Data(BaseModel):
     declaration_year: str
     applicant_signature: str   # typed name
     partner_signature: str     # typed name
+    # Section 5 — Commissioner / notary witnessing the declaration (optional)
+    admin_name: str = ""
+    admin_signature: str = ""

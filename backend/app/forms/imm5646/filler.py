@@ -45,6 +45,25 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 
     sex_val = "1" if d.student_sex.lower().startswith("m") else "2"
 
+    # statusGroup is an exclGroup whose items are integer "1" (Canadian citizen)
+    # and "2" (Permanent resident). Writing the raw string label leaves both
+    # checkboxes unticked.
+    _STATUS_VAL = {"canadian citizen": "1", "permanent resident": "2"}
+    status_val = _STATUS_VAL.get((d.custodian_status or "").strip().lower(), "")
+
+    # Parent/guardian signature date is reused from the sworn date.
+    parent_sig_date_iso = (
+        f"{d.sworn_year}-{d.sworn_month}-{d.sworn_day}"
+        if (d.sworn_year and d.sworn_month and d.sworn_day)
+        else ""
+    )
+    parent2_sig_xml = (
+        f"<parentSig2>{xe(d.parent2_signature)}</parentSig2>"
+        f"<subParentSig2date>{_date_digits(parent_sig_date_iso)}</subParentSig2date>"
+        if d.parent2_signature
+        else "<parentSig2/><subParentSig2date><iDate><d/><d/><d/><d/><d/><d/><d/><d/></iDate><theDate/></subParentSig2date>"
+    )
+
     # Build parent blocks (always 2)
     parent1 = _parent_block(
         d.parent1_family_name, d.parent1_given_names,
@@ -76,7 +95,7 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 <subCustodian>
 <FamilyName>{xe(d.custodian_family_name)}</FamilyName>
 <GivenNames>{xe(d.custodian_given_names)}</GivenNames>
-<subStatus><statusGroup>{xe(d.custodian_status)}</statusGroup></subStatus>
+<subStatus><statusGroup>{status_val}</statusGroup></subStatus>
 <DOB>{_date_digits(d.custodian_dob)}</DOB>
 <Address>{xe(d.custodian_address)}</Address>
 <Telephone>{xe(d.custodian_phone)}</Telephone>
@@ -94,28 +113,24 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 <swornMonth>{xe(d.sworn_month)}</swornMonth>
 <swornYear>{xe(d.sworn_year)}</swornYear>
 <parentSig1>{xe(d.parent_signature)}</parentSig1>
-<subParentSig1date>{_date_digits(d.sworn_year + "-" + d.sworn_month + "-" + d.sworn_day)}</subParentSig1date>
-<notarySig>{xe(d.notary_signature)}</notarySig>
+<subParentSig1date>{_date_digits(parent_sig_date_iso)}</subParentSig1date>
 </subDeclaration>"""
 
     page2_decl = f"""<subDeclaration>
 <childResideGroup/>
-<nameOther>{xe(d.other_parent_name)}</nameOther>
 <nameParent1>{xe(d.parent1_name_decl or d.parent1_family_name)}</nameParent1>
 <nameParent2>{xe(d.parent2_name_decl or d.parent2_family_name)}</nameParent2>
 <nameStudent>{xe(d.student_name_for_decl)}</nameStudent>
 <nameCust>{xe(d.custodian_name_for_decl)}</nameCust>
 <parentSig1>{xe(d.parent_signature)}</parentSig1>
-<subParentSig1date>{_date_digits(d.sworn_year + "-" + d.sworn_month + "-" + d.sworn_day)}</subParentSig1date>
-<parentSig2/>
-<subParentSig2date><iDate><d/><d/><d/><d/><d/><d/><d/><d/></iDate><theDate/></subParentSig2date>
+<subParentSig1date>{_date_digits(parent_sig_date_iso)}</subParentSig1date>
+{parent2_sig_xml}
 <swornCity>{xe(d.sworn_city)}</swornCity>
 <swornProv>{xe(d.sworn_province)}</swornProv>
 <swornCountry>{xe(d.sworn_country)}</swornCountry>
 <swornDay>{xe(d.sworn_day)}</swornDay>
 <swornMonth>{xe(d.sworn_month)}</swornMonth>
 <swornYear>{xe(d.sworn_year)}</swornYear>
-<notarySig>{xe(d.notary_signature)}</notarySig>
 </subDeclaration>
 <subPNS {DG}/>"""
 

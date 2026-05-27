@@ -183,6 +183,7 @@ const commonLawSchema = z.object({
   applicant_name: z.string().min(1, "Required"),
   partner_name: z.string().min(1, "Required"),
   cohabitation_city: z.string().min(1, "Required"),
+  cohabitation_county: z.string().default(""),
   cohabitation_province: z.string().default(""),
   cohabitation_country: z.string().min(1, "Required"),
   years_together: z.string().min(1, "Required"),
@@ -196,6 +197,7 @@ const commonLawSchema = z.object({
   previous_declaration: z.boolean().default(false),
   additional_details: z.string().default(""),
   declaration_city: z.string().min(1, "Required"),
+  declaration_county: z.string().default(""),
   declaration_province: z.string().default(""),
   declaration_country: z.string().min(1, "Required"),
   declaration_day: z.string().min(1, "Required"),
@@ -203,6 +205,8 @@ const commonLawSchema = z.object({
   declaration_year: z.string().min(1, "Required"),
   applicant_signature: z.string().min(1, "Required"),
   partner_signature: z.string().min(1, "Required"),
+  admin_name: z.string().default(""),
+  admin_signature: z.string().default(""),
 });
 
 // ---- IMM 5646 sub-schema ----
@@ -239,8 +243,7 @@ const custodianSchema = z.object({
   sworn_month: z.string().min(1, "Required"),
   sworn_year: z.string().min(1, "Required"),
   parent_signature: z.string().min(1, "Required"),
-  notary_signature: z.string().default(""),
-  other_parent_name: z.string().default(""),
+  parent2_signature: z.string().default(""),
   parent1_name_decl: z.string().default(""),
   parent2_name_decl: z.string().default(""),
 });
@@ -292,10 +295,6 @@ const releaseAuthoritySchema = z.object({
   designated_phone_country_code: z.string().default(""),
   designated_phone: z.string().default(""),
   designated_email: z.string().default(""),
-  release_scope: z.enum(["all", "specific"]).default("all"),
-  specific_info: z.string().default(""),
-  effective_from: z.string().default(""),
-  effective_to: z.string().default(""),
   cancel_previous: boolFromString.optional(),
   applicant_signature: z.string().min(1, "Required"),
   signed_date: dateStr,

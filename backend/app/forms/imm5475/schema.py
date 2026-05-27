@@ -32,15 +32,7 @@ class Imm5475Data(BaseModel):
     designated_phone: str = ""
     designated_email: str = ""
 
-    # --- Section: Authorization scope ---
-    # "all" = release all info on file; "specific" = release only what's listed
-    release_scope: str = "all"           # "all" | "specific"
-    specific_info: str = ""              # required when release_scope == "specific"
-
-    # --- Section: Effective period ---
-    # If both dates are blank, treat as open-ended.
-    effective_from: str = ""             # YYYY-MM-DD
-    effective_to: str = ""               # YYYY-MM-DD
+    # --- Section: Authorization vs cancellation ---
     cancel_previous: bool = False        # tick to cancel a prior designation
 
     # --- Section: Signature ---

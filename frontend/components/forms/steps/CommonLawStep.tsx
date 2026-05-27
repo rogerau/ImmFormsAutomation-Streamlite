@@ -10,7 +10,17 @@ interface Props {
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -23,7 +33,7 @@ function Field({ label, required, error, children }: { label: string; required?:
 }
 
 export function CommonLawStep({ register, errors }: Props) {
-  const cl = errors.common_law;
+  const cl = errors.common_law as any;
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Common-law Declaration (IMM 5409)</h2>
@@ -32,62 +42,116 @@ export function CommonLawStep({ register, errors }: Props) {
         common-law partner. Refer to the responsible visa office for your region.
       </div>
 
-      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Jurisdiction</h3>
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Jurisdiction where declaration is made</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Country where declaration is made" required error={(cl as any)?.jurisdiction_country?.message}>
+        <Field label="Country" required error={cl?.jurisdiction_country?.message}>
           <CountrySelect {...register("common_law.jurisdiction_country")} className={inp} />
         </Field>
-        <Field label="Province / State" error={(cl as any)?.jurisdiction_province?.message}>
+        <Field label="Province / State" error={cl?.jurisdiction_province?.message}>
           <input {...register("common_law.jurisdiction_province")} className={inp} />
         </Field>
       </div>
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Partner Information</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Your Full Name" required error={(cl as any)?.applicant_name?.message}>
+        <Field label="Your Full Name" required error={cl?.applicant_name?.message}>
           <input {...register("common_law.applicant_name")} className={inp} />
         </Field>
-        <Field label="Partner's Full Name" required error={(cl as any)?.partner_name?.message}>
+        <Field label="Partner's Full Name" required error={cl?.partner_name?.message}>
           <input {...register("common_law.partner_name")} className={inp} />
         </Field>
-        <Field label="Cohabitation Start Date" required error={(cl as any)?.start_date?.message}>
+        <Field label="Cohabitation Start Date" required error={cl?.start_date?.message}>
           <input {...register("common_law.start_date")} placeholder="YYYY-MM-DD" className={inp} />
         </Field>
-        <Field label="Years Together" required error={(cl as any)?.years_together?.message}>
+        <Field label="Cohabitation End Date (blank if ongoing)" error={cl?.end_date?.message}>
+          <input {...register("common_law.end_date")} placeholder="YYYY-MM-DD" className={inp} />
+        </Field>
+        <Field label="Years Together" required error={cl?.years_together?.message}>
           <input {...register("common_law.years_together")} className={inp} />
         </Field>
-        <Field label="Cohabitation City" required error={(cl as any)?.cohabitation_city?.message}>
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Cohabitation Address</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="City" required error={cl?.cohabitation_city?.message}>
           <input {...register("common_law.cohabitation_city")} className={inp} />
         </Field>
-        <Field label="Cohabitation Country" required error={(cl as any)?.cohabitation_country?.message}>
+        <Field label="County (if applicable)" error={cl?.cohabitation_county?.message}>
+          <input {...register("common_law.cohabitation_county")} className={inp} />
+        </Field>
+        <Field label="Province / State" error={cl?.cohabitation_province?.message}>
+          <input {...register("common_law.cohabitation_province")} className={inp} />
+        </Field>
+        <Field label="Country" required error={cl?.cohabitation_country?.message}>
           <CountrySelect {...register("common_law.cohabitation_country")} className={inp} />
         </Field>
       </div>
 
-      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Declaration</h3>
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Section 2 &amp; 3</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="City" required error={(cl as any)?.declaration_city?.message}>
+        <Field label="Do you have children together?" error={cl?.has_children?.message}>
+          <select {...register("common_law.has_children")} className={inp}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+        <Field label="Have you previously declared this relationship?" error={cl?.previous_declaration?.message}>
+          <select {...register("common_law.previous_declaration")} className={inp}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Section 4 — Additional details</h3>
+      <Field label="Any additional details about your relationship (optional)" error={cl?.additional_details?.message}>
+        <textarea {...register("common_law.additional_details")} rows={3} className={inp} />
+      </Field>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Section 5 — Declaration</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Field label="City" required error={cl?.declaration_city?.message}>
           <input {...register("common_law.declaration_city")} className={inp} />
         </Field>
-        <Field label="Country" required error={(cl as any)?.declaration_country?.message}>
+        <Field label="County (if applicable)" error={cl?.declaration_county?.message}>
+          <input {...register("common_law.declaration_county")} className={inp} />
+        </Field>
+        <Field label="Province / State" error={cl?.declaration_province?.message}>
+          <input {...register("common_law.declaration_province")} className={inp} />
+        </Field>
+        <Field label="Country" required error={cl?.declaration_country?.message}>
           <CountrySelect {...register("common_law.declaration_country")} className={inp} />
         </Field>
-        <Field label="Day" required error={(cl as any)?.declaration_day?.message}>
+        <Field label="Day" required error={cl?.declaration_day?.message}>
           <input {...register("common_law.declaration_day")} placeholder="DD" className={inp} />
         </Field>
-        <Field label="Month" required error={(cl as any)?.declaration_month?.message}>
+        <Field label="Month" required error={cl?.declaration_month?.message}>
           <input {...register("common_law.declaration_month")} placeholder="MM" className={inp} />
         </Field>
-        <Field label="Year" required error={(cl as any)?.declaration_year?.message}>
+        <Field label="Year" required error={cl?.declaration_year?.message}>
           <input {...register("common_law.declaration_year")} placeholder="YYYY" className={inp} />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Your Signature (type full name)" required error={(cl as any)?.applicant_signature?.message}>
+        <Field label="Your Signature (type full name)" required error={cl?.applicant_signature?.message}>
           <input {...register("common_law.applicant_signature")} className={inp} />
         </Field>
-        <Field label="Partner Signature (type full name)" required error={(cl as any)?.partner_signature?.message}>
+        <Field label="Partner Signature (type full name)" required error={cl?.partner_signature?.message}>
           <input {...register("common_law.partner_signature")} className={inp} />
+        </Field>
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Commissioner / notary (optional)</h3>
+      <p className="text-xs text-gray-500">
+        Only fill in this block if a Commissioner of Oaths, Notary Public, or other
+        authorised official is witnessing the declaration.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Commissioner / notary name" error={cl?.admin_name?.message}>
+          <input {...register("common_law.admin_name")} className={inp} />
+        </Field>
+        <Field label="Commissioner / notary signature (typed name)" error={cl?.admin_signature?.message}>
+          <input {...register("common_law.admin_signature")} className={inp} />
         </Field>
       </div>
     </div>

@@ -32,7 +32,6 @@ from xml.etree import ElementTree as ET
 
 import pikepdf
 
-from ..imm1294.filler import _province_lic
 from ..xfa_filler import fill_xfa_pdf
 
 if TYPE_CHECKING:
@@ -129,10 +128,11 @@ def _build_datasets_xml(data: "Imm5475Data", applicant_data: dict) -> str:
         if len(cities) >= 2:
             _set(cities[1], data.designated_country)
 
-        _set(
-            five.find("province"),
-            _province_lic(data.designated_country, data.designated_province_state),
-        )
+        # The IMM 5475 template has no setProvinceBasedOnCountry script, so the
+        # ProvinceAbbrev dropdown items never populate. Writing the LIC code
+        # leaves the raw "11" visible. Adobe falls back to displaying the raw
+        # rawValue, so we write the abbreviation directly.
+        _set(five.find("province"), data.designated_province_state)
         _set(
             five.find("postalCode"),
             _normalize_postal(data.designated_postal_code, data.designated_country),

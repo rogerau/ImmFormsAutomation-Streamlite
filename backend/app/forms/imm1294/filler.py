@@ -644,7 +644,12 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     ("ToYear", e.to_year), ("ToMonth", e.to_month),
                     ("FieldOfStudy", e.field_of_study), ("School", e.school),
                     ("CityTown", e.city),
-                    ("ProvState", _province_lic(e.country, e.province_state)),
+                    # The Edu/Occ row Country fields call setProvinceBasedOnCountry
+                    # only on exit (not initialize), so the ProvState dropdown's
+                    # items list stays empty at load time and a LIC code wouldn't
+                    # match. Write the raw abbreviation so Adobe falls back to
+                    # rendering it as text.
+                    ("ProvState", e.province_state),
                 ]:
                     el = edu_row.find(tag)
                     if el is not None:
@@ -666,7 +671,8 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                         ("FromYear", o.from_year), ("FromMonth", o.from_month),
                         ("ToYear", o.to_year), ("ToMonth", o.to_month),
                         ("Employer", o.employer),
-                        ("ProvState", _province_lic(o.country, o.province_state)),
+                        # See note above on Edu_Row1 ProvState — same caveat.
+                        ("ProvState", o.province_state),
                     ]:
                         el = occ_row.find(tag)
                         if el is not None:
