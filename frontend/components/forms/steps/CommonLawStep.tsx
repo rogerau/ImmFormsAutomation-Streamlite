@@ -87,6 +87,35 @@ export function CommonLawStep({ register, errors }: Props) {
         </Field>
       </div>
 
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Section 1 — Nature of relationship</h3>
+      <p className="text-xs text-gray-600">Answer Yes or No to each statement as it applies to your common-law relationship.</p>
+      <div className="grid grid-cols-1 gap-3">
+        <Field label="a) Have jointly signed a residential lease, mortgage or purchase agreement relating to a residence in which we both live." error={cl?.section1_joint_residential_agreement?.message}>
+          <select {...register("common_law.section1_joint_residential_agreement")} className={inp}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+        <Field label="b) Jointly own property other than our residence." error={cl?.section1_joint_property_ownership?.message}>
+          <select {...register("common_law.section1_joint_property_ownership")} className={inp}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+        <Field label="c) Have joint bank, trust, credit union or charge card accounts." error={cl?.section1_joint_financial_accounts?.message}>
+          <select {...register("common_law.section1_joint_financial_accounts")} className={inp}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+        <Field label='d) Have declared our common-law union under the Canadian Income Tax Act (T-1 "General — Individual Income Tax Return").' error={cl?.section1_declared_income_tax?.message}>
+          <select {...register("common_law.section1_declared_income_tax")} className={inp}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+      </div>
+
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Section 2 &amp; 3</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Do you have children together?" error={cl?.has_children?.message}>

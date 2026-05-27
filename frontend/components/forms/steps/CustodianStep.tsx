@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
-import { FieldErrors, UseFormRegister } from "react-hook-form";
+import { FieldErrors, UseFormRegister, useWatch, Control } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  control?: Control<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -33,10 +34,11 @@ function Field({
   );
 }
 
-export function CustodianStep({ register, errors }: Props) {
+export function CustodianStep({ register, errors, control }: Props) {
   const c = errors.custodian as any;
   // UI-only gate; not persisted. When toggled on, parent2_* inputs reveal.
   const [hasParent2, setHasParent2] = useState(false);
+  const childResidence = useWatch({ control, name: "custodian.child_residence" }) ?? "with_custodian";
 
   return (
     <div className="space-y-4">
@@ -156,6 +158,22 @@ export function CustodianStep({ register, errors }: Props) {
         <Field label="Phone" required error={c?.custodian_phone?.message}>
           <input {...register("custodian.custodian_phone")} className={inp} />
         </Field>
+      </div>
+
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">My / Our child will reside</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Where will the child reside?" required>
+          <select {...register("custodian.child_residence")} className={inp}>
+            <option value="with_custodian">With the appointed custodian</option>
+            <option value="school_dormitory">In the school dormitory</option>
+            <option value="with_other">With another person</option>
+          </select>
+        </Field>
+        {childResidence === "with_other" && (
+          <Field label="Name and relationship of the other person" required error={c?.child_residence_other_name?.message}>
+            <input {...register("custodian.child_residence_other_name")} className={inp} placeholder="e.g. Jane Doe — aunt" />
+          </Field>
+        )}
       </div>
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Declaration Details</h3>

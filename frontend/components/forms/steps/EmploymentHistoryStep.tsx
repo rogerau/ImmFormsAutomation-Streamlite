@@ -73,6 +73,9 @@ export function EmploymentHistoryStep({ control, register, errors, watch }: Prop
               <Field label="City" required error={errors.education_history?.[idx]?.city?.message}>
                 <input {...register(`education_history.${idx}.city`)} className={inp} />
               </Field>
+              <Field label="Province / State" error={(errors.education_history?.[idx] as any)?.province_state?.message}>
+                <input {...register(`education_history.${idx}.province_state`)} className={inp} />
+              </Field>
               <Field label="Country" required error={errors.education_history?.[idx]?.country?.message}>
                 <CountrySelect {...register(`education_history.${idx}.country`)} className={inp} />
               </Field>
@@ -118,6 +121,9 @@ export function EmploymentHistoryStep({ control, register, errors, watch }: Prop
               </Field>
               <Field label="City" required error={errors.occupation_history?.[idx]?.city?.message}>
                 <input {...register(`occupation_history.${idx}.city`)} className={inp} />
+              </Field>
+              <Field label="Province / State" error={(errors.occupation_history?.[idx] as any)?.province_state?.message}>
+                <input {...register(`occupation_history.${idx}.province_state`)} className={inp} />
               </Field>
               <Field label="Country" required error={errors.occupation_history?.[idx]?.country?.message}>
                 <CountrySelect {...register(`occupation_history.${idx}.country`)} className={inp} />

@@ -36,7 +36,23 @@ export const SexEnum = z.enum(["Male", "Female"]);
 export const LanguageEnum = z.enum(["English", "French", "Both", "Neither"]);
 export const ServiceInEnum = z.enum(["English", "French"]);
 export const ParentStatusEnum = z.enum(["Living", "Deceased"]);
-export const RepTypeEnum = z.enum(["paid_member", "paid_other", "unpaid", "cancel"]);
+export const RepActionEnum = z.enum([
+  "appointing",
+  "updating",
+  "cancelling",
+  "cancelling_and_appointing",
+  "withdrawing",
+]);
+export const RepTypeEnum = z.enum([
+  "unpaid_friend_family",
+  "unpaid_iccrc",
+  "unpaid_other",
+  "unpaid_law_society",
+  "unpaid_chambre",
+  "paid_iccrc",
+  "paid_law_society",
+  "paid_chambre",
+]);
 
 // ---- IMM 1294 sub-schemas ----
 const addressSchema = z.object({
@@ -189,10 +205,11 @@ const commonLawSchema = z.object({
   years_together: z.string().min(1, "Required"),
   start_date: dateStr,
   end_date: z.string().default(""),
-  section1_q1: boolFromString.default(true),
-  section1_q2: boolFromString.default(true),
-  section1_q3: boolFromString.default(true),
-  section1_q4: boolFromString.default(true),
+  // Section 1 — verbatim from IMM 5409 (Nov 2025), PDF order a..d.
+  section1_joint_residential_agreement: boolFromString.default(true),
+  section1_joint_property_ownership: boolFromString.default(true),
+  section1_joint_financial_accounts: boolFromString.default(true),
+  section1_declared_income_tax: boolFromString.default(true),
   has_children: boolFromString.default(false),
   previous_declaration: boolFromString.default(false),
   additional_details: z.string().default(""),
@@ -246,6 +263,8 @@ const custodianSchema = z.object({
   parent2_signature: z.string().default(""),
   parent1_name_decl: z.string().default(""),
   parent2_name_decl: z.string().default(""),
+  child_residence: z.enum(["with_custodian", "school_dormitory", "with_other"]).default("with_custodian"),
+  child_residence_other_name: z.string().default(""),
 });
 
 // ---- IMM 5476 sub-schema ----
@@ -254,26 +273,30 @@ const representativeSchema = z.object({
   applicant_given_name: z.string().min(1, "Required"),
   applicant_dob: dateStr,
   uci_number: z.string().default(""),
-  rep_type: RepTypeEnum.default("paid_member"),
-  rep_family_name: z.string().min(1, "Required"),
-  rep_given_name: z.string().min(1, "Required"),
+  applicant_email: z.string().default(""),
+  type_of_application: z.string().default("Study Permit (Outside Canada)"),
+  rep_action: RepActionEnum.default("appointing"),
+  rep_type: RepTypeEnum.default("paid_iccrc"),
+  rep_family_name: z.string().default(""),
+  rep_given_name: z.string().default(""),
   iccrc_number: z.string().default(""),
   provincial_law_society: z.string().default(""),
   membership_id: z.string().default(""),
+  unpaid_other_specify: z.string().default(""),
   organization_name: z.string().default(""),
   lawyer_name: z.string().default(""),
   unit: z.string().default(""),
   street_number: z.string().default(""),
-  street_name: z.string().min(1, "Required"),
-  city: z.string().min(1, "Required"),
+  street_name: z.string().default(""),
+  city: z.string().default(""),
   province: z.string().default(""),
-  country: z.string().min(1, "Required"),
+  country: z.string().default(""),
   postal_code: z.string().default(""),
   phone_country_code: z.string().default("1"),
-  phone_number: z.string().min(1, "Required"),
+  phone_number: z.string().default(""),
   fax_country_code: z.string().default(""),
   fax_number: z.string().default(""),
-  email: z.string().email("Valid email required"),
+  email: z.string().default(""),
   applicant_signature: z.string().min(1, "Required"),
   applicant_date_signed: dateStr,
   rep_signature: z.string().default(""),

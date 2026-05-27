@@ -1,7 +1,23 @@
 """IMM 5646 — Custodianship Declaration (minors studying in Canada)."""
 from __future__ import annotations
 
+from enum import Enum
+
 from pydantic import BaseModel
+
+
+class ChildResidence(str, Enum):
+    """Page-2 'My/Our child will reside' radio (childResideGroup).
+
+    Maps to XFA exclGroup items 1..3:
+      1 = with the appointed custodian
+      2 = in the school dormitory
+      3 = with another person
+    """
+
+    with_custodian = "with_custodian"
+    school_dormitory = "school_dormitory"
+    with_other = "with_other"
 
 
 class Imm5646Data(BaseModel):
@@ -51,3 +67,7 @@ class Imm5646Data(BaseModel):
     # Page 2 additional declarations (if applicable)
     parent1_name_decl: str = ""
     parent2_name_decl: str = ""
+
+    # Page 2 — "My/Our child will reside" choice
+    child_residence: ChildResidence = ChildResidence.with_custodian
+    child_residence_other_name: str = ""   # name + relationship when with_other

@@ -113,13 +113,17 @@ def _build_datasets_xml(d: "Imm5409Data") -> str:
         _set(info.find("startDate"), d.start_date)
         _set(info.find("endDate"), d.end_date)
 
-    # --- Section 1: 4 Yes/No statements (all default True / Yes) ---
+    # --- Section 1: 4 Yes/No statements (PDF order a, b, c, d) ---
     # exclGroup values: "1"=Yes, "2"=No
+    #  a) jointly signed residential lease/mortgage/purchase agreement
+    #  b) jointly own property other than our residence
+    #  c) joint bank/trust/credit-union/charge-card accounts
+    #  d) declared common-law union under the Canadian Income Tax Act
     sec1_vals = [
-        _yesno(d.section1_q1),
-        _yesno(d.section1_q2),
-        _yesno(d.section1_q3),
-        _yesno(d.section1_q4),
+        _yesno(d.section1_joint_residential_agreement),
+        _yesno(d.section1_joint_property_ownership),
+        _yesno(d.section1_joint_financial_accounts),
+        _yesno(d.section1_declared_income_tax),
     ]
     sec1 = page1.find("Section1")
     if sec1 is not None:

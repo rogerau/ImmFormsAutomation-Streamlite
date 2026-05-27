@@ -344,9 +344,12 @@ def education_rows(data: StudyPermitData) -> list[list]:
 
 REPRESENTATIVES_HEADERS = [
     "submission_id",
+    # Action + Section A applicant-side fields specific to IMM 5476
+    "rep_action", "applicant_email", "type_of_application",
     # Representative identity + accreditation (applicant identity lives in Submissions)
-    "rep_type", "rep_family_name", "rep_given_name",
+    "rep_sub_type", "rep_family_name", "rep_given_name",
     "iccrc_number", "provincial_law_society", "membership_id",
+    "unpaid_other_specify",
     "organization_name", "lawyer_name",
     # Address
     "unit", "street_number", "street_name",
@@ -366,9 +369,12 @@ def representatives_row(data: StudyPermitData) -> Optional[list]:
         return None
     return [
         data.submission_id,
+        rep.rep_action.value if rep.rep_action else "",
+        rep.applicant_email, rep.type_of_application,
         rep.rep_type.value if rep.rep_type else "",
         rep.rep_family_name, rep.rep_given_name,
         rep.iccrc_number, rep.provincial_law_society, rep.membership_id,
+        rep.unpaid_other_specify,
         rep.organization_name, rep.lawyer_name,
         rep.unit, rep.street_number, rep.street_name,
         rep.city, rep.province, rep.country, rep.postal_code,
@@ -389,8 +395,8 @@ COMMON_LAW_HEADERS = [
     "cohabitation_city", "cohabitation_province", "cohabitation_country",
     "years_together", "cohabitation_start", "cohabitation_end",
     "cohabitation_county",
-    "section1_continuous", "section1_shared_financials",
-    "section1_represent_as_couple", "section1_primary_residence",
+    "section1_joint_residential_agreement", "section1_joint_property_ownership",
+    "section1_joint_financial_accounts", "section1_declared_income_tax",
     "has_children_of_union", "previous_declaration",
     "additional_details",
     "jurisdiction_country", "jurisdiction_province",
@@ -412,7 +418,10 @@ def common_law_row(data: StudyPermitData) -> Optional[list]:
         cl.cohabitation_city, cl.cohabitation_province, cl.cohabitation_country,
         cl.years_together, cl.start_date, cl.end_date,
         cl.cohabitation_county,
-        cl.section1_q1, cl.section1_q2, cl.section1_q3, cl.section1_q4,
+        cl.section1_joint_residential_agreement,
+        cl.section1_joint_property_ownership,
+        cl.section1_joint_financial_accounts,
+        cl.section1_declared_income_tax,
         cl.has_children, cl.previous_declaration,
         cl.additional_details,
         cl.jurisdiction_country, cl.jurisdiction_province,
@@ -441,6 +450,7 @@ CUSTODIAN_HEADERS = [
     "parent_signature",
     "parent2_family_name", "parent2_given_names", "parent2_dob",
     "parent2_address", "parent2_phone", "parent2_signature",
+    "child_residence", "child_residence_other_name",
 ]
 
 
@@ -458,6 +468,8 @@ def custodian_row(data: StudyPermitData) -> Optional[list]:
         c.parent_signature,
         c.parent2_family_name, c.parent2_given_names, c.parent2_dob,
         c.parent2_address, c.parent2_phone, c.parent2_signature,
+        c.child_residence.value if c.child_residence else "",
+        c.child_residence_other_name,
     ]
 
 

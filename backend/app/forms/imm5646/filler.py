@@ -5,11 +5,26 @@ import os
 from typing import TYPE_CHECKING
 
 from ..xfa_filler import _xml_escape as xe, fill_xfa_pdf
+from .schema import ChildResidence
 
 if TYPE_CHECKING:
     from ..study_permit.schema import StudyPermitData
 
 TEMPLATE = os.path.join(os.path.dirname(__file__), "template", "imm5646e.pdf")
+
+_CHILD_RESIDE_XFA_VAL = {
+    ChildResidence.with_custodian: "1",
+    ChildResidence.school_dormitory: "2",
+    ChildResidence.with_other: "3",
+}
+
+
+def _full_name(family: str, given: str) -> str:
+    family = (family or "").strip()
+    given = (given or "").strip()
+    if family and given:
+        return f"{family}, {given}"
+    return family or given
 
 XFA_NS = 'xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"'
 DG = 'xfa:dataNode="dataGroup"'
@@ -116,10 +131,15 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 <subParentSig1date>{_date_digits(parent_sig_date_iso)}</subParentSig1date>
 </subDeclaration>"""
 
+    child_reside_val = _CHILD_RESIDE_XFA_VAL.get(d.child_residence, "1")
+    parent1_full = d.parent1_name_decl or _full_name(d.parent1_family_name, d.parent1_given_names)
+    parent2_full = d.parent2_name_decl or _full_name(d.parent2_family_name, d.parent2_given_names)
+
     page2_decl = f"""<subDeclaration>
-<childResideGroup/>
-<nameParent1>{xe(d.parent1_name_decl or d.parent1_family_name)}</nameParent1>
-<nameParent2>{xe(d.parent2_name_decl or d.parent2_family_name)}</nameParent2>
+<childResideGroup>{xe(child_reside_val)}</childResideGroup>
+<nameOther>{xe(d.child_residence_other_name)}</nameOther>
+<nameParent1>{xe(parent1_full)}</nameParent1>
+<nameParent2>{xe(parent2_full)}</nameParent2>
 <nameStudent>{xe(d.student_name_for_decl)}</nameStudent>
 <nameCust>{xe(d.custodian_name_for_decl)}</nameCust>
 <parentSig1>{xe(d.parent_signature)}</parentSig1>
