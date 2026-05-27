@@ -148,6 +148,16 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
             _set(sigs[1] if len(sigs) > 1 else None, d.rep_signature)
             _set(dates[1] if len(dates) > 1 else None, d.rep_date_signed)
 
+    # --- Sections C / D / E: clear XHTML body defaults ---
+    # The original datasets has <body xmlns="..."> child elements inside
+    # familyName nodes in these sections as placeholder content. If we don't
+    # call _set() on them, Adobe renders the raw XHTML markup as visible text.
+    # Explicitly clear them (set to "") so they appear blank.
+    for section_name in ("sectionC", "sectionD"):
+        sec = page1.find(section_name)
+        if sec is not None:
+            _set(sec.find("familyName"), "")
+
     return ET.tostring(root, encoding="unicode", xml_declaration=False)
 
 
