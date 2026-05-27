@@ -20,7 +20,7 @@ def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
         "imm5707": fill_imm5707(data),
     }
     if "imm5409" in data.optional_forms and data.common_law:
-        result["imm5409"] = fill_imm5409(data)
+        result["imm5409"] = fill_imm5409(data.common_law)
     if "imm5646" in data.optional_forms and data.custodian:
         result["imm5646"] = fill_imm5646(data)
     if "imm5476" in data.optional_forms and data.representative:

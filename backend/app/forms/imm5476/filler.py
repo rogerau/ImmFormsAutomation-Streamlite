@@ -1,11 +1,46 @@
-"""IMM 5476 — Use of a Representative (hybrid AcroForm filler)."""
+"""IMM 5476 — Use of a Representative (XFA datasets filler).
+
+Root cause of the previous blank-PDF bug: the form has BOTH an XFA datasets
+stream AND AcroForm field annotations.  Adobe reads values from XFA datasets;
+the pypdf approach of writing AcroForm /V entries is silently ignored.
+
+XFA datasets paths discovered from imm5476e_unenc.pdf:
+
+  IMM_5476/Page1/
+    RadioButtonList            — exclGroup; "1"=paid+member, "2"=paid+other,
+                                  "3"=unpaid, "4"=cancel+appoint, "5"=cancel
+    SectionA/
+      familyName               — applicant family name (XHTML body in template)
+      givenName
+      DOB                      — YYYY-MM-DD
+      UCI                      — unique client identifier
+    SectionB/
+      familyName               — rep family name (XHTML body in template)
+      givenName
+      question6/questionII/
+        ICCRCMember            — ICCRC membership #
+        province               — provincial law society
+        membership             — membership ID
+      question7/
+        organization, lawyer, membershipID
+        unit, streetNo, streetName, city, province, country, postalcode
+        phoneCountryCode, phoneNumber, faxCountryCode, faxNumber, email
+      question8/
+        signatrureApplicant[0]  — applicant signature (note: typo "signatrure" in form)
+        dateSigned[0]           — applicant date
+        signatrureApplicant[1]  — rep signature
+        dateSigned[1]           — rep date
+"""
 from __future__ import annotations
 
-import io
 import os
+import zlib
 from typing import TYPE_CHECKING
+from xml.etree import ElementTree as ET
 
-from pypdf import PdfReader, PdfWriter
+import pikepdf
+
+from ..xfa_filler import fill_xfa_pdf
 
 if TYPE_CHECKING:
     from ..study_permit.schema import StudyPermitData
@@ -13,71 +48,117 @@ from .schema import RepType
 
 TEMPLATE = os.path.join(os.path.dirname(__file__), "template", "imm5476e.pdf")
 UNENC = os.path.join(os.path.dirname(__file__), "template", "imm5476e_unenc.pdf")
+XFA_NS = "http://www.xfa.org/schema/xfa-data/1.0/"
 
-# RadioButtonList values: 0=paid+member, 1=paid+other, 2=unpaid, 3=cancel+appoint, 4=cancel
-_REP_TYPE_VAL = {
-    RepType.paid_member: "/0",
-    RepType.paid_other: "/1",
-    RepType.unpaid: "/2",
-    RepType.cancel: "/4",
+# XFA exclGroup item values for representative type (values 1–5, not the old AcroForm /0–/4).
+_REP_TYPE_XFA_VAL = {
+    RepType.paid_member: "1",   # Paid, member of regulatory body (ICCRC / law society)
+    RepType.paid_other:  "2",   # Paid, not a member of a regulatory body
+    RepType.unpaid:      "3",   # Unpaid (friend / family)
+    RepType.cancel:      "5",   # Cancel only (item 5 in the exclGroup)
 }
 
 
-def build_field_dict(data: "StudyPermitData") -> dict:
-    d = data.representative
-    if not d:
-        return {}
+def _get_raw_datasets(pdf_path: str) -> bytes:
+    with pikepdf.open(pdf_path) as pdf:
+        xfa = list(pdf.Root.AcroForm.XFA)
+        for i in range(0, len(xfa) - 1, 2):
+            if str(xfa[i]) == "datasets":
+                return bytes(xfa[i + 1].read_raw_bytes())
+    raise ValueError("datasets stream not found in IMM 5476 PDF")
 
-    return {
-        # Section A — applicant
-        "IMM_5476[0].Page1[0].SectionA[0].familyName[0]": d.applicant_family_name,
-        "IMM_5476[0].Page1[0].SectionA[0].givenName[0]": d.applicant_given_name,
-        "IMM_5476[0].Page1[0].SectionA[0].DOB[0]": d.applicant_dob,
-        "IMM_5476[0].Page1[0].SectionA[0].UCI[0]": d.uci_number,
-        # Radio — rep type
-        "IMM_5476[0].Page1[0].RadioButtonList[0]": _REP_TYPE_VAL.get(d.rep_type, "/0"),
-        # Section B — representative
-        "IMM_5476[0].Page1[0].SectionB[0].familyName[0]": d.rep_family_name,
-        "IMM_5476[0].Page1[0].SectionB[0].givenName[0]": d.rep_given_name,
-        "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].ICCRCMember[0]": d.iccrc_number,
-        "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].province[0]": d.provincial_law_society,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].organization[0]": d.organization_name,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].lawyer[0]": d.lawyer_name,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].membershipID[0]": d.membership_id,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]": d.unit,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].streetNo[0]": d.street_number,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].streetName[0]": d.street_name,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].city[0]": d.city,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].province[0]": d.province,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].country[0]": d.country,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].postalcode[0]": d.postal_code,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneCountryCode[0]": d.phone_country_code,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneNumber[0]": d.phone_number,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].faxCountryCode[0]": d.fax_country_code,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].faxNumber[0]": d.fax_number,
-        "IMM_5476[0].Page1[0].SectionB[0].question7[0].email[0]": d.email,
-        # Signatures
-        "IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[0]": d.applicant_signature,
-        "IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[0]": d.applicant_date_signed,
-        "IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[1]": d.rep_signature,
-        "IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[1]": d.rep_date_signed,
-    }
+
+def _set(node: ET.Element | None, value: str) -> None:
+    """Set text on a node, clearing any child elements (e.g., XHTML body wrappers)."""
+    if node is not None:
+        node.text = value or ""
+        for child in list(node):
+            node.remove(child)
+
+
+def _build_datasets_xml(data: "StudyPermitData") -> str:
+    d = data.representative
+    raw = _get_raw_datasets(UNENC)
+    xml_str = zlib.decompress(raw).decode("utf-8", errors="replace")
+    ET.register_namespace("xfa", XFA_NS)
+    root = ET.fromstring(xml_str)
+
+    data_root = root.find(f"{{{XFA_NS}}}data")
+    if data_root is None:
+        raise ValueError("xfa:data element not found in IMM 5476 datasets")
+    form = data_root.find("IMM_5476")
+    if form is None:
+        raise ValueError("IMM_5476 element not found in datasets")
+    page1 = form.find("Page1")
+    if page1 is None:
+        raise ValueError("Page1 element not found in datasets")
+
+    # --- RadioButtonList: representative type ---
+    _set(page1.find("RadioButtonList"), _REP_TYPE_XFA_VAL.get(d.rep_type, "1"))
+
+    # --- Section A: applicant identity ---
+    sec_a = page1.find("SectionA")
+    if sec_a is not None:
+        _set(sec_a.find("familyName"), d.applicant_family_name)
+        _set(sec_a.find("givenName"), d.applicant_given_name)
+        _set(sec_a.find("DOB"), d.applicant_dob)
+        _set(sec_a.find("UCI"), d.uci_number)
+
+    # --- Section B: representative details ---
+    sec_b = page1.find("SectionB")
+    if sec_b is not None:
+        _set(sec_b.find("familyName"), d.rep_family_name)
+        _set(sec_b.find("givenName"), d.rep_given_name)
+
+        # Question 6: accreditation (paid rep)
+        q6 = sec_b.find("question6")
+        if q6 is not None:
+            q6ii = q6.find("questionII")
+            if q6ii is not None:
+                _set(q6ii.find("ICCRCMember"), d.iccrc_number)
+                _set(q6ii.find("province"), d.provincial_law_society)
+                _set(q6ii.find("membership"), d.membership_id)
+
+        # Question 7: contact address
+        q7 = sec_b.find("question7")
+        if q7 is not None:
+            _set(q7.find("organization"), d.organization_name)
+            _set(q7.find("lawyer"), d.lawyer_name)
+            _set(q7.find("membershipID"), d.membership_id)
+            _set(q7.find("unit"), d.unit)
+            _set(q7.find("streetNo"), d.street_number)
+            _set(q7.find("streetName"), d.street_name)
+            _set(q7.find("city"), d.city)
+            _set(q7.find("province"), d.province)
+            _set(q7.find("country"), d.country)
+            _set(q7.find("postalcode"), d.postal_code)
+            _set(q7.find("phoneCountryCode"), d.phone_country_code)
+            _set(q7.find("phoneNumber"), d.phone_number)
+            _set(q7.find("faxCountryCode"), d.fax_country_code)
+            _set(q7.find("faxNumber"), d.fax_number)
+            _set(q7.find("email"), d.email)
+
+        # Question 8: signatures (note: "signatrure" is the typo in the form)
+        q8 = sec_b.find("question8")
+        if q8 is not None:
+            sigs = q8.findall("signatrureApplicant")
+            dates = q8.findall("dateSigned")
+            _set(sigs[0] if sigs else None, d.applicant_signature)
+            _set(dates[0] if dates else None, d.applicant_date_signed)
+            _set(sigs[1] if len(sigs) > 1 else None, d.rep_signature)
+            _set(dates[1] if len(dates) > 1 else None, d.rep_date_signed)
+
+    return ET.tostring(root, encoding="unicode", xml_declaration=False)
 
 
 def fill_pdf(data: "StudyPermitData") -> bytes:
-    if not os.path.exists(TEMPLATE):
-        raise FileNotFoundError(f"IMM 5476 template not found: {TEMPLATE}")
-    if not os.path.exists(UNENC):
-        raise FileNotFoundError(f"IMM 5476 unencrypted copy not found: {UNENC}")
-
-    fields = build_field_dict(data)
-    reader = PdfReader(UNENC)
-    writer = PdfWriter()
-    writer.clone_reader_document_root(reader)
-    # `page=None` updates every page and `auto_regenerate=True` (default) sets
-    # /NeedAppearances so Adobe regenerates field appearance streams on open —
-    # without both, fields show blank even though /V is populated.
-    writer.update_page_form_field_values(None, fields)
-    buf = io.BytesIO()
-    writer.write(buf)
-    return buf.getvalue()
+    if not (os.path.exists(TEMPLATE) and os.path.exists(UNENC)):
+        raise FileNotFoundError(
+            "IMM 5476 template not present. Drop imm5476e.pdf and "
+            "imm5476e_unenc.pdf at backend/app/forms/imm5476/template/ to "
+            "enable filling.",
+        )
+    if not data.representative:
+        return b""
+    xml_str = _build_datasets_xml(data)
+    return fill_xfa_pdf(TEMPLATE, xml_str)
