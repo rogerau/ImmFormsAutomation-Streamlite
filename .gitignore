@@ -17,6 +17,7 @@ build/
 node_modules/
 .next/
 out/
+tsconfig.tsbuildinfo
 
 # Secrets
 credentials.json
