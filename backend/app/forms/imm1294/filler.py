@@ -7,6 +7,7 @@ section, replace field values in-place using ElementTree, then serialize and inj
 from __future__ import annotations
 
 import os
+import re
 import zlib
 from typing import TYPE_CHECKING
 from xml.etree import ElementTree as ET
@@ -644,12 +645,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     ("ToYear", e.to_year), ("ToMonth", e.to_month),
                     ("FieldOfStudy", e.field_of_study), ("School", e.school),
                     ("CityTown", e.city),
-                    # The Edu/Occ row Country fields call setProvinceBasedOnCountry
-                    # only on exit (not initialize), so the ProvState dropdown's
-                    # items list stays empty at load time and a LIC code wouldn't
-                    # match. Write the raw abbreviation so Adobe falls back to
-                    # rendering it as text.
-                    ("ProvState", e.province_state),
+                    ("ProvState", _province_lic(e.country, e.province_state)),
                 ]:
                     el = edu_row.find(tag)
                     if el is not None:
@@ -671,8 +667,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                         ("FromYear", o.from_year), ("FromMonth", o.from_month),
                         ("ToYear", o.to_year), ("ToMonth", o.to_month),
                         ("Employer", o.employer),
-                        # See note above on Edu_Row1 ProvState — same caveat.
-                        ("ProvState", o.province_state),
+                        ("ProvState", _province_lic(o.country, o.province_state)),
                     ]:
                         el = occ_row.find(tag)
                         if el is not None:
@@ -845,6 +840,59 @@ def _patch_phone_visibility(template_xml: str, data: "StudyPermitData") -> str:
     return template_xml
 
 
+def _prov_label_lic(country: str, abbrev: str) -> tuple[str, str]:
+    """Return (display_label, lic_code) for a province/state abbreviation.
+
+    Returns ("", "") for empty input or non-CA/US countries — the ProvState
+    field is only relevant for Canada and USA per IRCC form design."""
+    if not abbrev:
+        return ("", "")
+    lic = _province_lic(country, abbrev)
+    return (abbrev.upper(), lic) if lic else ("", "")
+
+
+def _patch_prov_state_items(
+    template_xml: str,
+    prov_data: list[tuple[str, str]],
+) -> str:
+    """Pre-populate the 4 ProvState choiceList fields with exactly one item each.
+
+    The ProvState dropdowns are normally populated at runtime by the JS handler
+    setProvinceBasedOnCountry, which never fires in a pre-filled PDF.  Instead of
+    converting the widget type, we inject the correct label/lic pair directly into
+    the template's empty <items> lists so the choiceList can display without JS.
+
+    prov_data: [(label, lic_code), ...] for fields in template order —
+        index 0 = Edu_Row1, 1 = OccupationRow1, 2 = OccupationRow2, 3 = OccupationRow3.
+        Use ("", "") for rows with no province/state to leave the field blank."""
+    counter = [0]
+
+    def _patch(m: re.Match) -> str:
+        idx = counter[0]
+        counter[0] += 1
+        block = m.group(0)
+        label, lic = prov_data[idx] if idx < len(prov_data) else ("", "")
+        block = re.sub(r"<bindItems[^\n]*\n/>", "", block)
+        if label and lic:
+            block = block.replace(
+                "<items\n/>",
+                f"<items\n><text\n>{label}</text\n></items\n>",
+                1,
+            )
+            block = block.replace(
+                '<items presence="hidden" save="1"\n/>',
+                f'<items presence="hidden" save="1"\n><text\n>{lic}</text\n></items\n>',
+                1,
+            )
+        return block
+
+    return re.sub(
+        r'<field[^>]*name="ProvState"[^>]*\n>[\s\S]*?</field\n>',
+        _patch,
+        template_xml,
+    )
+
+
 def fill_pdf(data: "StudyPermitData") -> bytes:
     if not os.path.exists(TEMPLATE):
         raise FileNotFoundError(f"IMM 1294 template not found: {TEMPLATE}")
@@ -852,8 +900,18 @@ def fill_pdf(data: "StudyPermitData") -> bytes:
         raise FileNotFoundError(f"IMM 1294 unencrypted copy not found: {UNENC}")
 
     xml_str = _build_datasets_xml(data)
+    edu = data.education_history
+    occ = data.occupation_history
+    prov_data = [
+        _prov_label_lic(edu[0].country, edu[0].province_state) if edu else ("", ""),
+        _prov_label_lic(occ[0].country, occ[0].province_state) if len(occ) > 0 else ("", ""),
+        _prov_label_lic(occ[1].country, occ[1].province_state) if len(occ) > 1 else ("", ""),
+        _prov_label_lic(occ[2].country, occ[2].province_state) if len(occ) > 2 else ("", ""),
+    ]
     return fill_xfa_pdf(
         TEMPLATE,
         xml_str,
-        template_xml_transform=lambda xml: _patch_phone_visibility(xml, data),
+        template_xml_transform=lambda xml: _patch_prov_state_items(
+            _patch_phone_visibility(xml, data), prov_data
+        ),
     )
