@@ -35,11 +35,11 @@ class Imm5409Data(BaseModel):
     #    (T-1 "General — Individual Income Tax Return").
     section1_declared_income_tax: bool = True
 
-    # Section 2 — children of the relationship
-    has_children: bool = False
+    # Section 2 — life insurance (applicant names partner as beneficiary)
+    life_insurance_on_applicant: bool = False
 
-    # Section 3 — previous declarations
-    previous_declaration: bool = False
+    # Section 3 — life insurance (partner names applicant as beneficiary)
+    partner_life_insurance: bool = False
 
     # Section 4 — additional details (free text)
     additional_details: str = ""

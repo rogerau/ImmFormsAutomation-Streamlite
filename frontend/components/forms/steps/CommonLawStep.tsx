@@ -116,16 +116,16 @@ export function CommonLawStep({ register, errors }: Props) {
         </Field>
       </div>
 
-      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Section 2 &amp; 3</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Do you have children together?" error={cl?.has_children?.message}>
-          <select {...register("common_law.has_children")} className={inp}>
+      <h3 className="text-base font-medium text-gray-700 border-b pb-1">Section 2 &amp; 3 — Life insurance</h3>
+      <div className="grid grid-cols-1 gap-3">
+        <Field label="I have life insurance on myself which names my common-law partner as beneficiary." error={(cl as any)?.life_insurance_on_applicant?.message}>
+          <select {...register("common_law.life_insurance_on_applicant")} className={inp}>
             <option value="true">Yes</option>
             <option value="false">No</option>
           </select>
         </Field>
-        <Field label="Have you previously declared this relationship?" error={cl?.previous_declaration?.message}>
-          <select {...register("common_law.previous_declaration")} className={inp}>
+        <Field label="My common-law partner has life insurance on themselves which names me as beneficiary." error={(cl as any)?.partner_life_insurance?.message}>
+          <select {...register("common_law.partner_life_insurance")} className={inp}>
             <option value="true">Yes</option>
             <option value="false">No</option>
           </select>

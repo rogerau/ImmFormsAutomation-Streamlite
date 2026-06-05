@@ -20,8 +20,8 @@ XFA datasets paths discovered from imm5409e_unenc.pdf:
       startDate              — cohabitation start date (YYYY-MM-DD)
       endDate                — cohabitation end date (blank if ongoing)
     Section1/Options/Sec[0..3]/yesno  — exclGroup; "1"=Yes, "2"=No
-    Section2/yesno            — has children; "1"=Yes, "2"=No
-    Section3/yesno            — previous declaration; "1"=Yes, "2"=No
+    Section2/yesno            — life insurance: applicant names partner as beneficiary; "1"=Yes, "2"=No
+    Section3/yesno            — life insurance: partner names applicant as beneficiary; "1"=Yes, "2"=No
     Section4/TextField2       — additional details (free text)
     Section5/
       NameDecl               — applicant name (declaration)
@@ -133,15 +133,15 @@ def _build_datasets_xml(d: "Imm5409Data") -> str:
                 if idx < len(sec1_vals):
                     _set(sec.find("yesno"), sec1_vals[idx])
 
-    # --- Section 2: children ---
+    # --- Section 2: life insurance (applicant names partner as beneficiary) ---
     sec2 = page1.find("Section2")
     if sec2 is not None:
-        _set(sec2.find("yesno"), _yesno(d.has_children))
+        _set(sec2.find("yesno"), _yesno(d.life_insurance_on_applicant))
 
-    # --- Section 3: previous declaration ---
+    # --- Section 3: life insurance (partner names applicant as beneficiary) ---
     sec3 = page1.find("Section3")
     if sec3 is not None:
-        _set(sec3.find("yesno"), _yesno(d.previous_declaration))
+        _set(sec3.find("yesno"), _yesno(d.partner_life_insurance))
 
     # --- Section 4: additional details ---
     sec4 = page1.find("Section4")

@@ -127,7 +127,7 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 <swornDay>{xe(d.sworn_day)}</swornDay>
 <swornMonth>{xe(d.sworn_month)}</swornMonth>
 <swornYear>{xe(d.sworn_year)}</swornYear>
-<parentSig1>{xe(d.parent_signature)}</parentSig1>
+<parentSig1>{xe(d.custodian_name_for_decl)}</parentSig1>
 <subParentSig1date>{_date_digits(parent_sig_date_iso)}</subParentSig1date>
 </subDeclaration>"""
 
