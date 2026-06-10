@@ -1,5 +1,6 @@
 "use client";
-import { Control, FieldErrors, UseFormRegister, UseFormWatch, useFieldArray } from "react-hook-form";
+import { useEffect } from "react";
+import { Control, FieldErrors, UseFormRegister, UseFormWatch, UseFormSetValue, useFieldArray, useWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
@@ -8,6 +9,7 @@ interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
   watch?: UseFormWatch<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
 }
 
 const isYes = (v: unknown) => v === true || v === "true";
@@ -29,10 +31,16 @@ function Field({ label, required, error, children }: { label: string; required?:
 const EMPTY_EDU = { from_year: "", from_month: "", to_year: "", to_month: "", field_of_study: "", school: "", city: "", country: "", province_state: "" };
 const EMPTY_OCC = { from_year: "", from_month: "", to_year: "", to_month: "", occupation: "", employer: "", city: "", country: "", province_state: "" };
 
-export function EmploymentHistoryStep({ control, register, errors, watch }: Props) {
+export function EmploymentHistoryStep({ control, register, errors, watch, setValue }: Props) {
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control, name: "education_history" });
   const { fields: occFields, append: appendOcc, remove: removeOcc } = useFieldArray({ control, name: "occupation_history" });
   const hasEducation = isYes(watch?.("has_education_history"));
+
+  // Mirror the most recent activity's occupation into the IMM 5707 applicant occupation.
+  const firstOccupation = useWatch({ control, name: "occupation_history.0.occupation" });
+  useEffect(() => {
+    setValue("family.applicant_occupation", firstOccupation ?? "");
+  }, [firstOccupation, setValue]);
 
   return (
     <div className="space-y-8">

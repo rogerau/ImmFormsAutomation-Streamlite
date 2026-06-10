@@ -196,8 +196,8 @@ const child5707Schema = person5707Schema.extend({
 const commonLawSchema = z.object({
   jurisdiction_country: z.string().min(1, "Required"),
   jurisdiction_province: z.string().default(""),
-  applicant_name: z.string().min(1, "Required"),
-  partner_name: z.string().min(1, "Required"),
+  applicant_name: z.string().default(""),       // derived from personal_info
+  partner_name: z.string().default(""),         // derived from family.spouse
   cohabitation_city: z.string().min(1, "Required"),
   cohabitation_county: z.string().default(""),
   cohabitation_province: z.string().default(""),
@@ -220,7 +220,7 @@ const commonLawSchema = z.object({
   declaration_day: z.string().min(1, "Required"),
   declaration_month: z.string().min(1, "Required"),
   declaration_year: z.string().min(1, "Required"),
-  applicant_signature: z.string().min(1, "Required"),
+  applicant_signature: z.string().default(""),  // derived from personal_info
   partner_signature: z.string().min(1, "Required"),
   admin_name: z.string().default(""),
   admin_signature: z.string().default(""),
@@ -228,11 +228,11 @@ const commonLawSchema = z.object({
 
 // ---- IMM 5646 sub-schema ----
 const custodianSchema = z.object({
-  student_family_name: z.string().min(1, "Required"),
-  student_given_names: z.string().min(1, "Required"),
-  student_citizenship: z.string().min(1, "Required"),
+  student_family_name: z.string().default(""),   // derived from personal_info (student = applicant)
+  student_given_names: z.string().default(""),    // derived from personal_info
+  student_citizenship: z.string().default(""),    // derived from personal_info
   student_dob: dateStr,
-  student_sex: z.enum(["Male", "Female"]),
+  student_sex: z.union([z.enum(["Male", "Female"]), z.literal("")]).default(""),
   school_address: z.string().min(1, "Required"),
   student_address: z.string().min(1, "Required"),
   parent1_family_name: z.string().min(1, "Required"),
@@ -251,15 +251,15 @@ const custodianSchema = z.object({
   custodian_dob: dateStr,
   custodian_address: z.string().min(1, "Required"),
   custodian_phone: z.string().min(1, "Required"),
-  custodian_name_for_decl: z.string().min(1, "Required"),
-  student_name_for_decl: z.string().min(1, "Required"),
+  custodian_name_for_decl: z.string().default(""),  // derived from custodian name
+  student_name_for_decl: z.string().default(""),    // derived from personal_info
   sworn_city: z.string().min(1, "Required"),
   sworn_province: z.string().default(""),
   sworn_country: z.string().min(1, "Required"),
   sworn_day: z.string().min(1, "Required"),
   sworn_month: z.string().min(1, "Required"),
   sworn_year: z.string().min(1, "Required"),
-  parent_signature: z.string().min(1, "Required"),
+  parent_signature: z.string().default(""),       // derived from parent/guardian 1 name
   parent2_signature: z.string().default(""),
   parent1_name_decl: z.string().default(""),
   parent2_name_decl: z.string().default(""),
@@ -319,7 +319,7 @@ const releaseAuthoritySchema = z.object({
   designated_phone: z.string().default(""),
   designated_email: z.string().default(""),
   cancel_previous: boolFromString.optional(),
-  applicant_signature: z.string().min(1, "Required"),
+  applicant_signature: z.string().default(""),  // derived from personal_info
   signed_date: dateStr,
   signed_city: z.string().default(""),
   signed_country: z.string().default(""),
@@ -339,7 +339,7 @@ const previousMarriageSchema = z.object({
 // ---- FamilyInfo ----
 const familyInfoSchema = z.object({
   applicant_marital_status: MaritalStatusEnum,
-  applicant_occupation: z.string().min(1, "Required"),
+  applicant_occupation: z.string().default(""),  // derived from occupation_history[0]
   marriage_date: z.string().default(""),
   spouse: person5707Schema.nullable().optional(),
   no_spouse_signature: z.string().default(""),
@@ -352,7 +352,7 @@ const familyInfoSchema = z.object({
   children: z.array(child5707Schema).max(4).default([]),
   no_children_signature: z.string().default(""),
   no_children_date: z.string().default(""),
-  section_c_signature: z.string().min(1, "Type your full legal name to certify"),
+  section_c_signature: z.string().default(""),  // derived from personal_info
   section_c_date: dateStr.refine((s) => s.length > 0, "Required"),
 });
 
@@ -375,7 +375,7 @@ export const StudyPermitSchema = z
       place_birth_country: z.string().min(1, "Required"),
       citizenship: z.string().min(1, "Required"),
       current_country: z.string().min(1, "Required"),
-      marital_status: z.string().min(1, "Required"),
+      marital_status: z.string().default(""),  // consolidated — derived from family.applicant_marital_status
       language: LanguageEnum.default("English"),
       language_most_at_ease: z.preprocess(
         (v) => (v === "" || v == null ? null : v),

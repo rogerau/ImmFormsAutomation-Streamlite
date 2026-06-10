@@ -135,14 +135,6 @@ export function PersonalInfoStep({ register, errors, watch }: Props) {
         <Field label="Current Country of Residence" required error={pi?.current_country?.message}>
           <CountrySelect {...register("personal_info.current_country")} className={inp} />
         </Field>
-        <Field label="Marital Status" required error={pi?.marital_status?.message}>
-          <select {...register("personal_info.marital_status")} className={inp}>
-            <option value="">-- Select --</option>
-            {["Single","Married","Common-law","Divorced","Separated","Widowed","Annulled"].map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
         <Field label="UCI / Client ID Number (if known)" error={pi?.uci?.message}>
           <input {...register("personal_info.uci")} placeholder="e.g. 12345678" className={inp} />
         </Field>

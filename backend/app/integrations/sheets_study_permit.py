@@ -124,6 +124,14 @@ def submissions_row(
 
     yn = lambda v: "Yes" if v else "No"
 
+    # Phase G — consolidated sources (columns kept; value source redirected in-place):
+    #   marital_status     ← family.applicant_marital_status (single source for both forms)
+    #   applicant_occupation ← most recent activity in occupation_history
+    marital_status_val = f.applicant_marital_status.value if f.applicant_marital_status else ""
+    applicant_occupation_val = (
+        data.occupation_history[0].occupation if data.occupation_history else ""
+    )
+
     return [
         data.submission_id,
         datetime.now(timezone.utc).isoformat(),
@@ -137,8 +145,8 @@ def submissions_row(
         pi.alias_family_name, pi.alias_given_name,
         pi.sex.value if pi.sex else "", pi.date_of_birth,
         pi.place_birth_city, pi.place_birth_country,
-        pi.citizenship, pi.current_country, pi.marital_status,
-        f.applicant_occupation, pi.language.value if pi.language else "",
+        pi.citizenship, pi.current_country, marital_status_val,
+        applicant_occupation_val, pi.language.value if pi.language else "",
         pi.service_in or "",
         # Passport
         data.passport.passport_number,

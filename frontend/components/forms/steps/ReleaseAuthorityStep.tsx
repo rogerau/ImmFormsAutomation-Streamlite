@@ -1,11 +1,14 @@
 "use client";
-import { FieldErrors, UseFormRegister } from "react-hook-form";
+import { useEffect } from "react";
+import { FieldErrors, UseFormRegister, UseFormGetValues, UseFormSetValue } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  getValues: UseFormGetValues<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -32,8 +35,21 @@ function Field({
   );
 }
 
-export function ReleaseAuthorityStep({ register, errors }: Props) {
+export function ReleaseAuthorityStep({ register, errors, getValues, setValue }: Props) {
   const ra = errors.release_authority as any;
+
+  // Auto-fill the applicant signature and signing location from data already entered.
+  useEffect(() => {
+    const pi = getValues("personal_info");
+    const fullName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    if (fullName) setValue("release_authority.applicant_signature", fullName);
+
+    const mailing = getValues("contact.mailing_address");
+    if (!getValues("release_authority.signed_city") && mailing?.city)
+      setValue("release_authority.signed_city", mailing.city);
+    if (!getValues("release_authority.signed_country") && mailing?.country)
+      setValue("release_authority.signed_country", mailing.country);
+  }, [getValues, setValue]);
 
   return (
     <div className="space-y-4">

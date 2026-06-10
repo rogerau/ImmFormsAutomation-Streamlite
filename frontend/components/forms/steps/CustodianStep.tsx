@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { FieldErrors, UseFormRegister, useWatch, Control } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { FieldErrors, UseFormRegister, UseFormGetValues, UseFormSetValue, useWatch, Control } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
@@ -8,6 +8,8 @@ interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
   control?: Control<StudyPermitData>;
+  getValues: UseFormGetValues<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -34,11 +36,69 @@ function Field({
   );
 }
 
-export function CustodianStep({ register, errors, control }: Props) {
+export function CustodianStep({ register, errors, control, getValues, setValue }: Props) {
   const c = errors.custodian as any;
   // UI-only gate; not persisted. When toggled on, parent2_* inputs reveal.
   const [hasParent2, setHasParent2] = useState(false);
   const childResidence = useWatch({ control, name: "custodian.child_residence" }) ?? "with_custodian";
+
+  // The student is the applicant. Copy identity, and pre-fill parent/school defaults
+  // (editable — a legal guardian may differ from the biological parents in Step 3).
+  useEffect(() => {
+    const pi = getValues("personal_info");
+    const study = getValues("study");
+    const father = getValues("family.father");
+    const mother = getValues("family.mother");
+
+    if (pi?.family_name) setValue("custodian.student_family_name", pi.family_name);
+    if (pi?.given_name) setValue("custodian.student_given_names", pi.given_name);
+    if (pi?.date_of_birth) setValue("custodian.student_dob", pi.date_of_birth);
+    if (pi?.sex) setValue("custodian.student_sex", pi.sex);
+    if (pi?.citizenship) setValue("custodian.student_citizenship", pi.citizenship);
+    const studentName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    if (studentName) setValue("custodian.student_name_for_decl", studentName);
+
+    if (!getValues("custodian.school_address") && study?.school_name) {
+      setValue(
+        "custodian.school_address",
+        [study.school_name, study.city, study.province_state].filter(Boolean).join(", "),
+      );
+    }
+    if (father) {
+      if (!getValues("custodian.parent1_family_name") && father.family_name) setValue("custodian.parent1_family_name", father.family_name);
+      if (!getValues("custodian.parent1_given_names") && father.given_names) setValue("custodian.parent1_given_names", father.given_names);
+      if (!getValues("custodian.parent1_dob") && father.date_of_birth) setValue("custodian.parent1_dob", father.date_of_birth);
+      if (!getValues("custodian.parent1_address") && father.address) setValue("custodian.parent1_address", father.address);
+    }
+    if (mother) {
+      if (!getValues("custodian.parent2_family_name") && mother.family_name) setValue("custodian.parent2_family_name", mother.family_name);
+      if (!getValues("custodian.parent2_given_names") && mother.given_names) setValue("custodian.parent2_given_names", mother.given_names);
+      if (!getValues("custodian.parent2_dob") && mother.date_of_birth) setValue("custodian.parent2_dob", mother.date_of_birth);
+      if (!getValues("custodian.parent2_address") && mother.address) setValue("custodian.parent2_address", mother.address);
+      // Reveal the second guardian block so the pre-filled data is visible, not hidden.
+      if (mother.family_name || mother.given_names) setHasParent2(true);
+    }
+  }, [getValues, setValue]);
+
+  // Declaration signatures mirror the names entered/derived on this step (reactive).
+  const parent1Family = useWatch({ control, name: "custodian.parent1_family_name" });
+  const parent1Given = useWatch({ control, name: "custodian.parent1_given_names" });
+  const parent2Family = useWatch({ control, name: "custodian.parent2_family_name" });
+  const parent2Given = useWatch({ control, name: "custodian.parent2_given_names" });
+  const custFamily = useWatch({ control, name: "custodian.custodian_family_name" });
+  const custGiven = useWatch({ control, name: "custodian.custodian_given_names" });
+  useEffect(() => {
+    const n = [parent1Family, parent1Given].filter(Boolean).join(" ");
+    if (n) setValue("custodian.parent_signature", n);
+  }, [parent1Family, parent1Given, setValue]);
+  useEffect(() => {
+    const n = [parent2Family, parent2Given].filter(Boolean).join(" ");
+    if (n) setValue("custodian.parent2_signature", n);
+  }, [parent2Family, parent2Given, setValue]);
+  useEffect(() => {
+    const n = [custFamily, custGiven].filter(Boolean).join(" ");
+    if (n) setValue("custodian.custodian_name_for_decl", n);
+  }, [custFamily, custGiven, setValue]);
 
   return (
     <div className="space-y-4">
@@ -50,26 +110,8 @@ export function CustodianStep({ register, errors, control }: Props) {
       </div>
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Student Information</h3>
+      <p className="text-xs text-gray-500">The student is you — name, date of birth, sex and citizenship are carried over from your personal details. The school address is pre-filled from your study details; adjust if needed.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Student Family Name" required error={c?.student_family_name?.message}>
-          <input {...register("custodian.student_family_name")} className={inp} />
-        </Field>
-        <Field label="Student Given Name(s)" required error={c?.student_given_names?.message}>
-          <input {...register("custodian.student_given_names")} className={inp} />
-        </Field>
-        <Field label="Student Date of Birth" required error={c?.student_dob?.message}>
-          <input {...register("custodian.student_dob")} placeholder="YYYY-MM-DD" className={inp} />
-        </Field>
-        <Field label="Citizenship" required error={c?.student_citizenship?.message}>
-          <CountrySelect {...register("custodian.student_citizenship")} className={inp} />
-        </Field>
-        <Field label="Sex" required error={c?.student_sex?.message}>
-          <select {...register("custodian.student_sex")} className={inp}>
-            <option value="">-- Select --</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </Field>
         <Field label="School Address in Canada" required error={c?.school_address?.message}>
           <input {...register("custodian.school_address")} className={inp} />
         </Field>
@@ -79,6 +121,7 @@ export function CustodianStep({ register, errors, control }: Props) {
       </div>
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Parent / Guardian 1</h3>
+      <p className="text-xs text-gray-500">Pre-filled from your father&apos;s details in Step 3. Edit if the legal guardian is a different person.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Family Name" required error={c?.parent1_family_name?.message}>
           <input {...register("custodian.parent1_family_name")} className={inp} />

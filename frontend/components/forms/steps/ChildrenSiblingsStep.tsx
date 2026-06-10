@@ -1,5 +1,6 @@
 "use client";
-import { Control, FieldErrors, UseFormRegister, useFieldArray } from "react-hook-form";
+import { useEffect } from "react";
+import { Control, FieldErrors, UseFormRegister, UseFormGetValues, UseFormSetValue, useFieldArray } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
@@ -15,6 +16,8 @@ interface Props {
   control: Control<StudyPermitData>;
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  getValues: UseFormGetValues<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -31,10 +34,17 @@ function Field({ label, required, error, children }: { label: string; required?:
   );
 }
 
-export function ChildrenSiblingsStep({ control, register, errors }: Props) {
+export function ChildrenSiblingsStep({ control, register, errors, getValues, setValue }: Props) {
   const { fields, append, remove } = useFieldArray({ control, name: "family.children" });
   const f = errors.family;
   const hasChildren = fields.length > 0;
+
+  // Auto-fill the "no children" attestation from the name already entered in Step 1.
+  useEffect(() => {
+    const pi = getValues("personal_info");
+    const fullName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    if (fullName) setValue("family.no_children_signature", fullName);
+  }, [getValues, setValue]);
 
   return (
     <div className="space-y-6">

@@ -1,11 +1,14 @@
 "use client";
-import { FieldErrors, UseFormRegister } from "react-hook-form";
+import { useEffect } from "react";
+import { FieldErrors, UseFormRegister, UseFormGetValues, UseFormSetValue } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  getValues: UseFormGetValues<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -32,8 +35,29 @@ function Field({
   );
 }
 
-export function CommonLawStep({ register, errors }: Props) {
+export function CommonLawStep({ register, errors, getValues, setValue }: Props) {
   const cl = errors.common_law as any;
+
+  // Derive applicant/partner identity and declaration location from data already entered.
+  useEffect(() => {
+    const pi = getValues("personal_info");
+    const fullName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    if (fullName) {
+      setValue("common_law.applicant_name", fullName);
+      setValue("common_law.applicant_signature", fullName);
+    }
+    const spouse = getValues("family.spouse");
+    const partnerName = [spouse?.family_name, spouse?.given_names].filter(Boolean).join(" ");
+    if (partnerName) setValue("common_law.partner_name", partnerName);
+
+    // Signing location defaults to the mailing address — editable.
+    const mailing = getValues("contact.mailing_address");
+    if (!getValues("common_law.declaration_city") && mailing?.city)
+      setValue("common_law.declaration_city", mailing.city);
+    if (!getValues("common_law.declaration_country") && mailing?.country)
+      setValue("common_law.declaration_country", mailing.country);
+  }, [getValues, setValue]);
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-800">Common-law Declaration (IMM 5409)</h2>
@@ -53,13 +77,8 @@ export function CommonLawStep({ register, errors }: Props) {
       </div>
 
       <h3 className="text-base font-medium text-gray-700 border-b pb-1">Partner Information</h3>
+      <p className="text-xs text-gray-500">Your name and your partner&apos;s name are carried over from your personal and family details.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Your Full Name" required error={cl?.applicant_name?.message}>
-          <input {...register("common_law.applicant_name")} className={inp} />
-        </Field>
-        <Field label="Partner's Full Name" required error={cl?.partner_name?.message}>
-          <input {...register("common_law.partner_name")} className={inp} />
-        </Field>
         <Field label="Cohabitation Start Date" required error={cl?.start_date?.message}>
           <input {...register("common_law.start_date")} placeholder="YYYY-MM-DD" className={inp} />
         </Field>

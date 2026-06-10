@@ -58,7 +58,7 @@ class PersonalInfo(BaseModel):
     place_birth_country: str
     citizenship: str                  # country of citizenship
     current_country: str              # current country of residence
-    marital_status: str               # text for IMM 1294 (e.g. "Single")
+    marital_status: str = ""          # consolidated (Phase G): IMM 1294 derives from family.applicant_marital_status
     language: Language = Language.english          # IMM 1294 — able to communicate
     language_most_at_ease: Optional[Language] = None  # IMM 1294 — most at ease in
     taken_language_test: bool = False              # IMM 1294 — has taken language test

@@ -223,6 +223,31 @@ def _fill_residence_row(row_el, residence, date_parts_el=None) -> None:
                 el.text = val
 
 
+_IMM1294_MARITAL_MAP = {
+    "Single": "Single",
+    "Common-law": "Common-law",
+    "Married-physically present": "Married",
+    "Married-not physically present": "Married",
+    "Divorced": "Divorced",
+    "Legally separated": "Separated",
+    "Widowed": "Widowed",
+    "Annulled marriage": "Annulled",
+}
+
+
+def _imm1294_marital(status) -> str:
+    """Map the IMM 5707 marital-status enum to the IMM 1294 plain-text value.
+
+    IMM 1294 has fewer marital-status options than IMM 5707, so the detailed
+    enum (e.g. "Married-physically present") collapses to "Married". Falls back
+    to the raw value if an unmapped status is ever passed.
+    """
+    if status is None:
+        return ""
+    key = status.value if hasattr(status, "value") else str(status)
+    return _IMM1294_MARITAL_MAP.get(key, key)
+
+
 def _build_datasets_xml(data: "StudyPermitData") -> str:
     """
     Read the template datasets XML, modify the form1 section with our data,
@@ -328,7 +353,9 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
         if ms_section is not None:
             ms_el = ms_section.find("MaritalStatus")
             if ms_el is not None:
-                ms_el.text = d.marital_status
+                # Consolidated: derive from the IMM 5707 marital-status enum
+                # instead of a separate personal_info field (Phase G).
+                ms_el.text = _imm1294_marital(data.family.applicant_marital_status)
             fam = data.family
             if fam.spouse and fam.marriage_date:
                 md_el = ms_section.find("DateOfMarriage")

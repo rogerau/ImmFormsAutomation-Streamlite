@@ -124,7 +124,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
   const STEP_FIELDS: Record<number, string[]> = {
     1: ["personal_info", "passport", "national_id", "us_pr_card", "contact"],
     2: ["study", "tuberculosis", "medical_condition", "previously_remained_status", "previously_applied_canada", "previously_refused_visa", "criminal_record", "military_service", "political_party", "war_crimes", "consent_to_contact"],
-    3: ["family.applicant_marital_status", "family.applicant_occupation", "family.father", "family.mother", "family.section_c_signature", "family.section_c_date"],
+    3: ["family.applicant_marital_status", "family.father", "family.mother", "family.section_c_signature", "family.section_c_date"],
     4: ["family.children", "family.no_children_signature"],
     5: [],  // education/occupation optional
     6: optionalForms.includes("imm5409") ? ["common_law"] : [],
@@ -169,23 +169,23 @@ export function StudyPermitWizard({ token, claims }: Props) {
     1: <PersonalInfoStep register={register} errors={errors} watch={watch} />,
     2: <StudyDetailsStep register={register} errors={errors} watch={watch} />,
     3: <FamilyBackgroundStep register={register} errors={errors} watch={watch} setValue={setValue} />,
-    4: <ChildrenSiblingsStep control={control} register={register} errors={errors} />,
-    5: <EmploymentHistoryStep control={control} register={register} errors={errors} watch={watch} />,
+    4: <ChildrenSiblingsStep control={control} register={register} errors={errors} getValues={getValues} setValue={setValue} />,
+    5: <EmploymentHistoryStep control={control} register={register} errors={errors} watch={watch} setValue={setValue} />,
   };
 
   // Dynamically add optional steps
   let optIdx = 6;
   if (optionalForms.includes("imm5409")) {
-    stepComponents[optIdx++] = <CommonLawStep register={register} errors={errors} />;
+    stepComponents[optIdx++] = <CommonLawStep register={register} errors={errors} getValues={getValues} setValue={setValue} />;
   }
   if (optionalForms.includes("imm5646")) {
-    stepComponents[optIdx++] = <CustodianStep register={register} errors={errors} control={control} />;
+    stepComponents[optIdx++] = <CustodianStep register={register} errors={errors} control={control} getValues={getValues} setValue={setValue} />;
   }
   if (optionalForms.includes("imm5476")) {
     stepComponents[optIdx++] = <RepresentativeStep register={register} errors={errors} getValues={getValues} setValue={setValue} control={control} />;
   }
   if (optionalForms.includes("imm5475")) {
-    stepComponents[optIdx++] = <ReleaseAuthorityStep register={register} errors={errors} />;
+    stepComponents[optIdx++] = <ReleaseAuthorityStep register={register} errors={errors} getValues={getValues} setValue={setValue} />;
   }
   stepComponents[totalSteps] = (
     <ReviewSignStep

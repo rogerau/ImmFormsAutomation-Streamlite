@@ -135,6 +135,17 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
     if (motherStatus === "Deceased") setValue("family.mother.occupation", "Deceased");
   }, [motherStatus, setValue]);
 
+  // Auto-fill applicant attestation signatures from the name already entered in Step 1.
+  const piFamily = watch("personal_info.family_name");
+  const piGiven = watch("personal_info.given_name");
+  useEffect(() => {
+    const fullName = [piFamily, piGiven].filter(Boolean).join(" ");
+    if (fullName) {
+      setValue("family.section_c_signature", fullName);
+      setValue("family.no_spouse_signature", fullName);
+    }
+  }, [piFamily, piGiven, setValue]);
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-gray-800">Marital Status &amp; Family (IMM 1294, IMM 5707)</h2>
@@ -142,15 +153,13 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
       {/* Applicant IMM 5707 fields */}
       <div className="space-y-3">
         <h3 className={sectionHeading}>About You (for IMM 5707)</h3>
+        <p className="text-xs text-gray-500">Your occupation is taken from your most recent activity in the Education &amp; Employment step — no need to enter it here.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Marital Status" required error={f?.applicant_marital_status?.message}>
             <select {...register("family.applicant_marital_status")} className={inp}>
               <option value="">-- Select --</option>
               {MARITAL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-          </Field>
-          <Field label="Occupation" required error={f?.applicant_occupation?.message}>
-            <input {...register("family.applicant_occupation")} className={inp} />
           </Field>
         </div>
       </div>
