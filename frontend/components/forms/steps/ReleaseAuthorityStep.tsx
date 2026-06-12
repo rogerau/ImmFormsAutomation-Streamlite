@@ -41,7 +41,7 @@ export function ReleaseAuthorityStep({ register, errors, getValues, setValue }: 
   // Auto-fill the applicant signature and signing location from data already entered.
   useEffect(() => {
     const pi = getValues("personal_info");
-    const fullName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    const fullName = [pi?.given_name, pi?.family_name].filter(Boolean).join(" ");
     if (fullName) setValue("release_authority.applicant_signature", fullName);
 
     const mailing = getValues("contact.mailing_address");

@@ -155,6 +155,12 @@ export function RepresentativeStep({ register, errors, getValues, setValue, cont
             <Field label="Organization / Firm Name" error={r?.organization_name?.message}>
               <input {...register("representative.organization_name")} className={inp} />
             </Field>
+            <Field label="Unit / Apt (optional)" error={r?.unit?.message}>
+              <input {...register("representative.unit")} className={inp} />
+            </Field>
+            <Field label="Street Number" error={r?.street_number?.message}>
+              <input {...register("representative.street_number")} className={inp} />
+            </Field>
             <Field label="Street Name" error={r?.street_name?.message}>
               <input {...register("representative.street_name")} className={inp} />
             </Field>

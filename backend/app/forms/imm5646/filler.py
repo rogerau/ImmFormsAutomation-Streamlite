@@ -58,7 +58,7 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
     if not d:
         return ""
 
-    sex_val = "1" if d.student_sex.lower().startswith("m") else "2"
+    sex_val = "2" if d.student_sex.lower().startswith("m") else "1"
 
     # statusGroup is an exclGroup whose items are integer "1" (Canadian citizen)
     # and "2" (Permanent resident). Writing the raw string label leaves both

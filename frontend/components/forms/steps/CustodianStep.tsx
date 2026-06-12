@@ -55,13 +55,13 @@ export function CustodianStep({ register, errors, control, getValues, setValue }
     if (pi?.date_of_birth) setValue("custodian.student_dob", pi.date_of_birth);
     if (pi?.sex) setValue("custodian.student_sex", pi.sex);
     if (pi?.citizenship) setValue("custodian.student_citizenship", pi.citizenship);
-    const studentName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    const studentName = [pi?.given_name, pi?.family_name].filter(Boolean).join(" ");
     if (studentName) setValue("custodian.student_name_for_decl", studentName);
 
-    if (!getValues("custodian.school_address") && study?.school_name) {
+    if (!getValues("custodian.school_address") && study?.address) {
       setValue(
         "custodian.school_address",
-        [study.school_name, study.city, study.province_state].filter(Boolean).join(", "),
+        [study.address, study.city, study.province_state].filter(Boolean).join(", "),
       );
     }
     if (father) {
@@ -88,15 +88,15 @@ export function CustodianStep({ register, errors, control, getValues, setValue }
   const custFamily = useWatch({ control, name: "custodian.custodian_family_name" });
   const custGiven = useWatch({ control, name: "custodian.custodian_given_names" });
   useEffect(() => {
-    const n = [parent1Family, parent1Given].filter(Boolean).join(" ");
+    const n = [parent1Given, parent1Family].filter(Boolean).join(" ");
     if (n) setValue("custodian.parent_signature", n);
   }, [parent1Family, parent1Given, setValue]);
   useEffect(() => {
-    const n = [parent2Family, parent2Given].filter(Boolean).join(" ");
+    const n = [parent2Given, parent2Family].filter(Boolean).join(" ");
     if (n) setValue("custodian.parent2_signature", n);
   }, [parent2Family, parent2Given, setValue]);
   useEffect(() => {
-    const n = [custFamily, custGiven].filter(Boolean).join(" ");
+    const n = [custGiven, custFamily].filter(Boolean).join(" ");
     if (n) setValue("custodian.custodian_name_for_decl", n);
   }, [custFamily, custGiven, setValue]);
 

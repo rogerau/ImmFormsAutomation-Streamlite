@@ -681,13 +681,14 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 if country_el is not None:
                     country_el.text = _country_lic(e.country)
 
-        # Occupation history (up to 3 rows)
+        # Occupation history (up to 3 rows); reverse so Row1 = most recent (IRCC convention).
         occ_section = page3.find("Occupation")
+        occ_reversed = list(reversed(data.occupation_history))
         if occ_section is not None:
             for idx, row_tag in enumerate(["OccupationRow1", "OccupationRow2", "OccupationRow3"]):
-                if idx >= len(data.occupation_history):
+                if idx >= len(occ_reversed):
                     break
-                o = data.occupation_history[idx]
+                o = occ_reversed[idx]
                 occ_row = occ_section.find(row_tag)
                 if occ_row is not None:
                     for tag, val in [
@@ -928,12 +929,12 @@ def fill_pdf(data: "StudyPermitData") -> bytes:
 
     xml_str = _build_datasets_xml(data)
     edu = data.education_history
-    occ = data.occupation_history
+    occ_r = list(reversed(data.occupation_history))
     prov_data = [
         _prov_label_lic(edu[0].country, edu[0].province_state) if edu else ("", ""),
-        _prov_label_lic(occ[0].country, occ[0].province_state) if len(occ) > 0 else ("", ""),
-        _prov_label_lic(occ[1].country, occ[1].province_state) if len(occ) > 1 else ("", ""),
-        _prov_label_lic(occ[2].country, occ[2].province_state) if len(occ) > 2 else ("", ""),
+        _prov_label_lic(occ_r[0].country, occ_r[0].province_state) if len(occ_r) > 0 else ("", ""),
+        _prov_label_lic(occ_r[1].country, occ_r[1].province_state) if len(occ_r) > 1 else ("", ""),
+        _prov_label_lic(occ_r[2].country, occ_r[2].province_state) if len(occ_r) > 2 else ("", ""),
     ]
     return fill_xfa_pdf(
         TEMPLATE,

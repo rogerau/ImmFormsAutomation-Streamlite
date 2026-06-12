@@ -42,7 +42,7 @@ export function ChildrenSiblingsStep({ control, register, errors, getValues, set
   // Auto-fill the "no children" attestation from the name already entered in Step 1.
   useEffect(() => {
     const pi = getValues("personal_info");
-    const fullName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    const fullName = [pi?.given_name, pi?.family_name].filter(Boolean).join(" ");
     if (fullName) setValue("family.no_children_signature", fullName);
   }, [getValues, setValue]);
 

@@ -248,8 +248,8 @@ def build_datasets_xml(data: "StudyPermitData") -> str:
 {children_xml}
 <Note2>
 <subNote2>
-<SectionBsignature>{xe(f.no_children_signature)}</SectionBsignature>
-<SectionBdate>{xe(f.no_children_date)}</SectionBdate>
+<SectionBsignature>{xe(f.no_children_signature) if no_children else ""}</SectionBsignature>
+<SectionBdate>{xe(f.no_children_date) if no_children else ""}</SectionBdate>
 </subNote2>
 </Note2>
 </SectionB>

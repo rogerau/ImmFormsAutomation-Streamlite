@@ -139,7 +139,7 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
   const piFamily = watch("personal_info.family_name");
   const piGiven = watch("personal_info.given_name");
   useEffect(() => {
-    const fullName = [piFamily, piGiven].filter(Boolean).join(" ");
+    const fullName = [piGiven, piFamily].filter(Boolean).join(" ");
     if (fullName) {
       setValue("family.section_c_signature", fullName);
       setValue("family.no_spouse_signature", fullName);

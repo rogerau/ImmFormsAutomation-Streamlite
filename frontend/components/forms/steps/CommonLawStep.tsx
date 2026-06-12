@@ -41,13 +41,13 @@ export function CommonLawStep({ register, errors, getValues, setValue }: Props) 
   // Derive applicant/partner identity and declaration location from data already entered.
   useEffect(() => {
     const pi = getValues("personal_info");
-    const fullName = [pi?.family_name, pi?.given_name].filter(Boolean).join(" ");
+    const fullName = [pi?.given_name, pi?.family_name].filter(Boolean).join(" ");
     if (fullName) {
       setValue("common_law.applicant_name", fullName);
       setValue("common_law.applicant_signature", fullName);
     }
     const spouse = getValues("family.spouse");
-    const partnerName = [spouse?.family_name, spouse?.given_names].filter(Boolean).join(" ");
+    const partnerName = [spouse?.given_names, spouse?.family_name].filter(Boolean).join(" ");
     if (partnerName) setValue("common_law.partner_name", partnerName);
 
     // Signing location defaults to the mailing address — editable.

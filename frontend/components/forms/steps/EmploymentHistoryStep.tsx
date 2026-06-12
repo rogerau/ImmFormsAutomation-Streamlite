@@ -37,10 +37,12 @@ export function EmploymentHistoryStep({ control, register, errors, watch, setVal
   const hasEducation = isYes(watch?.("has_education_history"));
 
   // Mirror the most recent activity's occupation into the IMM 5707 applicant occupation.
-  const firstOccupation = useWatch({ control, name: "occupation_history.0.occupation" });
+  // Users enter activities oldest-first, so the last item is the current/most recent job.
+  const occupationHistory = useWatch({ control, name: "occupation_history" });
   useEffect(() => {
-    setValue("family.applicant_occupation", firstOccupation ?? "");
-  }, [firstOccupation, setValue]);
+    const last = occupationHistory?.[occupationHistory.length - 1];
+    setValue("family.applicant_occupation", last?.occupation ?? "");
+  }, [occupationHistory, setValue]);
 
   return (
     <div className="space-y-8">
@@ -101,8 +103,8 @@ export function EmploymentHistoryStep({ control, register, errors, watch, setVal
       <div>
         <h2 className="text-lg font-semibold text-gray-800 mb-3">Work / Activity History (IMM 1294)</h2>
         <p className="text-sm text-gray-500 mb-2">
-          Provide details of your personal history for the last <strong>10 years</strong>. List your most recent
-          activity first; include all employment, self-employment, unemployment, studies, travel, etc. If you have more
+          Provide details of your personal history for the last <strong>10 years</strong>. List from oldest to most recent;
+          include all employment, self-employment, unemployment, studies, travel, etc. If you have more
           entries than space allows (the IMM 1294 supports up to 3 rows), let your representative know so the remainder
           can be communicated separately.
         </p>
