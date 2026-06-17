@@ -12,6 +12,9 @@ from fastapi import Depends, FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
 
 load_dotenv()
 
@@ -35,7 +38,18 @@ from .integrations.sheets_study_permit import (
 log = logging.getLogger("imm_automation")
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Immigration Form Automation", version="0.2.0")
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("X-Forwarded-For")
+    return fwd.split(",")[0].strip() if fwd else (request.client.host or "unknown")
+
+limiter = Limiter(key_func=_client_ip)
+
+app = FastAPI(
+    title="Immigration Form Automation",
+    version="0.2.0",
+    docs_url=None,
+    redoc_url=None,
+)
 
 allowed = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
 app.add_middleware(
@@ -45,13 +59,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 def require_token(authorization: str = Header(default="")) -> TokenClaims:
     if not authorization.lower().startswith("bearer "):
+        log.warning("Token auth failure — missing bearer header")
         raise HTTPException(status_code=401, detail="Missing bearer token")
     claims = verify_token(authorization.split(" ", 1)[1])
     if not claims:
+        log.warning("Token auth failure — invalid or expired JWT")
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return claims
 
@@ -59,6 +77,7 @@ def require_token(authorization: str = Header(default="")) -> TokenClaims:
 def require_admin(x_admin_secret: str = Header(default="")) -> None:
     expected = os.environ.get("ADMIN_SECRET", "")
     if not expected or x_admin_secret != expected:
+        log.warning("Admin auth failure — bad or missing x-admin-secret")
         raise HTTPException(status_code=401, detail="Admin secret required")
 
 
@@ -77,7 +96,8 @@ class IssueLinkRequest(BaseModel):
 
 
 @app.post("/admin/issue-link")
-def admin_issue_link(req: IssueLinkRequest, _=Depends(require_admin)):
+@limiter.limit("10/minute")
+def admin_issue_link(req: IssueLinkRequest, request: Request, _=Depends(require_admin)):
     if not tenants.get(req.tenant_id):
         raise HTTPException(status_code=400, detail=f"Unknown tenant: {req.tenant_id}")
     token = issue_token(
@@ -157,9 +177,9 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
     # Fill all PDFs
     try:
         pdf_bundle = fill_bundle(payload)
-    except Exception as e:
+    except Exception:
         log.exception("PDF fill failed")
-        raise HTTPException(status_code=500, detail=f"PDF fill failed: {e}")
+        raise HTTPException(status_code=500, detail="PDF fill failed — see server logs")
 
     # Upload each PDF to Drive
     family_name = payload.personal_info.family_name
@@ -176,11 +196,11 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
             upload_errors.append(f"{form_id}: {e}")
 
     if not drive_results and upload_errors:
-        raise HTTPException(status_code=502, detail=f"Drive upload failed: {upload_errors}")
+        raise HTTPException(status_code=502, detail="Drive upload failed — see server logs")
 
     # Write to Google Sheets
     sheet_id = tenant.submissions_spreadsheet_id
-    sheets_warning: str | None = None
+    sheets_warning: bool = False
     try:
         append_rows(
             sheet_id,
@@ -208,9 +228,9 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
         ra_row = release_authority_row(payload)
         if ra_row:
             append_rows(sheet_id, "ReleaseAuthority", [ra_row])
-    except Exception as e:
+    except Exception:
         log.exception("Sheets append failed")
-        sheets_warning = str(e)
+        sheets_warning = True
 
     response: dict = {
         "submission_id": payload.submission_id,
@@ -223,9 +243,9 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
         },
     }
     if upload_errors:
-        response["upload_warnings"] = upload_errors
+        response["upload_warnings"] = True
     if sheets_warning:
-        response["sheets_warning"] = sheets_warning
+        response["sheets_warning"] = True
     return response
 
 
@@ -244,9 +264,9 @@ def study_permit_preview(payload: StudyPermitData, claims: TokenClaims = Depends
 
     try:
         pdf_bundle = fill_bundle(payload)
-    except Exception as e:
+    except Exception:
         log.exception("PDF fill failed")
-        raise HTTPException(status_code=500, detail=f"PDF fill failed: {e}")
+        raise HTTPException(status_code=500, detail="PDF fill failed — see server logs")
 
     family_name = payload.personal_info.family_name
     zip_buf = io.BytesIO()

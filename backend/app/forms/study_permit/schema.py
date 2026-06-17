@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ..imm1294.schema import (
     Imm1294Address,
@@ -34,7 +34,7 @@ class ContactInfo(BaseModel):
     mailing_address: Imm1294Address
     residential_address_same_as_mailing: bool = True
     residential_address: Optional[Imm1294Address] = None
-    phone: str                                  # primary phone (digits — number portion)
+    phone: str = Field(max_length=30)           # primary phone (digits — number portion)
     primary_phone_type: str = ""                # "Residence" / "Work" / "Cell"
     primary_phone_country_code: str = ""        # e.g. "1" for NA, "44" for UK
     primary_phone_ext: str = ""
@@ -42,19 +42,19 @@ class ContactInfo(BaseModel):
     alt_phone: Optional[Imm1294Phone] = None
     has_fax: bool = False
     fax: Optional[Imm1294Phone] = None
-    email: str
+    email: str = Field(max_length=254)
 
 
 class PersonalInfo(BaseModel):
     """Applicant identity — common to IMM 1294 and IMM 5707."""
-    family_name: str
-    given_name: str
-    native_name: str = ""             # IMM 5707 only
-    alias_family_name: str = ""
-    alias_given_name: str = ""
+    family_name: str = Field(max_length=100)
+    given_name: str = Field(max_length=100)
+    native_name: str = Field(default="", max_length=100)   # IMM 5707 only
+    alias_family_name: str = Field(default="", max_length=100)
+    alias_given_name: str = Field(default="", max_length=100)
     sex: Sex
     date_of_birth: str                # YYYY-MM-DD
-    place_birth_city: str
+    place_birth_city: str = Field(max_length=100)
     place_birth_country: str
     citizenship: str                  # country of citizenship
     current_country: str              # current country of residence
@@ -62,7 +62,7 @@ class PersonalInfo(BaseModel):
     language: Language = Language.english          # IMM 1294 — able to communicate
     language_most_at_ease: Optional[Language] = None  # IMM 1294 — most at ease in
     taken_language_test: bool = False              # IMM 1294 — has taken language test
-    uci: str = ""                     # UCI / Client ID (8 or 10 digits)
+    uci: str = Field(default="", max_length=20)   # UCI / Client ID (8 or 10 digits)
     # IMM 1294 Page 1, subsection 2 — "I want service in"
     service_in: str = "English"       # "English" or "French"
 
@@ -152,7 +152,7 @@ class StudyPermitData(BaseModel):
     tuberculosis: bool = False
     # Q87: medical disorder (with textbox; reuses MedicalDetails)
     medical_condition: bool = False
-    medical_condition_details: str = ""
+    medical_condition_details: str = Field(default="", max_length=1000)
     # Q88a: remained beyond status / unauthorized work or study in Canada
     previously_remained_status: bool = False
     # Q88b: previously applied to enter or remain in Canada
@@ -160,13 +160,13 @@ class StudyPermitData(BaseModel):
     # Q89: refused a visa/permit, denied entry, or ordered to leave any country
     previously_refused_visa: bool = False
     # Shared details textbox (visible if any Q88/Q89 = Yes)
-    previously_refused_visa_details: str = ""
+    previously_refused_visa_details: str = Field(default="", max_length=1000)
     # Q90: criminal record (with textbox)
     criminal_record: bool = False
-    criminal_record_details: str = ""
+    criminal_record_details: str = Field(default="", max_length=1000)
     # Q92: military / police / security service
     military_service: bool = False
-    military_service_details: str = ""
+    military_service_details: str = Field(default="", max_length=1000)
     # Q93: political party / group that advocated violence
     political_party: bool = False
     # Q94: war crimes / ill-treatment of prisoners / desecration

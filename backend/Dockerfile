@@ -14,4 +14,7 @@ COPY app ./app
 ENV PORT=8080
 EXPOSE 8080
 
+RUN addgroup --system appgrp && adduser --system --ingroup appgrp appuser
+USER appuser
+
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

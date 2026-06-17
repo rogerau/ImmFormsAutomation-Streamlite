@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Sex(str, Enum):
@@ -27,14 +27,14 @@ class Imm1294Passport(BaseModel):
 
 
 class Imm1294Address(BaseModel):
-    unit: str = ""
-    street_number: str = ""
-    street_name: str
-    city: str
-    country: str
-    province_state: str = ""
-    postal_code: str = ""
-    district: str = ""                # IMM 1294 mailing/residential address district
+    unit: str = Field(default="", max_length=20)
+    street_number: str = Field(default="", max_length=20)
+    street_name: str = Field(max_length=200)
+    city: str = Field(max_length=100)
+    country: str = Field(max_length=100)
+    province_state: str = Field(default="", max_length=100)
+    postal_code: str = Field(default="", max_length=20)
+    district: str = Field(default="", max_length=100)
 
 
 class Imm1294ResidenceRow(BaseModel):

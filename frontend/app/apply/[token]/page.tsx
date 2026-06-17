@@ -5,9 +5,10 @@ import { StudyPermitWizard } from "@/components/forms/StudyPermitWizard";
 export default async function ApplyPage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
-  const claims = await verifyToken(params.token);
+  const { token } = await params;
+  const claims = await verifyToken(token);
   if (!claims) notFound();
 
   if (claims.form_type === "study_permit") {
@@ -21,7 +22,7 @@ export default async function ApplyPage({
           </p>
           <p className="mt-2 text-xs text-gray-500">Case: {claims.case_id}</p>
         </header>
-        <StudyPermitWizard token={params.token} claims={claims} />
+        <StudyPermitWizard token={token} claims={claims} />
       </main>
     );
   }
