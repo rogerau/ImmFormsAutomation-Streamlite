@@ -141,6 +141,26 @@ export function StudyPermitWizard({ token, claims }: Props) {
 
   const handleBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
+  // Surface validation failures instead of silently doing nothing — react-hook-form
+  // won't call onSubmit if any field (even on a non-visible step) fails Zod, which
+  // otherwise looks like a dead "Submit" button.
+  const SECTION_LABELS: Record<string, string> = {
+    personal_info: "Personal Info", passport: "Passport", contact: "Contact",
+    study: "Study Details", family: "Family Background", common_law: "Common-law Declaration",
+    custodian: "Custodian Declaration", representative: "Representative",
+    release_authority: "Authority to Release Info", applicant_signature: "Declaration & Signature",
+    applicant_signature_date: "Declaration & Signature",
+  };
+  const onInvalid = (errs: Record<string, unknown>) => {
+    const sections = Array.from(
+      new Set(Object.keys(errs).map((k) => SECTION_LABELS[k] ?? k)),
+    );
+    setSubmitError(
+      `Some required fields are missing or invalid in: ${sections.join(", ")}. ` +
+        `Please go back to those steps and complete them, then submit again.`,
+    );
+  };
+
   const onSubmit = async (data: StudyPermitData) => {
     setSubmitError(null);
     try {
@@ -201,7 +221,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
   const isLastStep = currentStep === totalSteps;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
       {!submitResult && (
         <WizardProgress
           currentStep={currentStep}

@@ -58,6 +58,10 @@ export function RepresentativeStep({ register, errors, getValues, setValue, cont
     if (pi?.uci) setValue("representative.uci_number", pi.uci);
     if (contact?.email) setValue("representative.applicant_email", contact.email);
     setValue("representative.type_of_application", "Study Permit (Outside Canada)");
+    // Section E consent signature = applicant's full name (given + family), same
+    // convention as every other form's main-applicant signature. Editable.
+    const fullName = [pi?.given_name, pi?.family_name].filter(Boolean).join(" ");
+    if (fullName) setValue("representative.applicant_signature", fullName);
   }, [getValues, setValue]);
 
   const action = useWatch({ control, name: "representative.rep_action" }) ?? "appointing";

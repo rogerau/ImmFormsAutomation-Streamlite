@@ -48,7 +48,10 @@ export function CommonLawStep({ register, errors, getValues, setValue }: Props) 
     }
     const spouse = getValues("family.spouse");
     const partnerName = [spouse?.given_names, spouse?.family_name].filter(Boolean).join(" ");
-    if (partnerName) setValue("common_law.partner_name", partnerName);
+    if (partnerName) {
+      setValue("common_law.partner_name", partnerName);
+      setValue("common_law.partner_signature", partnerName);
+    }
 
     // Signing location defaults to the mailing address — editable.
     const mailing = getValues("contact.mailing_address");
