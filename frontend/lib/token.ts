@@ -14,6 +14,7 @@ export interface TokenClaims {
   client_name: string;
   tenant_id: string;
   optional_forms: string[];
+  auto_number?: boolean;
   exp: number;
 }
 

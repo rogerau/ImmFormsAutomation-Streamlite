@@ -54,6 +54,22 @@ def append_rows(spreadsheet_id: str, sheet_name: str, rows: list[list]) -> dict:
     return r.json()
 
 
+def increment_counter(spreadsheet_id: str, counter_key: str) -> int:
+    """Atomically bump a named counter in the tenant's "Counters" tab via n8n.
+
+    Used to assign sequential per-use-case case numbers (e.g. STANDARD-0007)
+    to submissions made through a shared/reusable template link.
+    """
+    payload = {
+        "action": "increment_counter",
+        "spreadsheet_id": spreadsheet_id,
+        "counter_key": counter_key,
+    }
+    r = httpx.post(_sheets_url(), json=payload, timeout=_TIMEOUT)
+    r.raise_for_status()
+    return r.json()["value"]
+
+
 def find_spreadsheet_in_folder(name: str, folder_id: str) -> str | None:
     """Not used when routing through n8n — tenants supply spreadsheet_id directly."""
     return None

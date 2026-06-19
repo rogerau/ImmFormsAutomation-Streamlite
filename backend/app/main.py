@@ -22,7 +22,7 @@ from . import tenants
 from .auth import TokenClaims, issue_token, verify_token
 from .forms.study_permit.filler import fill_bundle
 from .forms.study_permit.schema import StudyPermitData
-from .integrations.google import append_rows, upload_pdf_to_drive
+from .integrations.google import append_rows, increment_counter, upload_pdf_to_drive
 from .integrations.sheets_study_permit import (
     children_rows,
     common_law_row,
@@ -93,6 +93,7 @@ class IssueLinkRequest(BaseModel):
     tenant_id: str
     expires_in_days: int = 30
     optional_forms: list[str] = []
+    auto_number: bool = False
 
 
 @app.post("/admin/issue-link")
@@ -107,6 +108,7 @@ def admin_issue_link(req: IssueLinkRequest, request: Request, _=Depends(require_
         tenant_id=req.tenant_id,
         expires_in_days=req.expires_in_days,
         optional_forms=req.optional_forms,
+        auto_number=req.auto_number,
     )
     base = os.environ.get("FRONTEND_BASE_URL", "http://localhost:3000")
     return {"token": token, "url": f"{base}/apply/{token}"}
@@ -143,11 +145,12 @@ _FORM_NUM = {
 }
 
 
-def _filename(form_id: str, case_id: str, family_name: str) -> str:
-    safe = "".join(c for c in family_name.upper() if c.isalnum()) or "UNKNOWN"
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+def _filename(form_id: str, case_id: str, family_name: str, given_name: str) -> str:
+    safe_family = "".join(c for c in family_name.upper() if c.isalnum()) or "UNKNOWN"
+    safe_given = "".join(c for c in given_name.upper() if c.isalnum()) or "UNKNOWN"
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     prefix = _FORM_NUM.get(form_id, form_id.upper())
-    return f"{prefix}_{case_id}_{safe}_{today}.pdf"
+    return f"{prefix}_{case_id}_{safe_family}_{safe_given}_{ts}.pdf"
 
 
 # ---------------------------------------------------------------------------
@@ -155,8 +158,6 @@ def _filename(form_id: str, case_id: str, family_name: str) -> str:
 # ---------------------------------------------------------------------------
 @app.post("/forms/study_permit/fill")
 def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(require_token)):
-    if claims.case_id != payload.case_id:
-        raise HTTPException(status_code=403, detail="case_id mismatch with token")
     if claims.form_type != "study_permit":
         raise HTTPException(status_code=403, detail="token not issued for study_permit")
 
@@ -172,6 +173,18 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
     if not tenant:
         raise HTTPException(status_code=400, detail=f"Unknown tenant: {claims.tenant_id}")
 
+    case_numbering_warning = False
+    if claims.auto_number:
+        try:
+            seq = increment_counter(tenant.submissions_spreadsheet_id, claims.case_id)
+            payload.case_id = f"{claims.case_id}-{seq:04d}"
+        except Exception:
+            log.exception("Case numbering failed — falling back to timestamp suffix")
+            payload.case_id = f"{claims.case_id}-{int(datetime.now(timezone.utc).timestamp())}"
+            case_numbering_warning = True
+    elif claims.case_id != payload.case_id:
+        raise HTTPException(status_code=403, detail="case_id mismatch with token")
+
     payload.submission_id = new_submission_id()
 
     # Fill all PDFs
@@ -183,11 +196,12 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
 
     # Upload each PDF to Drive
     family_name = payload.personal_info.family_name
+    given_name = payload.personal_info.given_name
     drive_results: dict[str, dict] = {}
     upload_errors: list[str] = []
 
     for form_id, pdf_bytes in pdf_bundle.items():
-        filename = _filename(form_id, payload.case_id, family_name)
+        filename = _filename(form_id, payload.case_id, family_name, given_name)
         try:
             result = upload_pdf_to_drive(filename, pdf_bytes, tenant.filled_forms_folder_id)
             drive_results[form_id] = result
@@ -246,6 +260,8 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
         response["upload_warnings"] = True
     if sheets_warning:
         response["sheets_warning"] = True
+    if case_numbering_warning:
+        response["case_numbering_warning"] = True
     return response
 
 
@@ -269,10 +285,11 @@ def study_permit_preview(payload: StudyPermitData, claims: TokenClaims = Depends
         raise HTTPException(status_code=500, detail="PDF fill failed — see server logs")
 
     family_name = payload.personal_info.family_name
+    given_name = payload.personal_info.given_name
     zip_buf = io.BytesIO()
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for form_id, pdf_bytes in pdf_bundle.items():
-            filename = _filename(form_id, payload.case_id, family_name)
+            filename = _filename(form_id, payload.case_id, family_name, given_name)
             zf.writestr(filename, pdf_bytes)
 
     zip_buf.seek(0)
