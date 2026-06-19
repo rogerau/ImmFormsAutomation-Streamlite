@@ -124,6 +124,19 @@ def submissions_row(
 
     yn = lambda v: "Yes" if v else "No"
 
+    # Mirror imm5707/filler.py's gating exactly — the PDF only ever prints
+    # no_spouse_signature/no_children_signature when those declarations are
+    # genuinely true. Without the same gating here, the Sheets row showed the
+    # raw signature text even for applicants who do have a spouse/children,
+    # which contradicted what the (correctly gated) PDF rendered.
+    ms_str = f.applicant_marital_status.value if f.applicant_marital_status else ""
+    married = ms_str in (
+        "Married-physically present",
+        "Married-not physically present",
+        "Common-law",
+    )
+    no_children = not (f.children or []) and bool(f.no_children_signature)
+
     # Phase G — consolidated sources (columns kept; value source redirected in-place):
     #   marital_status     ← family.applicant_marital_status (single source for both forms)
     #   applicant_occupation ← most recent activity in occupation_history
@@ -180,7 +193,8 @@ def submissions_row(
         (s.marital_status.value if s.marital_status else "") if s else "",
         s.address if s else "", s.occupation if s else "",
         ("Yes" if s.will_accompany else "No") if s else "",
-        f.no_spouse_signature, f.no_spouse_date,
+        f.no_spouse_signature if not (s and married) else "",
+        f.no_spouse_date if not (s and married) else "",
         # Father
         fa.family_name, fa.given_names, fa.date_of_birth, fa.country_of_birth,
         fa.status.value if fa.status else "Living", fa.address, fa.occupation,
@@ -189,7 +203,8 @@ def submissions_row(
         mo.status.value if mo.status else "Living", mo.address, mo.occupation,
         # Children flags
         yn(bool(f.children)),
-        f.no_children_signature, f.no_children_date,
+        f.no_children_signature if no_children else "",
+        f.no_children_date if no_children else "",
         # Declarations
         f.section_c_signature, f.section_c_date,
         data.applicant_signature, data.applicant_signature_date,

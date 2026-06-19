@@ -53,6 +53,40 @@ _STATE_LIC = {
     "mh": "69", "mp": "70", "pw": "71", "vi": "72", "pr": "PR",
 }
 
+# Frontend province/state inputs are free text (no dropdown), so users type
+# full names ("Ontario") as often as abbreviations ("ON"). Normalize both to
+# the 2-letter abbreviation before any LOV lookup.
+_PROVINCE_FULLNAME_TO_ABBR = {
+    "alberta": "ab", "british columbia": "bc", "manitoba": "mb",
+    "new brunswick": "nb", "newfoundland and labrador": "nl",
+    "newfoundland": "nl", "labrador": "nl", "nova scotia": "ns",
+    "northwest territories": "nt", "nunavut": "nu", "ontario": "on",
+    "prince edward island": "pe", "quebec": "qc", "québec": "qc",
+    "saskatchewan": "sk", "yukon": "yt", "yukon territory": "yt",
+}
+
+_STATE_FULLNAME_TO_ABBR = {
+    "alabama": "al", "alaska": "ak", "arizona": "az", "arkansas": "ar",
+    "california": "ca", "colorado": "co", "connecticut": "ct",
+    "delaware": "de", "district of columbia": "dc", "florida": "fl",
+    "georgia": "ga", "hawaii": "hi", "idaho": "id", "illinois": "il",
+    "indiana": "in", "iowa": "ia", "kansas": "ks", "kentucky": "ky",
+    "louisiana": "la", "maine": "me", "maryland": "md",
+    "massachusetts": "ma", "michigan": "mi", "minnesota": "mn",
+    "mississippi": "ms", "missouri": "mo", "montana": "mt",
+    "nebraska": "ne", "nevada": "nv", "new hampshire": "nh",
+    "new jersey": "nj", "new mexico": "nm", "new york": "ny",
+    "north carolina": "nc", "north dakota": "nd", "ohio": "oh",
+    "oklahoma": "ok", "oregon": "or", "pennsylvania": "pa",
+    "rhode island": "ri", "south carolina": "sc", "south dakota": "sd",
+    "tennessee": "tn", "texas": "tx", "utah": "ut", "vermont": "vt",
+    "virginia": "va", "washington": "wa", "west virginia": "wv",
+    "wisconsin": "wi", "wyoming": "wy", "american samoa": "as",
+    "federated states of micronesia": "fm", "guam": "gu",
+    "marshall islands": "mh", "northern mariana islands": "mp",
+    "palau": "pw", "virgin islands": "vi", "puerto rico": "pr",
+}
+
 
 def _country_lic(name: str) -> str:
     """Return LOV lic code for a country name, or the original text if unknown."""
@@ -61,19 +95,55 @@ def _country_lic(name: str) -> str:
     return _COUNTRY_LIC.get(name.strip().lower(), name)
 
 
-def _province_lic(country: str, prov: str) -> str:
-    """Return ProvinceAbbrev/StateAbbrev lic code for Canadian provinces / US
-    states. Returns empty when the country isn't Canada or USA — those fields
-    are blocked out by the form's design."""
+def _province_abbrev(country: str, prov: str) -> str:
+    """Normalize a free-text province/state (full name or abbreviation) to its
+    2-letter abbreviation. Returns "" for empty input or non-CA/US countries."""
     if not prov:
         return ""
     c = (country or "").strip().lower()
     p = prov.strip().lower()
     if c in ("canada", "ca"):
-        return _PROVINCE_LIC.get(p, "")
+        return p if p in _PROVINCE_LIC else _PROVINCE_FULLNAME_TO_ABBR.get(p, "")
     if c in ("united states", "united states of america", "usa", "us",
              "u.s.a.", "u.s.", "america"):
-        return _STATE_LIC.get(p, "")
+        return p if p in _STATE_LIC else _STATE_FULLNAME_TO_ABBR.get(p, "")
+    return ""
+
+
+def _province_lic(country: str, prov: str) -> str:
+    """Return ProvinceAbbrev/StateAbbrev lic code for Canadian provinces / US
+    states. Returns empty when the country isn't Canada or USA — those fields
+    are blocked out by the form's design."""
+    abbr = _province_abbrev(country, prov)
+    if not abbr:
+        return ""
+    c = (country or "").strip().lower()
+    if c in ("canada", "ca"):
+        return _PROVINCE_LIC.get(abbr, "")
+    return _STATE_LIC.get(abbr, "")
+
+
+def _city_lic(datasets_root: ET.Element, province_abbrev: str, city: str) -> str:
+    """Look up the IRCC city-LOV `lic` code for a city/town within a given
+    Canadian province. PurposeRow1's CityTown field is a closed `choiceList`
+    bound to CityList.<ProvinceAbbrev>.City[*] (see imm1294e template), and
+    the form's own embedded JavaScript nulls the field out on open whenever
+    the Province field isn't a recognized value — free text never renders.
+    Returns "" if there's no exact (case-insensitive) match in the list."""
+    if not province_abbrev or not city:
+        return ""
+    lov = datasets_root.find("LOVFile")
+    lov = lov.find("LOV") if lov is not None else None
+    city_list = lov.find("CityList") if lov is not None else None
+    if city_list is None:
+        return ""
+    prov_el = city_list.find(province_abbrev.upper())
+    if prov_el is None:
+        return ""
+    needle = city.strip().lower()
+    for c in prov_el.findall("City"):
+        if (c.text or "").strip().lower() == needle:
+            return c.get("lic", "")
     return ""
 
 
@@ -600,8 +670,10 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 _set_path(row, "schoolName", "SchoolName", study.school_name)
                 _set_path(row, "schoolName", "Level", study.level)
                 _set_path(row, "schoolName", "Program", study.program)
-                _set_path(row, "ProvinceState", "Prov", _province_lic("Canada", study.province_state))
-                _set_path(row, "CityTown", "CityTown", study.city)
+                prov_abbr = _province_abbrev("Canada", study.province_state)
+                _set_path(row, "ProvinceState", "Prov", _PROVINCE_LIC.get(prov_abbr, ""))
+                city_lic = _city_lic(root, prov_abbr, study.city)
+                _set_path(row, "CityTown", "CityTown", city_lic or study.city)
                 _set_path(row, "Address", "Address", study.address)
                 dli_el = row.find("DLI")
                 if dli_el is not None:
