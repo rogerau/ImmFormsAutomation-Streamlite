@@ -37,11 +37,22 @@ export function EmploymentHistoryStep({ control, register, errors, watch, setVal
   const hasEducation = isYes(watch?.("has_education_history"));
 
   // Mirror the most recent activity's occupation into the IMM 5707 applicant occupation.
-  // Users enter activities oldest-first, so the last item is the current/most recent job.
+  // Determined by end date (blank "to" = ongoing/current, so it ranks as most recent),
+  // not by array position — entries aren't guaranteed to be added in chronological order.
   const occupationHistory = useWatch({ control, name: "occupation_history" });
   useEffect(() => {
-    const last = occupationHistory?.[occupationHistory.length - 1];
-    setValue("family.applicant_occupation", last?.occupation ?? "");
+    if (!occupationHistory || occupationHistory.length === 0) {
+      setValue("family.applicant_occupation", "");
+      return;
+    }
+    const rank = (o: any) => {
+      const toYear = parseInt(o?.to_year, 10);
+      if (isNaN(toYear)) return Infinity; // no end date entered = ongoing = most recent
+      const toMonth = parseInt(o?.to_month, 10);
+      return toYear * 12 + (isNaN(toMonth) ? 0 : toMonth);
+    };
+    const latest = occupationHistory.reduce((best, cur) => (rank(cur) >= rank(best) ? cur : best));
+    setValue("family.applicant_occupation", latest?.occupation ?? "");
   }, [occupationHistory, setValue]);
 
   return (

@@ -212,6 +212,8 @@ export function StudyPermitWizard({ token, claims }: Props) {
       register={register}
       errors={errors}
       getValues={getValues}
+      watch={watch}
+      setValue={setValue}
       isSubmitting={isSubmitting}
       submitError={submitError}
       submitResult={submitResult}

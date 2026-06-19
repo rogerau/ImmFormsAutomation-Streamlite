@@ -139,11 +139,12 @@ def submissions_row(
 
     # Phase G — consolidated sources (columns kept; value source redirected in-place):
     #   marital_status     ← family.applicant_marital_status (single source for both forms)
-    #   applicant_occupation ← most recent activity in occupation_history
+    #   applicant_occupation ← family.applicant_occupation, the same field imm5707/filler.py
+    #     fills into the PDF (frontend derives it from the latest occupation_history entry by
+    #     date). Recomputing independently from occupation_history[0] here previously picked the
+    #     OLDEST activity, not the latest, and could diverge from what the PDF showed.
     marital_status_val = f.applicant_marital_status.value if f.applicant_marital_status else ""
-    applicant_occupation_val = (
-        data.occupation_history[0].occupation if data.occupation_history else ""
-    )
+    applicant_occupation_val = f.applicant_occupation or ""
 
     return [
         data.submission_id,

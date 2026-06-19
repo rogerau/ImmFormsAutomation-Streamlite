@@ -1,11 +1,14 @@
 "use client";
-import { FieldErrors, UseFormRegister, UseFormGetValues } from "react-hook-form";
+import { useEffect } from "react";
+import { FieldErrors, UseFormRegister, UseFormGetValues, UseFormWatch, UseFormSetValue } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 
 interface Props {
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
   getValues: UseFormGetValues<StudyPermitData>;
+  watch: UseFormWatch<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
   isSubmitting: boolean;
   submitError: string | null;
   submitResult: any;
@@ -40,8 +43,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function ReviewSignStep({ register, errors, getValues, isSubmitting, submitError, submitResult }: Props) {
+export function ReviewSignStep({ register, errors, getValues, watch, setValue, isSubmitting, submitError, submitResult }: Props) {
   const v = getValues();
+
+  // Auto-fill the final declaration signature from the name entered in Step 1.
+  const piFamily = watch("personal_info.family_name");
+  const piGiven = watch("personal_info.given_name");
+  useEffect(() => {
+    const fullName = [piGiven, piFamily].filter(Boolean).join(" ");
+    if (fullName) setValue("applicant_signature", fullName);
+  }, [piFamily, piGiven, setValue]);
 
   if (submitResult) {
     const forms = submitResult.forms || {};
