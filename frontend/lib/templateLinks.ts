@@ -1,3 +1,5 @@
+import { MaritalStatusEnum, type MaritalStatus } from "@/lib/schemas/study_permit";
+
 export interface TemplateUseCase {
   id: string;
   label: string;
@@ -80,3 +82,55 @@ export const TEMPLATE_USE_CASES: TemplateUseCase[] = [
     optional_forms: ["imm5476", "imm5409", "imm5646", "imm5475"],
   },
 ];
+
+// ---- Intake classifier ----
+// Maps a few basic client-intake facts to the matching TemplateUseCase above,
+// so the lawyer answers 3 questions instead of picking from a list of 8.
+
+export const MARITAL_STATUS_OPTIONS = MaritalStatusEnum.options;
+
+export interface IntakeAnswers {
+  maritalStatus: MaritalStatus | "";
+  dateOfBirth: string; // "YYYY-MM-DD", or "" = unanswered
+  wantsReleaseAuthority: boolean | null; // null = unanswered (forced choice, no implicit default)
+}
+
+export const EMPTY_INTAKE_ANSWERS: IntakeAnswers = {
+  maritalStatus: "",
+  dateOfBirth: "",
+  wantsReleaseAuthority: null,
+};
+
+/** Age in whole years as of `asOf`. Returns null if dob is empty/unparseable. */
+export function calculateAge(dob: string, asOf: Date = new Date()): number | null {
+  if (!dob) return null;
+  const birth = new Date(dob + "T00:00:00"); // force local-time parsing, avoid UTC day rollback
+  if (Number.isNaN(birth.getTime())) return null;
+  let age = asOf.getFullYear() - birth.getFullYear();
+  const monthDiff = asOf.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && asOf.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+export function deriveOptionalForms(answers: IntakeAnswers): string[] {
+  const forms = ["imm5476"];
+  if (answers.maritalStatus === "Common-law") forms.push("imm5409");
+  const age = calculateAge(answers.dateOfBirth);
+  if (age !== null && age < 18) forms.push("imm5646");
+  if (answers.wantsReleaseAuthority === true) forms.push("imm5475");
+  return forms;
+}
+
+/** Order-independent match against TEMPLATE_USE_CASES. Exhaustive by construction (8 cases = 2^3 combos). */
+export function matchUseCase(answers: IntakeAnswers): TemplateUseCase | undefined {
+  const target = [...deriveOptionalForms(answers)].sort().join(",");
+  return TEMPLATE_USE_CASES.find((uc) => [...uc.optional_forms].sort().join(",") === target);
+}
+
+export function isIntakeComplete(answers: IntakeAnswers): boolean {
+  return (
+    answers.maritalStatus !== "" &&
+    calculateAge(answers.dateOfBirth) !== null &&
+    answers.wantsReleaseAuthority !== null
+  );
+}
