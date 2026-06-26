@@ -292,10 +292,12 @@ CHILDREN_HEADERS = [
     "family_name", "given_names", "native_name",
     "date_of_birth", "country_of_birth",
     "relationship", "marital_status", "address", "occupation", "accompanies",
-    # Dependant study-permit (Phase X) — only populated when the child files their own IMM 1294
-    "applying_study_permit", "unaccompanied",
+    # Dependant study-permit (Phase X) — only populated when the child files their own IMM 1294.
+    # No custodian (IMM 5646) column: this child is accompanied by the main applicant as their
+    # parent, so IRCC's custodianship requirement never applies in this flow.
+    "applying_study_permit",
     "child_passport_number", "child_dli_number", "child_school", "child_study_level",
-    "imm1294_child_url", "imm5707_child_url", "imm5646_child_url",
+    "imm1294_child_url", "imm5707_child_url",
 ]
 
 
@@ -318,14 +320,12 @@ def children_rows(data: StudyPermitData, drive_results: dict | None = None) -> l
             c.address, c.occupation,
             "Yes" if c.will_accompany else "No",
             "Yes" if applying else "No",
-            "Yes" if getattr(c, "unaccompanied", False) else "No",
             (sa.passport.passport_number if sa and sa.passport else ""),
             (sa.study.dli_number if sa and sa.study else ""),
             (sa.study.school_name if sa and sa.study else ""),
             (sa.study.level if sa and sa.study else ""),
             _url(f"imm1294_child_{i}") if applying else "",
             _url(f"imm5707_child_{i}") if applying else "",
-            _url(f"imm5646_child_{i}") if applying else "",
         ])
     return rows
 

@@ -47,6 +47,8 @@ export function DependentChildrenStep({ control, register, errors }: Props) {
           A school-age (K-12) minor child coming to Canada needs their own study permit. For each
           such child, tick the box and fill in the few extra details below. Their name, date of
           birth and country of birth are reused from the Children step — no need to re-enter them.
+          No custodian declaration is needed here: the child is accompanied by you, the main
+          applicant, as their parent.
         </p>
       </div>
 
@@ -149,11 +151,6 @@ export function DependentChildrenStep({ control, register, errors }: Props) {
                     </Field>
                   </div>
                 </div>
-
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" {...register(`family.children.${idx}.unaccompanied` as any)} />
-                  Arriving without a parent or guardian (requires a custodian — IMM 5646)
-                </label>
               </div>
             )}
           </div>

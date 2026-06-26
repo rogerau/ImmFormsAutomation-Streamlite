@@ -221,9 +221,13 @@ const child5707Schema = person5707Schema.extend({
   relationship: z.string().min(1, "Required"),
   marital_status: MaritalStatusEnum,
   will_accompany: requiredBoolFromString,
-  // Phase X — minor child filing their own study permit
+  // Phase X — minor child filing their own study permit. No "unaccompanied"
+  // flag: this child is a dependent of the main applicant, who is themself
+  // the parent travelling to/residing in Canada — IRCC's custodian
+  // requirement (IMM 5646) only applies when NO parent/guardian accompanies,
+  // which can't happen in this flow. A genuinely unaccompanied minor (no
+  // parent involved at all) is a different case type, out of scope here.
   applying_study_permit: boolFromString.optional(),
-  unaccompanied: boolFromString.optional(),
   study_applicant: childStudyApplicantSchema.nullable().optional(),
 });
 

@@ -1,12 +1,19 @@
 """Dependant form generation — child-as-principal projection (Phase X, Phase 1).
 
 When a study-permit applicant has a school-age (K-12) minor child who is also
-filing their OWN study permit, we generate that child's IMM 1294 (+ IMM 5707,
-+ IMM 5646 when unaccompanied). Rather than rewrite the large IMM 1294 / IMM 5707
-fillers (which read the *main* applicant off StudyPermitData), this module
-synthesizes a StudyPermitData in which the **child is the principal**, reusing
-the parent's already-captured data wherever IRCC asks for the same fact, so the
-existing fillers run unchanged.
+filing their OWN study permit, we generate that child's IMM 1294 (+ IMM 5707).
+Rather than rewrite the large IMM 1294 / IMM 5707 fillers (which read the
+*main* applicant off StudyPermitData), this module synthesizes a
+StudyPermitData in which the **child is the principal**, reusing the parent's
+already-captured data wherever IRCC asks for the same fact, so the existing
+fillers run unchanged.
+
+No custodian declaration (IMM 5646) is ever generated for this child: they are
+a dependant of the main applicant, who is themself the parent travelling
+to/residing in Canada. IRCC's custodianship requirement (a notarized Custodian
+Declaration) only applies when a minor arrives WITHOUT an accompanying parent
+or legal guardian — that can't happen for a child filed in the same bundle as
+their own parent's study-permit application.
 
 Reuse policy (see the 'keep the online form simple / no duplication' rule):
   - child name / DOB / native name / country of birth / address  -> from the
@@ -150,7 +157,5 @@ def build_child_principal_data(parent: StudyPermitData, child: ChildEntry) -> St
         consent_to_contact=parent.consent_to_contact,
         applicant_signature=sign,          # the parent signs for the minor
         applicant_signature_date=sign_date,
-        # NB: an unaccompanied child's custodian declaration (IMM 5646) is NOT
-        # generated here — it needs the Canadian custodian's details, collected
-        # separately. The child is flagged 'unaccompanied' in the Children sheet.
+        # NB: no custodian declaration (IMM 5646) — see module docstring.
     )

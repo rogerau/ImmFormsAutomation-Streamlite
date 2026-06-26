@@ -110,9 +110,13 @@ class ChildEntry(Child5707):
     Subclasses Child5707 (so the IMM 5707 filler reads it unchanged) and adds the
     dependant-study-permit fields. Phase X: when applying_study_permit is set and
     'child_study_permit' is in optional_forms, fill_bundle generates this child's
-    own IMM 1294 (+ IMM 5707, + IMM 5646 when unaccompanied)."""
+    own IMM 1294 (+ IMM 5707).
+
+    No custodian declaration (IMM 5646): this child is a dependant of the main
+    applicant, who is themself the parent travelling to/residing in Canada.
+    IRCC's custodianship requirement only applies when NO parent/guardian
+    accompanies the minor, which cannot happen in this flow."""
     applying_study_permit: bool = False
-    unaccompanied: bool = False       # child arriving without a parent/guardian -> custodian (IMM 5646)
     study_applicant: Optional[ChildStudyApplicant] = None
 
 

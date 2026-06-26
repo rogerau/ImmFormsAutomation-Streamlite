@@ -44,21 +44,24 @@ def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
     # study permit. The eligibility engine (data/dependents_eligibility.json)
     # decides each child's required form set; we fill the ones we support here.
     #
+    # accompanied_by_parent is always True here: this child is a dependant of
+    # the main applicant, who is themself the parent travelling to/residing in
+    # Canada. IRCC's custodian requirement (IMM 5646) only applies when NO
+    # parent/guardian accompanies the minor — that can't happen in this flow,
+    # so IMM 5646 is never part of `status.required_forms` for accompanied
+    # children and is correctly absent from `child_fillers` below. (A
+    # genuinely unaccompanied minor — no parent involved at all — is a
+    # different case type, out of scope for this main-applicant bundle.)
+    #
     # IMM 5476 / 5475 are family-level (the main applicant's representative /
-    # release authority), IMM 5483 is a document checklist (not fillable), and
-    # IMM 5646 (custodian) needs the Canadian custodian's details which are NOT
-    # collected per child in Phase 1 — an unaccompanied child is instead flagged
-    # in the Children sheet so the lawyer prepares IMM 5646 separately. So those
-    # codes are intentionally skipped (no filler registered).
+    # release authority) and IMM 5483 is a document checklist (not fillable),
+    # so those codes are also intentionally skipped (no filler registered).
     if "child_study_permit" in data.optional_forms:
         child_fillers = {"IMM1294": fill_imm1294, "IMM5707": fill_imm5707}
+        status = get_child_status(ChildSchoolLevel.k12, accompanied_by_parent=True)
         for idx, child in enumerate(data.family.children, start=1):
             if not getattr(child, "applying_study_permit", False):
                 continue
-            status = get_child_status(
-                ChildSchoolLevel.k12,
-                accompanied_by_parent=not getattr(child, "unaccompanied", False),
-            )
             child_data = build_child_principal_data(data, child)
             for form_code in status.required_forms:
                 filler = child_fillers.get(form_code)
