@@ -74,6 +74,52 @@ function flattenErrors(node: any, path: string[] = []): { path: string[]; messag
   return out;
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  personal_info: "Personal Info", passport: "Passport", contact: "Contact",
+  national_id: "National ID", us_pr_card: "U.S. PR Card",
+  study: "Study Details", family: "Family Background",
+  education_history: "Education History", occupation_history: "Employment History",
+  common_law: "Common-law Declaration",
+  custodian: "Custodian Declaration", representative: "Representative",
+  release_authority: "Authority to Release Info", applicant_signature: "Declaration & Signature",
+  applicant_signature_date: "Declaration & Signature",
+};
+
+// Build a readable label for a field path, e.g. ["family","children","0","study_applicant","passport","passport_number"]
+// -> "Family Background › Children › #1 › Study Applicant › Passport › Passport Number".
+function labelForPath(path: (string | number)[]): string {
+  if (path.length === 0) return "Form";
+  const strPath = path.map(String);
+  const [head, ...rest] = strPath;
+  const headLabel = SECTION_LABELS[head] ?? humanizeSeg(head);
+  return [headLabel, ...rest.map(humanizeSeg)].join(" › ");
+}
+
+// FastAPI/Pydantic error responses come in several shapes: a plain string,
+// a single {msg} object, or (most commonly, on 422) a list of per-field
+// validation errors with a `loc` path — e.g. {"loc": ["body","family","children",0,"sex"], "msg": "Field required"}.
+// Format all of these into the same readable "Section › Field: message" style
+// used for client-side errors, instead of letting them stringify to "[object Object]".
+function formatApiErrorDetail(detail: unknown, status: number): string {
+  if (typeof detail === "string" && detail.length > 0) return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const lines = detail.map((d: any) => {
+      if (d && typeof d === "object") {
+        const loc = Array.isArray(d.loc) ? d.loc.filter((p: any) => p !== "body") : [];
+        const msg = typeof d.msg === "string" ? d.msg : JSON.stringify(d);
+        return loc.length > 0 ? `• ${labelForPath(loc)}: ${msg}` : `• ${msg}`;
+      }
+      return `• ${String(d)}`;
+    });
+    return `The server rejected this submission:\n${lines.join("\n")}`;
+  }
+  if (detail && typeof detail === "object") {
+    const msg = (detail as any).msg ?? (detail as any).message;
+    if (typeof msg === "string" && msg.length > 0) return msg;
+  }
+  return `Submission failed (HTTP ${status}). Please try again or contact support.`;
+}
+
 export function StudyPermitWizard({ token, claims }: Props) {
   const optionalForms = claims.optional_forms ?? [];
   const activeOptSteps = Object.entries(OPT_STEPS).filter(([key]) => optionalForms.includes(key));
@@ -175,24 +221,6 @@ export function StudyPermitWizard({ token, claims }: Props) {
   // Surface validation failures instead of silently doing nothing — react-hook-form
   // won't call onSubmit if any field (even on a non-visible step) fails Zod, which
   // otherwise looks like a dead "Submit" button.
-  const SECTION_LABELS: Record<string, string> = {
-    personal_info: "Personal Info", passport: "Passport", contact: "Contact",
-    national_id: "National ID", us_pr_card: "U.S. PR Card",
-    study: "Study Details", family: "Family Background",
-    education_history: "Education History", occupation_history: "Employment History",
-    common_law: "Common-law Declaration",
-    custodian: "Custodian Declaration", representative: "Representative",
-    release_authority: "Authority to Release Info", applicant_signature: "Declaration & Signature",
-    applicant_signature_date: "Declaration & Signature",
-  };
-  // Build a readable label for a field path, e.g. ["family","children","0","study_applicant","passport","passport_number"]
-  // -> "Family Background › Children › #1 › Study Applicant › Passport › Passport Number".
-  const labelForPath = (path: string[]): string => {
-    if (path.length === 0) return "Form";
-    const [head, ...rest] = path;
-    const headLabel = SECTION_LABELS[head] ?? humanizeSeg(head);
-    return [headLabel, ...rest.map(humanizeSeg)].join(" › ");
-  };
   const onInvalid = (errs: Record<string, unknown>) => {
     const items = flattenErrors(errs);
     if (items.length === 0) {
@@ -218,8 +246,8 @@ export function StudyPermitWizard({ token, claims }: Props) {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Unknown error" }));
-        throw new Error(err.detail ?? `HTTP ${res.status}`);
+        const err = await res.json().catch(() => ({ detail: null }));
+        throw new Error(formatApiErrorDetail(err.detail, res.status));
       }
       const result = await res.json();
       setSubmitResult(result);
