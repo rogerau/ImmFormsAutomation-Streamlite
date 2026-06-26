@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
     client_name: body.client_name,
     tenant_id: body.tenant_id,
     optional_forms: Array.isArray(body.optional_forms) ? body.optional_forms : [],
-  }, body.expires_in_days || 30);
+    // Match the pre-baked template links: auto-number cases and default to a long expiry.
+    auto_number: body.auto_number ?? true,
+  }, body.expires_in_days || 730);
 
   const base = process.env.NEXT_PUBLIC_FRONTEND_BASE_URL || "http://localhost:3000";
   return NextResponse.json({ token, url: `${base}/apply/${token}` });

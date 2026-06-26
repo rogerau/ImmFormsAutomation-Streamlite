@@ -89,6 +89,33 @@ class PreviousMarriage(BaseModel):
     to_date: str = ""                 # YYYY-MM-DD
 
 
+class ChildStudyApplicant(BaseModel):
+    """Extra identity fields a minor child needs to file their OWN study permit
+    (IMM 1294) as the principal applicant. Reused where possible from the main
+    applicant: citizenship / current_country default to the parent's when blank,
+    and contact/funding are inherited by the child-principal projection (see
+    forms/study_permit/dependents.py). Only sex / place_birth_city / passport /
+    study are genuinely child-specific and collected in the wizard."""
+    sex: Optional[Sex] = None
+    place_birth_city: str = Field(default="", max_length=100)
+    citizenship: str = ""             # defaults to the parent's if blank
+    current_country: str = ""         # defaults to the parent's if blank
+    passport: Optional[Imm1294Passport] = None
+    study: Optional[Imm1294StudyDetails] = None
+
+
+class ChildEntry(Child5707):
+    """A child on IMM 5707, optionally also applying for their own study permit.
+
+    Subclasses Child5707 (so the IMM 5707 filler reads it unchanged) and adds the
+    dependant-study-permit fields. Phase X: when applying_study_permit is set and
+    'child_study_permit' is in optional_forms, fill_bundle generates this child's
+    own IMM 1294 (+ IMM 5707, + IMM 5646 when unaccompanied)."""
+    applying_study_permit: bool = False
+    unaccompanied: bool = False       # child arriving without a parent/guardian -> custodian (IMM 5646)
+    study_applicant: Optional[ChildStudyApplicant] = None
+
+
 class FamilyInfo(BaseModel):
     """IMM 5707-specific data: occupation, marital status enum, family members."""
     applicant_marital_status: MaritalStatus
@@ -113,7 +140,7 @@ class FamilyInfo(BaseModel):
     section_a_date: str = ""
 
     # Children (max 4)
-    children: list[Child5707] = []
+    children: list[ChildEntry] = []
     no_children_signature: str = ""
     no_children_date: str = ""
 

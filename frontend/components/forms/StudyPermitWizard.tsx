@@ -13,6 +13,7 @@ import { CommonLawStep } from "./steps/CommonLawStep";
 import { CustodianStep } from "./steps/CustodianStep";
 import { RepresentativeStep } from "./steps/RepresentativeStep";
 import { ReleaseAuthorityStep } from "./steps/ReleaseAuthorityStep";
+import { DependentChildrenStep } from "./steps/DependentChildrenStep";
 import { ReviewSignStep } from "./steps/ReviewSignStep";
 import { FormsGuidance } from "./FormsGuidance";
 import type { TokenClaims } from "@/lib/token";
@@ -42,6 +43,7 @@ const OPT_STEPS: Record<string, string> = {
   imm5646: "Custodian Declaration",
   imm5476: "Representative",
   imm5475: "Authority to Release Info",
+  child_study_permit: "Dependent Children",
 };
 
 export function StudyPermitWizard({ token, claims }: Props) {
@@ -131,6 +133,7 @@ export function StudyPermitWizard({ token, claims }: Props) {
     7: optionalForms.includes("imm5646") ? ["custodian"] : [],
     8: optionalForms.includes("imm5476") ? ["representative"] : [],
     9: optionalForms.includes("imm5475") ? ["release_authority"] : [],
+    10: optionalForms.includes("child_study_permit") ? ["family.children"] : [],
   };
 
   const handleNext = useCallback(async () => {
@@ -206,6 +209,9 @@ export function StudyPermitWizard({ token, claims }: Props) {
   }
   if (optionalForms.includes("imm5475")) {
     stepComponents[optIdx++] = <ReleaseAuthorityStep register={register} errors={errors} getValues={getValues} setValue={setValue} />;
+  }
+  if (optionalForms.includes("child_study_permit")) {
+    stepComponents[optIdx++] = <DependentChildrenStep control={control} register={register} errors={errors} />;
   }
   stepComponents[totalSteps] = (
     <ReviewSignStep

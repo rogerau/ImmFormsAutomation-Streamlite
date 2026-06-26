@@ -1,0 +1,76 @@
+{
+  "version": "2026-06-24",
+  "effective_date": "2025-01-21",
+  "source_doc": "research/study-permit-dependents-entry-conditions-research.md",
+  "spouse": {
+    "eligible_study_levels": [
+      "doctoral",
+      "masters_16_plus_months",
+      "professional_degree",
+      "pilot_program"
+    ],
+    "ineligible_study_levels": [
+      "masters_under_16_months",
+      "bachelors",
+      "college_diploma",
+      "certificate",
+      "language_program",
+      "other"
+    ],
+    "professional_programs": [
+      { "code": "DDS", "name": "Doctor of Dental Surgery" },
+      { "code": "JD", "name": "Bachelor of Law / Juris Doctor (LLB, JD, BCL)" },
+      { "code": "MD", "name": "Doctor of Medicine" },
+      { "code": "OD", "name": "Doctor of Optometry" },
+      { "code": "PHARM", "name": "Pharmacy (PharmD, BSc, BPharm)" },
+      { "code": "DVM", "name": "Doctor of Veterinary Medicine" },
+      { "code": "BSCN", "name": "Bachelor of Science in Nursing / Bachelor of Nursing (BScN, BSN, BNSc, BN)" },
+      { "code": "BED", "name": "Bachelor of Education" },
+      { "code": "BENG", "name": "Bachelor of Engineering (BEng, BE, BASc)" }
+    ],
+    "alternatives_if_ineligible": ["visitor", "employer_specific_work_permit", "own_study_permit"],
+    "forms_by_path": {
+      "open_work_permit": ["IMM1295", "IMM5707", "IMM5409", "IMM5476", "IMM5475", "IMM5488"],
+      "employer_specific_work_permit": ["IMM1295", "IMM5707", "IMM5409", "IMM5476", "IMM5475", "IMM5488"],
+      "visitor": ["IMM5257", "IMM5257_SCH1", "IMM5707", "IMM5409", "IMM5476", "IMM5475", "IMM5484"],
+      "own_study_permit": ["IMM1294", "IMM5707", "IMM5483"]
+    },
+    "conditional_forms": ["IMM5409", "IMM5476", "IMM5475"],
+    "notes": "Validity cannot exceed the principal's study permit expiry; SOWP generally cannot be applied for once the principal is in their final semester.",
+    "source_refs": [1, 2, 3, 4, 5, 6]
+  },
+  "child": {
+    "rules": [
+      {
+        "school_level": "pre_school",
+        "required_status": "visitor",
+        "pal_tal_exempt": null,
+        "forms": ["IMM5257", "IMM5257_SCH1", "IMM5707", "IMM5476", "IMM5475", "IMM5484"],
+        "notes": "No study permit needed until school age."
+      },
+      {
+        "school_level": "k12",
+        "required_status": "study_permit_required",
+        "pal_tal_exempt": true,
+        "forms": ["IMM1294", "IMM5707", "IMM5476", "IMM5475", "IMM5483"],
+        "notes": "Must apply before entering Canada. PAL/TAL exempt for K-12. No Letter of Acceptance required if filed together with the parent's own study/work permit application."
+      }
+    ],
+    "owp_eligible": false,
+    "custodian_required_if_unaccompanied": true,
+    "custodian_form": "IMM5646",
+    "age_of_majority_note": "On reaching the age of majority (18 or 19, province-dependent), the child must obtain their own study permit to keep studying.",
+    "source_refs": [3, 5, 7, 8, 15]
+  },
+  "sources": {
+    "1": "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/work/help-your-spouse-common-law-partner-work-canada.html",
+    "2": "https://www.canada.ca/en/immigration-refugees-citizenship/news/notices/changes-open-work-permits-family-members-temporary-residents.html",
+    "3": "https://www.cicnews.com/2025/09/who-can-get-an-open-work-permit-as-the-spouse-of-an-international-student-0959881.html",
+    "4": "https://www.canada.ca/en/immigration-refugees-citizenship/services/work-canada/special-instructions/spouses-dependent-children/apply.html",
+    "5": "https://www.mltaikins.com/insights/changes-to-open-work-permits-effective-january-21-2025/",
+    "6": "https://www.immigration-nation.ca/2025/11/19/spouses-of-international-students-in-2025-2026-who-still-qualifies-for-an-open-work-permit/",
+    "7": "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/prepare/minor-children.html",
+    "8": "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/eligibility/study-without-permit.html",
+    "15": "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents/provincial-attestation-letter.html"
+  }
+}

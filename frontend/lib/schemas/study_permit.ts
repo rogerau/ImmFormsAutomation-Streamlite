@@ -186,10 +186,45 @@ const parent5707Schema = person5707Schema.extend({
   will_accompany: requiredBoolFromString,
 });
 
+// ---- Dependant child study-permit (Phase X) ----
+// Lenient by design: every field defaults, so a non-applying child never errors.
+// When a child is flagged applying_study_permit AND optional_forms includes
+// "child_study_permit", the master superRefine enforces the required fields.
+const childPassportSchema = z.object({
+  passport_number: z.string().default(""),
+  country_of_issue: z.string().default(""),
+  issue_date: dateStr,
+  expiry_date: dateStr,
+});
+
+const childStudySchema = z.object({
+  school_name: z.string().default(""),
+  level: z.string().default(""),
+  program: z.string().default(""),
+  city: z.string().default(""),
+  province_state: z.string().default(""),
+  dli_number: z.string().default(""),
+  start_date: dateStr,
+  end_date: dateStr,
+});
+
+const childStudyApplicantSchema = z.object({
+  sex: z.preprocess((v) => (v === "" || v == null ? null : v), SexEnum.nullable().optional()),
+  place_birth_city: z.string().default(""),
+  citizenship: z.string().default(""),   // defaults to the parent's on the backend if blank
+  current_country: z.string().default(""),
+  passport: childPassportSchema.default({ passport_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
+  study: childStudySchema.default({ school_name: "", level: "", program: "", city: "", province_state: "", dli_number: "", start_date: "", end_date: "" }),
+});
+
 const child5707Schema = person5707Schema.extend({
   relationship: z.string().min(1, "Required"),
   marital_status: MaritalStatusEnum,
   will_accompany: requiredBoolFromString,
+  // Phase X — minor child filing their own study permit
+  applying_study_permit: boolFromString.optional(),
+  unaccompanied: boolFromString.optional(),
+  study_applicant: childStudyApplicantSchema.nullable().optional(),
 });
 
 // ---- IMM 5409 sub-schema ----
@@ -477,6 +512,34 @@ export const StudyPermitSchema = z
         code: z.ZodIssueCode.custom,
         message: "Type your name to confirm you have no children.",
         path: ["family", "no_children_signature"],
+      });
+    }
+
+    // Phase X — when a minor child files their own study permit, require the
+    // child-specific identity/passport/study fields the IMM 1294 needs.
+    if (d.optional_forms.includes("child_study_permit")) {
+      d.family.children.forEach((c, i) => {
+        if (!c.applying_study_permit) return;
+        const sa = c.study_applicant;
+        const need = (ok: unknown, msg: string, ...path: (string | number)[]) => {
+          if (!ok) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: msg,
+              path: ["family", "children", i, "study_applicant", ...path],
+            });
+          }
+        };
+        need(sa?.sex, "Required", "sex");
+        need(sa?.place_birth_city, "Required", "place_birth_city");
+        need(sa?.passport?.passport_number, "Required", "passport", "passport_number");
+        need(sa?.passport?.country_of_issue, "Required", "passport", "country_of_issue");
+        need(sa?.study?.school_name, "Required", "study", "school_name");
+        need(sa?.study?.level, "Required", "study", "level");
+        need(sa?.study?.program, "Required", "study", "program");
+        need(sa?.study?.dli_number, "Required", "study", "dli_number");
+        need(sa?.study?.start_date, "Required", "study", "start_date");
+        need(sa?.study?.end_date, "Required", "study", "end_date");
       });
     }
   });

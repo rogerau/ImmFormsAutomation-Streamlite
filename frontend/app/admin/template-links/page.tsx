@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import {
   EMPTY_INTAKE_ANSWERS,
   MARITAL_STATUS_OPTIONS,
+  DEPENDENT_CHILD_FORM,
+  deriveOptionalForms,
   isIntakeComplete,
+  matchBaseUseCase,
   matchUseCase,
   type IntakeAnswers,
 } from "@/lib/templateLinks";
@@ -23,7 +26,12 @@ const FORM_LABELS: Record<string, string> = {
   imm5409: "IMM 5409 — Common-Law",
   imm5646: "IMM 5646 — Custodian",
   imm5475: "IMM 5475 — Release Authority",
+  child_study_permit: "Dependent Children — IMM 1294 / 5707",
 };
+
+// Pre-baked template links are issued for this tenant; the dynamic dependent-child
+// link must match (mirrors TENANT_ID in app/api/admin/template-links/route.ts).
+const TENANT_ID = "patko";
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
 
@@ -38,7 +46,9 @@ export default function TemplateLinksPage() {
   const [answers, setAnswers] = useState<IntakeAnswers>(EMPTY_INTAKE_ANSWERS);
   const [assessed, setAssessed] = useState(false);
   const [matchedLinkId, setMatchedLinkId] = useState<string | null>(null);
+  const [dynamicResult, setDynamicResult] = useState<TemplateLink | null>(null);
   const [assessError, setAssessError] = useState("");
+  const [assessing, setAssessing] = useState(false);
 
   useEffect(() => {
     const stored = sessionStorage.getItem(SECRET_STORAGE_KEY);
@@ -78,13 +88,57 @@ export default function TemplateLinksPage() {
     setTimeout(() => setCopiedId((id) => (id === link.id ? null : id)), 1500);
   }
 
-  function handleAssess() {
+  async function handleAssess() {
+    setAssessError("");
+    const forms = deriveOptionalForms(answers);
+
+    // Dependent-child cases are orthogonal to the 8 pre-baked links, so issue a
+    // link dynamically with the full derived form set.
+    if (forms.includes(DEPENDENT_CHILD_FORM)) {
+      const base = matchBaseUseCase(answers);
+      if (!base) {
+        setAssessError("Could not match a use case — check answers.");
+        return;
+      }
+      setAssessing(true);
+      try {
+        const res = await fetch("/api/admin/issue-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+          body: JSON.stringify({
+            case_id: `${base.case_prefix}-DEP`,
+            client_name: base.client_name,
+            tenant_id: TENANT_ID,
+            optional_forms: forms,
+          }),
+        });
+        if (!res.ok) {
+          setAssessError("Could not issue the link. Check the admin secret and try again.");
+          return;
+        }
+        const data = await res.json();
+        setDynamicResult({
+          id: "dynamic",
+          label: `${base.label} + Dependent Children`,
+          description:
+            `${base.description} Plus IMM 1294 / IMM 5707 for each minor child applying for their own study permit.`,
+          optional_forms: forms,
+          url: data.url,
+        });
+        setAssessed(true);
+      } catch {
+        setAssessError("Could not reach the server. Try again.");
+      } finally {
+        setAssessing(false);
+      }
+      return;
+    }
+
     const uc = matchUseCase(answers);
     if (!uc) {
       setAssessError("Could not match a use case — check answers.");
       return;
     }
-    setAssessError("");
     setMatchedLinkId(uc.id);
     setAssessed(true);
   }
@@ -92,6 +146,7 @@ export default function TemplateLinksPage() {
   function handleStartOver() {
     setAnswers(EMPTY_INTAKE_ANSWERS);
     setMatchedLinkId(null);
+    setDynamicResult(null);
     setAssessed(false);
     setAssessError("");
   }
@@ -188,23 +243,48 @@ export default function TemplateLinksPage() {
               </label>
             </div>
           </div>
+          <div>
+            <span className="block text-sm font-medium text-gray-700 mb-1">
+              Any school-age (K-12) minor children coming to Canada who need their own study permit?
+            </span>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name="hasMinorChildrenStudying"
+                  checked={answers.hasMinorChildrenStudying === true}
+                  onChange={() => setAnswers((a) => ({ ...a, hasMinorChildrenStudying: true }))}
+                />
+                Yes
+              </label>
+              <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name="hasMinorChildrenStudying"
+                  checked={answers.hasMinorChildrenStudying === false}
+                  onChange={() => setAnswers((a) => ({ ...a, hasMinorChildrenStudying: false }))}
+                />
+                No
+              </label>
+            </div>
+          </div>
           {assessError && <p className="text-sm text-red-600">{assessError}</p>}
           <button
             onClick={handleAssess}
-            disabled={!isIntakeComplete(answers)}
+            disabled={!isIntakeComplete(answers) || assessing}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
-            Assess
+            {assessing ? "Assessing…" : "Assess"}
           </button>
           {!isIntakeComplete(answers) && (
-            <p className="text-xs text-gray-500">Answer all 3 questions to assess.</p>
+            <p className="text-xs text-gray-500">Answer all 4 questions to assess.</p>
           )}
         </div>
       </main>
     );
   }
 
-  const matchedLink = links.find((l) => l.id === matchedLinkId);
+  const matchedLink = dynamicResult ?? links.find((l) => l.id === matchedLinkId);
 
   return (
     <main className="mx-auto max-w-3xl p-6">

@@ -93,13 +93,18 @@ export interface IntakeAnswers {
   maritalStatus: MaritalStatus | "";
   dateOfBirth: string; // "YYYY-MM-DD", or "" = unanswered
   wantsReleaseAuthority: boolean | null; // null = unanswered (forced choice, no implicit default)
+  hasMinorChildrenStudying: boolean | null; // Phase X — minor child(ren) filing their own study permit
 }
 
 export const EMPTY_INTAKE_ANSWERS: IntakeAnswers = {
   maritalStatus: "",
   dateOfBirth: "",
   wantsReleaseAuthority: null,
+  hasMinorChildrenStudying: null,
 };
+
+/** "child_study_permit" is an orthogonal add-on, not part of the 2^3 base use-case combos. */
+export const DEPENDENT_CHILD_FORM = "child_study_permit";
 
 /** Age in whole years as of `asOf`. Returns null if dob is empty/unparseable. */
 export function calculateAge(dob: string, asOf: Date = new Date()): number | null {
@@ -118,10 +123,25 @@ export function deriveOptionalForms(answers: IntakeAnswers): string[] {
   const age = calculateAge(answers.dateOfBirth);
   if (age !== null && age < 18) forms.push("imm5646");
   if (answers.wantsReleaseAuthority === true) forms.push("imm5475");
+  if (answers.hasMinorChildrenStudying === true) forms.push(DEPENDENT_CHILD_FORM);
   return forms;
 }
 
-/** Order-independent match against TEMPLATE_USE_CASES. Exhaustive by construction (8 cases = 2^3 combos). */
+/** The principal-applicant-only forms (excludes the orthogonal dependent-child add-on),
+ * used to match a base TEMPLATE_USE_CASE for labelling/case-prefix purposes. */
+export function deriveBaseForms(answers: IntakeAnswers): string[] {
+  return deriveOptionalForms(answers).filter((f) => f !== DEPENDENT_CHILD_FORM);
+}
+
+/** Match the base use case (ignoring the dependent-child axis). Exhaustive by
+ * construction (8 cases = 2^3 combos), so this never returns undefined for complete answers. */
+export function matchBaseUseCase(answers: IntakeAnswers): TemplateUseCase | undefined {
+  const target = [...deriveBaseForms(answers)].sort().join(",");
+  return TEMPLATE_USE_CASES.find((uc) => [...uc.optional_forms].sort().join(",") === target);
+}
+
+/** Order-independent match against TEMPLATE_USE_CASES. Returns undefined when the
+ * dependent-child add-on applies (no pre-baked template covers it — issue dynamically). */
 export function matchUseCase(answers: IntakeAnswers): TemplateUseCase | undefined {
   const target = [...deriveOptionalForms(answers)].sort().join(",");
   return TEMPLATE_USE_CASES.find((uc) => [...uc.optional_forms].sort().join(",") === target);
@@ -131,6 +151,7 @@ export function isIntakeComplete(answers: IntakeAnswers): boolean {
   return (
     answers.maritalStatus !== "" &&
     calculateAge(answers.dateOfBirth) !== null &&
-    answers.wantsReleaseAuthority !== null
+    answers.wantsReleaseAuthority !== null &&
+    answers.hasMinorChildrenStudying !== null
   );
 }

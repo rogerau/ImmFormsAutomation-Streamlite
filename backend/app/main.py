@@ -149,7 +149,10 @@ def _filename(form_id: str, case_id: str, family_name: str, given_name: str) -> 
     safe_family = "".join(c for c in family_name.upper() if c.isalnum()) or "UNKNOWN"
     safe_given = "".join(c for c in given_name.upper() if c.isalnum()) or "UNKNOWN"
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    prefix = _FORM_NUM.get(form_id, form_id.upper())
+    # Dependant child forms are keyed e.g. "imm1294_child_2"; the prefix comes
+    # from the base form id, and the name passed in is the child's.
+    base_id = form_id.split("_child_")[0]
+    prefix = _FORM_NUM.get(base_id, base_id.upper())
     return f"{prefix}_{case_id}_{safe_family}_{safe_given}_{ts}.pdf"
 
 
@@ -201,7 +204,15 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
     upload_errors: list[str] = []
 
     for form_id, pdf_bytes in pdf_bundle.items():
-        filename = _filename(form_id, payload.case_id, family_name, given_name)
+        # Dependant child forms ("..._child_N") are named after the child, not
+        # the main applicant.
+        if "_child_" in form_id:
+            ci = int(form_id.rsplit("_child_", 1)[1]) - 1
+            child = payload.family.children[ci]
+            fam_n, giv_n = child.family_name, child.given_names
+        else:
+            fam_n, giv_n = family_name, given_name
+        filename = _filename(form_id, payload.case_id, fam_n, giv_n)
         try:
             result = upload_pdf_to_drive(filename, pdf_bytes, tenant.filled_forms_folder_id)
             drive_results[form_id] = result
@@ -221,7 +232,7 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
             "Submissions",
             [submissions_row(payload, claims.tenant_id, drive_results)],
         )
-        crows = children_rows(payload)
+        crows = children_rows(payload, drive_results)
         if crows:
             append_rows(sheet_id, "Children", crows)
         emp_rows = employment_rows(payload)

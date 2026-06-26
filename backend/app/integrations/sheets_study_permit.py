@@ -292,12 +292,23 @@ CHILDREN_HEADERS = [
     "family_name", "given_names", "native_name",
     "date_of_birth", "country_of_birth",
     "relationship", "marital_status", "address", "occupation", "accompanies",
+    # Dependant study-permit (Phase X) — only populated when the child files their own IMM 1294
+    "applying_study_permit", "unaccompanied",
+    "child_passport_number", "child_dli_number", "child_school", "child_study_level",
+    "imm1294_child_url", "imm5707_child_url", "imm5646_child_url",
 ]
 
 
-def children_rows(data: StudyPermitData) -> list[list]:
+def children_rows(data: StudyPermitData, drive_results: dict | None = None) -> list[list]:
+    drive_results = drive_results or {}
+
+    def _url(form_id: str) -> str:
+        return (drive_results.get(form_id) or {}).get("webViewLink", "")
+
     rows = []
     for i, c in enumerate(data.family.children or [], start=1):
+        sa = getattr(c, "study_applicant", None)
+        applying = getattr(c, "applying_study_permit", False)
         rows.append([
             str(uuid.uuid4()), data.submission_id, i,
             c.family_name, c.given_names, c.native_name,
@@ -306,6 +317,15 @@ def children_rows(data: StudyPermitData) -> list[list]:
             c.marital_status.value if c.marital_status else "",
             c.address, c.occupation,
             "Yes" if c.will_accompany else "No",
+            "Yes" if applying else "No",
+            "Yes" if getattr(c, "unaccompanied", False) else "No",
+            (sa.passport.passport_number if sa and sa.passport else ""),
+            (sa.study.dli_number if sa and sa.study else ""),
+            (sa.study.school_name if sa and sa.study else ""),
+            (sa.study.level if sa and sa.study else ""),
+            _url(f"imm1294_child_{i}") if applying else "",
+            _url(f"imm5707_child_{i}") if applying else "",
+            _url(f"imm5646_child_{i}") if applying else "",
         ])
     return rows
 
