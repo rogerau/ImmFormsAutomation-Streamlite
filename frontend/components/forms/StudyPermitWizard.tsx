@@ -46,6 +46,34 @@ const OPT_STEPS: Record<string, string> = {
   child_study_permit: "Dependent Children",
 };
 
+// Turn a field-path segment into a human label: "place_birth_city" -> "Place Birth City",
+// "study_applicant" -> "Study Applicant", array index "0" -> "#1".
+function humanizeSeg(seg: string): string {
+  if (/^\d+$/.test(seg)) return `#${Number(seg) + 1}`;
+  return seg
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+// Walk react-hook-form's nested error object and collect every leaf message
+// with its full field path, so the client sees exactly which fields to fix.
+function flattenErrors(node: any, path: string[] = []): { path: string[]; message: string }[] {
+  const out: { path: string[]; message: string }[] = [];
+  if (!node || typeof node !== "object") return out;
+  if (typeof node.message === "string" && node.message.length > 0) {
+    out.push({ path, message: node.message });
+  }
+  for (const key of Object.keys(node)) {
+    if (key === "message" || key === "type" || key === "ref" || key === "types") continue;
+    const child = node[key];
+    if (child && typeof child === "object") {
+      out.push(...flattenErrors(child, [...path, key]));
+    }
+  }
+  return out;
+}
+
 export function StudyPermitWizard({ token, claims }: Props) {
   const optionalForms = claims.optional_forms ?? [];
   const activeOptSteps = Object.entries(OPT_STEPS).filter(([key]) => optionalForms.includes(key));
@@ -149,19 +177,33 @@ export function StudyPermitWizard({ token, claims }: Props) {
   // otherwise looks like a dead "Submit" button.
   const SECTION_LABELS: Record<string, string> = {
     personal_info: "Personal Info", passport: "Passport", contact: "Contact",
-    study: "Study Details", family: "Family Background", common_law: "Common-law Declaration",
+    national_id: "National ID", us_pr_card: "U.S. PR Card",
+    study: "Study Details", family: "Family Background",
+    education_history: "Education History", occupation_history: "Employment History",
+    common_law: "Common-law Declaration",
     custodian: "Custodian Declaration", representative: "Representative",
     release_authority: "Authority to Release Info", applicant_signature: "Declaration & Signature",
     applicant_signature_date: "Declaration & Signature",
   };
+  // Build a readable label for a field path, e.g. ["family","children","0","study_applicant","passport","passport_number"]
+  // -> "Family Background › Children › #1 › Study Applicant › Passport › Passport Number".
+  const labelForPath = (path: string[]): string => {
+    if (path.length === 0) return "Form";
+    const [head, ...rest] = path;
+    const headLabel = SECTION_LABELS[head] ?? humanizeSeg(head);
+    return [headLabel, ...rest.map(humanizeSeg)].join(" › ");
+  };
   const onInvalid = (errs: Record<string, unknown>) => {
-    const sections = Array.from(
-      new Set(Object.keys(errs).map((k) => SECTION_LABELS[k] ?? k)),
-    );
-    setSubmitError(
-      `Some required fields are missing or invalid in: ${sections.join(", ")}. ` +
-        `Please go back to those steps and complete them, then submit again.`,
-    );
+    const items = flattenErrors(errs);
+    if (items.length === 0) {
+      setSubmitError("Some fields are missing or invalid. Please review the form and try again.");
+      return;
+    }
+    const lines = items.map((it) => `• ${labelForPath(it.path)}: ${it.message}`);
+    const header =
+      `Please fix the following ${items.length} ${items.length === 1 ? "field" : "fields"} ` +
+      `before submitting (go back to the relevant step to correct each one):`;
+    setSubmitError(`${header}\n${lines.join("\n")}`);
   };
 
   const onSubmit = async (data: StudyPermitData) => {

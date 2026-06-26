@@ -467,8 +467,10 @@ export function ReviewSignStep({ register, errors, getValues, watch, setValue, i
       </div>
 
       {submitError && (
-        <div className="rounded bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-          {submitError}
+        <div className="rounded bg-red-50 border border-red-200 p-4 text-sm text-red-700 max-h-72 overflow-y-auto space-y-1">
+          {submitError.split("\n").map((line, i) => (
+            <p key={i} className={i === 0 ? "font-medium" : "pl-1"}>{line}</p>
+          ))}
         </div>
       )}
 
