@@ -1,5 +1,6 @@
 "use client";
-import { Control, FieldErrors, UseFormRegister, useWatch } from "react-hook-form";
+import { useEffect } from "react";
+import { Control, FieldErrors, UseFormRegister, UseFormSetValue, useWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 
@@ -7,6 +8,7 @@ interface Props {
   control: Control<StudyPermitData>;
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  setValue: UseFormSetValue<StudyPermitData>;
   optionalForms: string[];
 }
 
@@ -24,12 +26,26 @@ function Field({ label, required, error, children }: { label: string; required?:
   );
 }
 
-export function DependentSpouseStep({ control, register, errors, optionalForms }: Props) {
+export function DependentSpouseStep({ control, register, errors, setValue, optionalForms }: Props) {
   const spouse = useWatch({ control, name: "family.spouse" });
   const isWorkPermit = optionalForms.includes("spouse_work_permit");
   const isVisitor = optionalForms.includes("spouse_visitor");
   const sa = errors.family?.spouse_study_applicant;
   const label = spouse ? [spouse.given_names, spouse.family_name].filter(Boolean).join(" ") : "Your spouse / partner";
+
+  const workPermitType = useWatch({ control, name: "family.spouse_study_applicant.work.work_permit_type" as any });
+  const isOpenWorkPermit = isWorkPermit && (workPermitType ?? "Open Work Permit") === "Open Work Permit";
+
+  // Open Work Permit doesn't have a specific employer/job — job title and
+  // position description are hardcoded to "OPEN" rather than collected, and
+  // intended city/province are left blank (not asked, not hardcoded).
+  useEffect(() => {
+    if (!isOpenWorkPermit) return;
+    setValue("family.spouse_study_applicant.work.job_title" as any, "OPEN");
+    setValue("family.spouse_study_applicant.work.position_description" as any, "OPEN");
+    setValue("family.spouse_study_applicant.work.intended_city_town" as any, "");
+    setValue("family.spouse_study_applicant.work.intended_province_state" as any, "");
+  }, [isOpenWorkPermit, setValue]);
 
   return (
     <div className="space-y-6">
@@ -100,16 +116,28 @@ export function DependentSpouseStep({ control, register, errors, optionalForms }
                 <option value="Employer-Specific Work Permit">Employer-Specific Work Permit</option>
               </select>
             </Field>
-            <Field label="Job Title" error={(sa?.work as any)?.job_title?.message}>
-              <input {...register("family.spouse_study_applicant.work.job_title" as any)} className={inp} />
-            </Field>
-            <Field label="Intended City/Town in Canada" error={(sa?.work as any)?.intended_city_town?.message}>
-              <input {...register("family.spouse_study_applicant.work.intended_city_town" as any)} className={inp} />
-            </Field>
-            <Field label="Intended Province/State" error={(sa?.work as any)?.intended_province_state?.message}>
-              <input {...register("family.spouse_study_applicant.work.intended_province_state" as any)} className={inp} />
-            </Field>
           </div>
+          {isOpenWorkPermit ? (
+            <p className="mt-2 text-xs text-gray-500">
+              An open work permit isn't tied to a specific job or location — job title, position
+              description, intended city and intended province are not collected for this path.
+            </p>
+          ) : (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Job Title" required error={(sa?.work as any)?.job_title?.message}>
+                <input {...register("family.spouse_study_applicant.work.job_title" as any)} className={inp} />
+              </Field>
+              <Field label="Position Description" required error={(sa?.work as any)?.position_description?.message}>
+                <textarea {...register("family.spouse_study_applicant.work.position_description" as any)} rows={3} className={inp} />
+              </Field>
+              <Field label="Intended City/Town in Canada" error={(sa?.work as any)?.intended_city_town?.message}>
+                <input {...register("family.spouse_study_applicant.work.intended_city_town" as any)} className={inp} />
+              </Field>
+              <Field label="Intended Province/State" error={(sa?.work as any)?.intended_province_state?.message}>
+                <input {...register("family.spouse_study_applicant.work.intended_province_state" as any)} className={inp} />
+              </Field>
+            </div>
+          )}
         </div>
       )}
 

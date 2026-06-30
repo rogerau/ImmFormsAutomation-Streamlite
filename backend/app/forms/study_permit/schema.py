@@ -128,14 +128,15 @@ class SpouseStudyApplicant(BaseModel):
     file their OWN application alongside the main applicant's study permit —
     Phase 2: an open work permit (IMM 1295) when the main applicant's program
     qualifies, or a visitor visa (IMM 5257 + Schedule 1) when it doesn't (see
-    eligibility.lookup.get_spouse_path). Reused where possible from the main
-    applicant / the spouse's existing Person5707 entry: contact, language,
-    service_in are inherited by the spouse-principal projection (see
-    forms/study_permit/dependents_spouse.py). Only sex / place_birth_city /
-    citizenship / passport / the path-specific block are genuinely
-    spouse-specific and collected in the wizard. Exactly one of `work` / `visit`
-    is populated, decided server-side by spouse_study_level at fill time — never
-    trust a client-precomputed path for which block is "the" one."""
+    eligibility.lookup.get_spouse_path). Only mailing/residential address,
+    phone, and email are legitimately shared (the household) and reused from
+    the main applicant's `contact` block by the spouse-principal projection
+    (forms/study_permit/dependents_spouse.py) — every other personal/background
+    fact below (full parity, Phase G) is the spouse's OWN data, collected in the
+    wizard, never borrowed from the main applicant. Exactly one of `work` /
+    `visit` is populated, decided server-side by spouse_study_level at fill
+    time — never trust a client-precomputed path for which block is "the" one.
+    """
     sex: Optional[Sex] = None
     place_birth_city: str = Field(default="", max_length=100)
     citizenship: str = ""             # defaults to the parent's if blank
@@ -144,6 +145,28 @@ class SpouseStudyApplicant(BaseModel):
     work: Optional[WorkDetails] = None                        # open_work_permit path (IMM 1295)
     visit: Optional[VisitDetails] = None                      # visitor path (IMM 5257)
     visit_background: Optional[Imm5257Schedule1Data] = None   # visitor path (Schedule 1)
+
+    # --- Full parity (Phase G) — the spouse's own personal/background data,
+    # mirroring StudyPermitData's own fields of the same name below. ---
+    language: Language = Language.english
+    service_in: str = "English"
+    has_education_history: bool = False
+    education_history: list[Imm1294EducationEntry] = []
+    occupation_history: list[Imm1294OccupationEntry] = []
+    tuberculosis: bool = False
+    medical_condition: bool = False
+    medical_condition_details: str = Field(default="", max_length=1000)
+    previously_remained_status: bool = False
+    previously_applied_canada: bool = False
+    previously_refused_visa: bool = False
+    previously_refused_visa_details: str = Field(default="", max_length=1000)
+    criminal_record: bool = False
+    criminal_record_details: str = Field(default="", max_length=1000)
+    military_service: bool = False
+    military_service_details: str = Field(default="", max_length=1000)
+    political_party: bool = False
+    war_crimes: bool = False
+    consent_to_contact: bool = True
 
 
 class FamilyInfo(BaseModel):

@@ -215,6 +215,20 @@ def _split_date(date_str: str) -> tuple[str, str, str]:
     return parts[0], parts[1], parts[2]
 
 
+def _history_sort_key(entry) -> tuple[int, int]:
+    """Chronological sort key (oldest first) for occupation/education entries.
+    Clients can fill these out in any order — don't trust submission order."""
+    try:
+        year = int(entry.from_year)
+    except (TypeError, ValueError):
+        year = 0
+    try:
+        month = int(entry.from_month)
+    except (TypeError, ValueError):
+        month = 0
+    return (year, month)
+
+
 def _fill_phone(phone_el, full_number: str, type_str: str = "",
                 country_code: str = "", ext: str = "") -> None:
     """Fill a Phone/AltPhone/FaxEmail-Phone subform with parsed values.
@@ -736,7 +750,7 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
             if edu_ind is not None:
                 edu_ind.text = "Y" if data.has_education_history else "N"
         if edu_section is not None and data.education_history:
-            e = data.education_history[0]
+            e = sorted(data.education_history, key=_history_sort_key)[-1]  # most recent
             edu_row = edu_section.find("Edu_Row1")
             if edu_row is not None:
                 for tag, val in [
@@ -753,9 +767,10 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 if country_el is not None:
                     country_el.text = _country_lic(e.country)
 
-        # Occupation history (up to 3 rows); reverse so Row1 = most recent (IRCC convention).
+        # Occupation history (up to 3 rows); sort oldest->newest then reverse so
+        # Row1 = most recent (IRCC convention) — regardless of submission order.
         occ_section = page3.find("Occupation")
-        occ_reversed = list(reversed(data.occupation_history))
+        occ_reversed = sorted(data.occupation_history, key=_history_sort_key, reverse=True)
         if occ_section is not None:
             for idx, row_tag in enumerate(["OccupationRow1", "OccupationRow2", "OccupationRow3"]):
                 if idx >= len(occ_reversed):

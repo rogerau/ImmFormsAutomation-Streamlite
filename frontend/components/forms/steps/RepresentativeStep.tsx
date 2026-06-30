@@ -187,15 +187,6 @@ export function RepresentativeStep({ register, errors, getValues, setValue, cont
               <input {...register("representative.email")} type="email" className={inp} />
             </Field>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Representative Signature (type name)" error={r?.rep_signature?.message}>
-              <input {...register("representative.rep_signature")} className={inp} />
-            </Field>
-            <Field label="Representative Date Signed" error={r?.rep_date_signed?.message}>
-              <input {...register("representative.rep_date_signed")} placeholder="YYYY-MM-DD" className={inp} />
-            </Field>
-          </div>
         </>
       )}
 

@@ -35,6 +35,14 @@ class SpousePath(str, Enum):
     own_study_permit = "own_study_permit"
 
 
+class RelationshipType(str, Enum):
+    """Married spouses prove the relationship with a marriage certificate;
+    common-law partners prove it with IMM 5409 instead — same form package
+    otherwise."""
+    married = "married"
+    common_law = "common_law"
+
+
 class ChildSchoolLevel(str, Enum):
     pre_school = "pre_school"
     k12 = "k12"
@@ -57,6 +65,8 @@ class SpouseRuleSet(BaseModel):
     alternatives_if_ineligible: list[SpousePath]
     forms_by_path: dict[str, list[str]]
     conditional_forms: list[str]
+    common_law_proof_paths: list[SpousePath]
+    common_law_proof_form: str
     notes: str
     source_refs: list[int]
 
@@ -89,6 +99,7 @@ class DependentsEligibilityRuleset(BaseModel):
 
 class SpouseEligibilityResult(BaseModel):
     study_level: StudyLevel
+    relationship_type: RelationshipType
     sowp_eligible: bool
     recommended_path: SpousePath
     alternative_paths: list[SpousePath]

@@ -219,7 +219,9 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 _set(q7.find("faxNumber"), d.fax_number)
                 _set(q7.find("email"), d.email)
 
-            # Question 8: signatures
+            # Question 8: signatures. Only the applicant's slot is filled here —
+            # the representative's signature/date slot is left blank for the
+            # representative to fill by hand, not collected from the client.
             q8 = sec_b.find("question8")
             if q8 is not None:
                 sigs = q8.findall("signatrureApplicant")
@@ -228,10 +230,6 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                     _set(sigs[0], d.applicant_signature)
                 if dates:
                     _set(dates[0], d.applicant_date_signed)
-                if len(sigs) > 1:
-                    _set(sigs[1], d.rep_signature)
-                if len(dates) > 1:
-                    _set(dates[1], d.rep_date_signed)
         else:
             # action doesn't include B — clear everything under SectionB
             for tag in ("familyName", "givenName"):
@@ -251,14 +249,15 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
             _set(sec_c.find("organization"), "")
 
     # --- Section D: rep withdrawing themselves (action 5) ---
+    # signatrureApplicant/dateApplicantSigned here are the representative's own
+    # signature/date confirming the withdrawal — left blank for the
+    # representative to fill by hand, not collected from the client.
     sec_d = page1.find("sectionD")
     if sec_d is not None:
         if "D" in sections:
             _set(sec_d.find("familyName"), d.rep_family_name)
             _set(sec_d.find("givenName"), d.rep_given_name)
             _set(sec_d.find("organization"), d.organization_name)
-            _set(sec_d.find("signatrureApplicant"), d.rep_signature)
-            _set(sec_d.find("dateApplicantSigned"), d.rep_date_signed)
         else:
             _set(sec_d.find("familyName"), "")
             _set(sec_d.find("givenName"), "")

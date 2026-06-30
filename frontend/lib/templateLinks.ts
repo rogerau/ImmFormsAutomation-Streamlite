@@ -102,6 +102,15 @@ export const SPOUSE_OWP_ELIGIBLE_STUDY_LEVELS = [
   "pilot_program",
 ] as const;
 
+// Marital statuses that imply an actual spouse/common-law partner exists.
+// Mirrors FamilyBackgroundStep.tsx's `hasSpouse` check — the only statuses
+// where it makes sense to ask "does your partner need their own application?"
+export const PARTNERED_MARITAL_STATUSES: MaritalStatus[] = [
+  "Common-law",
+  "Married-physically present",
+  "Married-not physically present",
+];
+
 export const STUDY_LEVEL_OPTIONS: { value: string; label: string }[] = [
   { value: "doctoral", label: "Doctoral (PhD)" },
   { value: "masters_16_plus_months", label: "Master's — 16+ months" },
@@ -158,7 +167,8 @@ export function deriveOptionalForms(answers: IntakeAnswers): string[] {
   if (age !== null && age < 18) forms.push("imm5646");
   if (answers.wantsReleaseAuthority === true) forms.push("imm5475");
   if (answers.hasMinorChildrenStudying === true) forms.push(DEPENDENT_CHILD_FORM);
-  if (answers.hasSpouseAccompanying === true) {
+  const hasPartner = PARTNERED_MARITAL_STATUSES.includes(answers.maritalStatus as MaritalStatus);
+  if (hasPartner && answers.hasSpouseAccompanying === true) {
     const eligible = (SPOUSE_OWP_ELIGIBLE_STUDY_LEVELS as readonly string[]).includes(
       answers.principalStudyLevel,
     );
@@ -192,12 +202,15 @@ export function matchUseCase(answers: IntakeAnswers): TemplateUseCase | undefine
 }
 
 export function isIntakeComplete(answers: IntakeAnswers): boolean {
+  const hasPartner = PARTNERED_MARITAL_STATUSES.includes(answers.maritalStatus as MaritalStatus);
   return (
     answers.maritalStatus !== "" &&
     calculateAge(answers.dateOfBirth) !== null &&
     answers.wantsReleaseAuthority !== null &&
     answers.hasMinorChildrenStudying !== null &&
-    answers.hasSpouseAccompanying !== null &&
-    (answers.hasSpouseAccompanying === false || answers.principalStudyLevel !== "")
+    // Only a partnered status can trigger the spouse question — anything else
+    // (Single, Divorced, etc.) skips it entirely, no answer needed.
+    (!hasPartner || answers.hasSpouseAccompanying !== null) &&
+    (!hasPartner || answers.hasSpouseAccompanying === false || answers.principalStudyLevel !== "")
   );
 }

@@ -85,8 +85,8 @@ class Imm5476Data(BaseModel):
     fax_number: str = ""
     email: str = ""
 
-    # Signatures (Section B Q8, Section E reuses applicant_signature/date)
+    # Signatures (Section B Q8, Section E reuses applicant_signature/date).
+    # Rep signature/date are filled by hand by the representative, not collected
+    # from the client — see imm5476/filler.py for the blank PDF slot.
     applicant_signature: str = ""          # applicant typed name
     applicant_date_signed: str = ""        # YYYY-MM-DD
-    rep_signature: str = ""                # rep typed name (if applicable)
-    rep_date_signed: str = ""

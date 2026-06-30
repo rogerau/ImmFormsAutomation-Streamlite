@@ -48,6 +48,22 @@ const GUIDANCE = [
     key: "imm5646",
     note: "Complete only if the minor studying in Canada is less than 17 years old.",
   },
+  {
+    code: "IMM 1295 / IMM 5707",
+    title: "Application for Work Permit Made Outside of Canada — Accompanying Spouse",
+    required: false,
+    key: "spouse_work_permit",
+    note:
+      "Complete only if your spouse / common-law partner is accompanying you and applying for their own open work permit.",
+  },
+  {
+    code: "IMM 5257 / Schedule 1 / IMM 5707",
+    title: "Application for a Temporary Resident Visa — Accompanying Spouse",
+    required: false,
+    key: "spouse_visitor",
+    note:
+      "Complete only if your spouse / common-law partner is accompanying you and applying for their own visitor visa.",
+  },
 ];
 
 export function FormsGuidance({ activeOptionalForms }: Props) {

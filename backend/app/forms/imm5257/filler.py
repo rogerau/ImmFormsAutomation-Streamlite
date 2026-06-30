@@ -365,7 +365,7 @@ def _build_datasets_xml(data: "Imm5257Data") -> str:
             if edu_ind is not None:
                 edu_ind.text = "Y" if data.education_history else "N"
             if data.education_history:
-                e = data.education_history[0]
+                e = sorted(data.education_history, key=common.history_sort_key)[-1]  # most recent
                 edu_row = edu_section.find("Edu_Row1")
                 if edu_row is not None:
                     for tag, val in [
@@ -383,7 +383,7 @@ def _build_datasets_xml(data: "Imm5257Data") -> str:
                         country_el.text = common.country_lic(e.country)
 
         occ_section = page3.find("Occupation")
-        occ_reversed = list(reversed(data.occupation_history))
+        occ_reversed = sorted(data.occupation_history, key=common.history_sort_key, reverse=True)
         if occ_section is not None:
             for idx, row_tag in enumerate(["OccupationRow1", "OccupationRow2", "OccupationRow3"]):
                 if idx >= len(occ_reversed):

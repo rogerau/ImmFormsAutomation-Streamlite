@@ -15,6 +15,7 @@ import { RepresentativeStep } from "./steps/RepresentativeStep";
 import { ReleaseAuthorityStep } from "./steps/ReleaseAuthorityStep";
 import { DependentChildrenStep } from "./steps/DependentChildrenStep";
 import { DependentSpouseStep } from "./steps/DependentSpouseStep";
+import { DependentSpouseHistoryStep } from "./steps/DependentSpouseHistoryStep";
 import { ReviewSignStep } from "./steps/ReviewSignStep";
 import { FormsGuidance } from "./FormsGuidance";
 import type { TokenClaims } from "@/lib/token";
@@ -118,6 +119,9 @@ export function StudyPermitWizard({ token, claims }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
   const [submitResult, setSubmitResult] = useState<any>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // True once the user has clicked "Next" on the current step at least once —
+  // gates the inline error banner so it doesn't show before any attempt.
+  const [attemptedNext, setAttemptedNext] = useState(false);
 
   const DRAFT_KEY = `study_permit_draft_${token.slice(-12)}`;
 
@@ -232,13 +236,29 @@ export function StudyPermitWizard({ token, claims }: Props) {
       key: "spouse_work_permit",
       label: "Spouse — Work Permit",
       fields: ["family.spouse_study_applicant"],
-      render: () => <DependentSpouseStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
+      render: () => <DependentSpouseStep control={control} register={register} errors={errors} setValue={setValue} optionalForms={optionalForms} />,
     },
     {
       key: "spouse_visitor",
       label: "Spouse — Visitor Visa",
       fields: ["family.spouse_study_applicant"],
-      render: () => <DependentSpouseStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
+      render: () => <DependentSpouseStep control={control} register={register} errors={errors} setValue={setValue} optionalForms={optionalForms} />,
+    },
+    // Full parity (Phase G) — the spouse's own language/education/employment/
+    // background data, same key as above so it's included alongside whichever
+    // spouse path is active; same "family.spouse_study_applicant" field path
+    // (one Zod object, two steps that touch it).
+    {
+      key: "spouse_work_permit",
+      label: "Spouse — Background",
+      fields: ["family.spouse_study_applicant"],
+      render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} />,
+    },
+    {
+      key: "spouse_visitor",
+      label: "Spouse — Background",
+      fields: ["family.spouse_study_applicant"],
+      render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} />,
     },
   ];
   const activeOptSteps = optStepConfigs.filter((c) => optionalForms.includes(c.key));
@@ -265,10 +285,38 @@ export function StudyPermitWizard({ token, claims }: Props) {
   const handleNext = useCallback(async () => {
     const fields = STEP_FIELDS[currentStep] ?? [];
     const valid = fields.length === 0 ? true : await trigger(fields as any);
-    if (valid) setCurrentStep((s) => Math.min(s + 1, totalSteps));
+    if (valid) {
+      setAttemptedNext(false);
+      setCurrentStep((s) => Math.min(s + 1, totalSteps));
+    } else {
+      // trigger() resolves after react-hook-form's internal formState updates,
+      // but this render's `errors` closure may still be stale — re-rendering
+      // via attemptedNext lets the banner below read fresh `errors` instead.
+      setAttemptedNext(true);
+    }
   }, [currentStep, totalSteps, trigger, STEP_FIELDS]);
 
-  const handleBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
+  const handleBack = () => {
+    setAttemptedNext(false);
+    setCurrentStep((s) => Math.max(s - 1, 1));
+  };
+
+  // Build a readable "fix these fields" message for just the current step's
+  // fields, reusing the same flattenErrors/labelForPath machinery as the
+  // final submit's onInvalid — so an intermediate "Next" failure is no longer
+  // silent (previously this swallowed every validation error with no
+  // indication, e.g. the spouse work-permit step getting stuck with no
+  // visible reason).
+  function currentStepErrorMessage(): string | null {
+    const fields = STEP_FIELDS[currentStep] ?? [];
+    const items = fields.flatMap((f) => {
+      const node = f.split(".").reduce((acc: any, seg) => (acc == null ? acc : acc[seg]), errors as any);
+      return flattenErrors(node, f.split("."));
+    });
+    if (items.length === 0) return null;
+    const lines = items.map((it) => `• ${labelForPath(it.path)}: ${it.message}`);
+    return `Please fix the following before continuing:\n${lines.join("\n")}`;
+  }
 
   // Surface validation failures instead of silently doing nothing — react-hook-form
   // won't call onSubmit if any field (even on a non-visible step) fails Zod, which
@@ -350,6 +398,11 @@ export function StudyPermitWizard({ token, claims }: Props) {
       <div className="min-h-[400px]">
         {currentStep === 1 && !submitResult && (
           <FormsGuidance activeOptionalForms={optionalForms} />
+        )}
+        {attemptedNext && !submitResult && currentStepErrorMessage() && (
+          <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700 whitespace-pre-line">
+            {currentStepErrorMessage()}
+          </div>
         )}
         {stepComponents[currentStep] ?? (
           <p className="text-gray-500 text-sm">Step not found.</p>

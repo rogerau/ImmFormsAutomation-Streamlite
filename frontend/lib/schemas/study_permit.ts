@@ -260,8 +260,14 @@ const spouseWorkDetailsSchema = z.object({
   intended_address: z.string().default(""),
   job_title: z.string().default(""),
   position_description: z.string().default(""),
-  how_long_from: dateStr,
-  how_long_to: dateStr,
+  // Not rendered anywhere in DependentSpouseStep.tsx's work-permit block —
+  // dateStr alone (no .default) made these silently required despite never
+  // being collected, which was the actual root cause of the "stuck on Next,
+  // no error shown" bug report: react-hook-form never registers an input for
+  // an unrendered field, so it stayed `undefined` and failed Zod's required
+  // string check on every validation pass.
+  how_long_from: dateStr.default(""),
+  how_long_to: dateStr.default(""),
   lmia_number: z.string().default(""),
 });
 
@@ -301,6 +307,29 @@ const spouseStudyApplicantSchema = z.object({
   work: spouseWorkDetailsSchema.nullable().optional(),
   visit: spouseVisitDetailsSchema.nullable().optional(),
   visit_background: schedule1Schema.nullable().optional(),
+
+  // Full parity (Phase G) — the spouse's own personal/background data,
+  // collected the same way as the main applicant's (StudyDetailsStep /
+  // EmploymentHistoryStep), never borrowed from the main applicant.
+  language: LanguageEnum.default("English"),
+  service_in: ServiceInEnum.default("English"),
+  has_education_history: boolFromString.optional(),
+  education_history: z.array(educationEntrySchema).default([]),
+  occupation_history: z.array(occupationEntrySchema).default([]),
+  tuberculosis: boolFromString.optional(),
+  medical_condition: boolFromString.optional(),
+  medical_condition_details: z.string().default(""),
+  previously_remained_status: boolFromString.optional(),
+  previously_applied_canada: boolFromString.optional(),
+  previously_refused_visa: boolFromString.optional(),
+  previously_refused_visa_details: z.string().default(""),
+  criminal_record: boolFromString.optional(),
+  criminal_record_details: z.string().default(""),
+  military_service: boolFromString.optional(),
+  military_service_details: z.string().default(""),
+  political_party: boolFromString.optional(),
+  war_crimes: boolFromString.optional(),
+  consent_to_contact: boolFromString.optional(),
 });
 
 // ---- IMM 5409 sub-schema ----
@@ -410,8 +439,6 @@ const representativeSchema = z.object({
   email: z.string().default(""),
   applicant_signature: z.string().min(1, "Required"),
   applicant_date_signed: dateStr,
-  rep_signature: z.string().default(""),
-  rep_date_signed: z.string().default(""),
 });
 
 // ---- IMM 5475 — Authority to Release Personal Information ----
@@ -450,7 +477,7 @@ const previousMarriageSchema = z.object({
 // ---- FamilyInfo ----
 const familyInfoSchema = z.object({
   applicant_marital_status: MaritalStatusEnum,
-  applicant_occupation: z.string().default(""),  // derived from occupation_history[0]
+  applicant_occupation: z.string().default(""),  // derived from the most recent occupation_history entry (see EmploymentHistoryStep)
   marriage_date: z.string().default(""),
   spouse: person5707Schema.nullable().optional(),
   no_spouse_signature: z.string().default(""),
@@ -645,13 +672,42 @@ export const StudyPermitSchema = z
           });
         }
       };
+      // Boolean Y/N answers: `false` is a legitimate "No" — only flag truly
+      // unanswered (undefined/null), unlike `need()`'s falsy check above.
+      const needAnswered = (ok: unknown, msg: string, ...path: (string | number)[]) => {
+        if (ok === undefined || ok === null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: msg,
+            path: ["family", "spouse_study_applicant", ...path],
+          });
+        }
+      };
       need(d.family.spouse, "Spouse / partner info is required for this application.");
       need(sa?.sex, "Required", "sex");
       need(sa?.place_birth_city, "Required", "place_birth_city");
       need(sa?.passport?.passport_number, "Required", "passport", "passport_number");
       need(sa?.passport?.country_of_issue, "Required", "passport", "country_of_issue");
+      // Full parity (Phase G) — the spouse's own IMM 1294-style background
+      // questions, mirrored from the top-level required set above.
+      needAnswered(sa?.tuberculosis, "Required", "tuberculosis");
+      needAnswered(sa?.medical_condition, "Required", "medical_condition");
+      needAnswered(sa?.previously_remained_status, "Required", "previously_remained_status");
+      needAnswered(sa?.previously_applied_canada, "Required", "previously_applied_canada");
+      needAnswered(sa?.previously_refused_visa, "Required", "previously_refused_visa");
+      needAnswered(sa?.criminal_record, "Required", "criminal_record");
+      needAnswered(sa?.military_service, "Required", "military_service");
+      needAnswered(sa?.political_party, "Required", "political_party");
+      needAnswered(sa?.war_crimes, "Required", "war_crimes");
+      needAnswered(sa?.consent_to_contact, "Required", "consent_to_contact");
       if (wantsSpouseWork) {
         need(sa?.work?.work_permit_type, "Required", "work", "work_permit_type");
+        // Open Work Permit's job_title/position_description are hardcoded to
+        // "OPEN" (see DependentSpouseStep.tsx), not user-entered — only
+        // require position_description for the employer-specific path.
+        if (sa?.work?.work_permit_type === "Employer-Specific Work Permit") {
+          need(sa?.work?.position_description, "Required", "work", "position_description");
+        }
       }
       if (wantsSpouseVisit) {
         need(sa?.visit?.purpose_of_visit, "Required", "visit", "purpose_of_visit");

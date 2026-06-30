@@ -154,29 +154,37 @@ def build_spouse_principal_data(parent: StudyPermitData, spouse_applicant: Spous
 
 def _common_application_fields(parent: StudyPermitData, spouse_applicant: SpouseStudyApplicant) -> dict:
     """Field values shared by Imm1295Data and Imm5257Data — both reuse the same
-    generic-application shape (see those schemas' module docstrings)."""
+    generic-application shape (see those schemas' module docstrings).
+
+    Only the household facts (mailing/residential address, phone, email) and
+    the applicant's own signature context are legitimately shared with the
+    main applicant. Every other personal/background fact (language,
+    education/occupation history, medical/criminal/military/political
+    declarations, consent) is the spouse's OWN data (full parity, Phase G) —
+    previously this wrongly borrowed the main applicant's answers."""
     if spouse_applicant.passport is None:
         raise ValueError("spouse_study_applicant is missing passport details")
     spouse = _require_spouse(parent)
     ppi = parent.personal_info
     contact = parent.contact
+    sa = spouse_applicant
 
     return dict(
         family_name=spouse.family_name,
         given_name=spouse.given_names,
-        sex=spouse_applicant.sex or (Sex.female if ppi.sex == Sex.male else Sex.male),
+        sex=sa.sex or (Sex.female if ppi.sex == Sex.male else Sex.male),
         date_of_birth=spouse.date_of_birth,
-        place_birth_city=spouse_applicant.place_birth_city,
+        place_birth_city=sa.place_birth_city,
         place_birth_country=spouse.country_of_birth,
-        citizenship=spouse_applicant.citizenship or ppi.citizenship,
-        current_country=spouse_applicant.current_country or ppi.current_country,
+        citizenship=sa.citizenship or ppi.citizenship,
+        current_country=sa.current_country or ppi.current_country,
         marital_status=_marital_text(spouse.marital_status or parent.family.applicant_marital_status),
-        language=ppi.language,
-        service_in=ppi.service_in,
+        language=sa.language,
+        service_in=sa.service_in,
         spouse_family_name=ppi.family_name,
         spouse_given_name=ppi.given_name,
         marriage_date=parent.family.marriage_date,
-        passport=spouse_applicant.passport,
+        passport=sa.passport,
         mailing_address=contact.mailing_address,
         residential_address_same_as_mailing=contact.residential_address_same_as_mailing,
         residential_address=contact.residential_address,
@@ -189,34 +197,44 @@ def _common_application_fields(parent: StudyPermitData, spouse_applicant: Spouse
         has_fax=contact.has_fax,
         fax=contact.fax,
         email=contact.email,
-        education_history=parent.education_history,
-        occupation_history=parent.occupation_history,
-        medical_condition=parent.medical_condition,
-        medical_condition_details=parent.medical_condition_details,
-        previously_remained_status=parent.previously_remained_status,
-        previously_applied_canada=parent.previously_applied_canada,
-        previously_refused_visa=parent.previously_refused_visa,
-        previously_refused_visa_details=parent.previously_refused_visa_details,
-        criminal_record=parent.criminal_record,
-        criminal_record_details=parent.criminal_record_details,
-        military_service=parent.military_service,
-        military_service_details=parent.military_service_details,
-        political_party=parent.political_party,
-        war_crimes=parent.war_crimes,
-        consent_to_contact=parent.consent_to_contact,
+        education_history=sa.education_history,
+        occupation_history=sa.occupation_history,
+        medical_condition=sa.medical_condition,
+        medical_condition_details=sa.medical_condition_details,
+        previously_remained_status=sa.previously_remained_status,
+        previously_applied_canada=sa.previously_applied_canada,
+        previously_refused_visa=sa.previously_refused_visa,
+        previously_refused_visa_details=sa.previously_refused_visa_details,
+        criminal_record=sa.criminal_record,
+        criminal_record_details=sa.criminal_record_details,
+        military_service=sa.military_service,
+        military_service_details=sa.military_service_details,
+        political_party=sa.political_party,
+        war_crimes=sa.war_crimes,
+        consent_to_contact=sa.consent_to_contact,
         applicant_signature=parent.applicant_signature,
         applicant_signature_date=parent.applicant_signature_date,
     )
 
 
 def build_spouse_imm1295_data(parent: StudyPermitData, spouse_applicant: SpouseStudyApplicant) -> Imm1295Data:
-    """Open work permit path. Background questions / history / contact are
-    reused from the main applicant's bundle (the household), per the same reuse
-    policy as the dependent-child projection."""
+    """Open work permit path. Household contact is reused (same policy as the
+    dependent-child projection); the background/history questions are the
+    spouse's own (full parity, Phase G)."""
     common = _common_application_fields(parent, spouse_applicant)
+    work = spouse_applicant.work or WorkDetails()
+    if work.work_permit_type == "Open Work Permit":
+        # Mirror the frontend hardcode (DependentSpouseStep.tsx) as a backend
+        # fallback — an open work permit isn't tied to a specific job.
+        work = work.model_copy(update={
+            "job_title": "OPEN",
+            "position_description": "OPEN",
+            "intended_city_town": "",
+            "intended_province_state": "",
+        })
     return Imm1295Data(
-        tuberculosis=parent.tuberculosis,
-        work=spouse_applicant.work or WorkDetails(),
+        tuberculosis=spouse_applicant.tuberculosis,
+        work=work,
         **common,
     )
 

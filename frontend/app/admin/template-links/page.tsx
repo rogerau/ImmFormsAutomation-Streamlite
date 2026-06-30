@@ -7,12 +7,14 @@ import {
   DEPENDENT_CHILD_FORM,
   SPOUSE_WORK_PERMIT_FORM,
   SPOUSE_VISITOR_FORM,
+  PARTNERED_MARITAL_STATUSES,
   deriveOptionalForms,
   isIntakeComplete,
   matchBaseUseCase,
   matchUseCase,
   type IntakeAnswers,
 } from "@/lib/templateLinks";
+import type { MaritalStatus } from "@/lib/schemas/study_permit";
 
 interface TemplateLink {
   id: string;
@@ -222,7 +224,17 @@ export default function TemplateLinksPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Relationship status</label>
             <select
               value={answers.maritalStatus}
-              onChange={(e) => setAnswers((a) => ({ ...a, maritalStatus: e.target.value as IntakeAnswers["maritalStatus"] }))}
+              onChange={(e) => {
+                const maritalStatus = e.target.value as IntakeAnswers["maritalStatus"];
+                const hasPartner = PARTNERED_MARITAL_STATUSES.includes(maritalStatus as MaritalStatus);
+                setAnswers((a) => ({
+                  ...a,
+                  maritalStatus,
+                  // Status no longer implies a partner — clear any previously
+                  // answered spouse question so it doesn't silently carry over.
+                  ...(hasPartner ? {} : { hasSpouseAccompanying: null, principalStudyLevel: "" }),
+                }));
+              }}
               className={inp}
             >
               <option value="">— Select —</option>
@@ -290,31 +302,33 @@ export default function TemplateLinksPage() {
               </label>
             </div>
           </div>
-          <div>
-            <span className="block text-sm font-medium text-gray-700 mb-1">
-              Is there an accompanying spouse / common-law partner who needs their own work permit or visitor visa?
-            </span>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-1.5 text-sm text-gray-700">
-                <input
-                  type="radio"
-                  name="hasSpouseAccompanying"
-                  checked={answers.hasSpouseAccompanying === true}
-                  onChange={() => setAnswers((a) => ({ ...a, hasSpouseAccompanying: true }))}
-                />
-                Yes
-              </label>
-              <label className="flex items-center gap-1.5 text-sm text-gray-700">
-                <input
-                  type="radio"
-                  name="hasSpouseAccompanying"
-                  checked={answers.hasSpouseAccompanying === false}
-                  onChange={() => setAnswers((a) => ({ ...a, hasSpouseAccompanying: false, principalStudyLevel: "" }))}
-                />
-                No
-              </label>
+          {PARTNERED_MARITAL_STATUSES.includes(answers.maritalStatus as MaritalStatus) && (
+            <div>
+              <span className="block text-sm font-medium text-gray-700 mb-1">
+                Is there an accompanying spouse / common-law partner who needs their own work permit or visitor visa?
+              </span>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="hasSpouseAccompanying"
+                    checked={answers.hasSpouseAccompanying === true}
+                    onChange={() => setAnswers((a) => ({ ...a, hasSpouseAccompanying: true }))}
+                  />
+                  Yes
+                </label>
+                <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="hasSpouseAccompanying"
+                    checked={answers.hasSpouseAccompanying === false}
+                    onChange={() => setAnswers((a) => ({ ...a, hasSpouseAccompanying: false, principalStudyLevel: "" }))}
+                  />
+                  No
+                </label>
+              </div>
             </div>
-          </div>
+          )}
           {answers.hasSpouseAccompanying === true && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

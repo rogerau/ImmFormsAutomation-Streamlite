@@ -18,6 +18,7 @@ from .schema import (
     ChildStatus,
     ChildStatusResult,
     DependentsEligibilityRuleset,
+    RelationshipType,
     SpouseEligibilityResult,
     SpousePath,
     StudyLevel,
@@ -32,9 +33,18 @@ def _ruleset() -> DependentsEligibilityRuleset:
     return DependentsEligibilityRuleset.model_validate(raw)
 
 
-def get_spouse_path(study_level: StudyLevel) -> SpouseEligibilityResult:
+def get_spouse_path(
+    study_level: StudyLevel,
+    relationship_type: RelationshipType = RelationshipType.married,
+) -> SpouseEligibilityResult:
     """Given the principal applicant's program of study, determine the
-    spouse/common-law partner's path (Decision Table 1)."""
+    spouse/common-law partner's path (Decision Table 1).
+
+    A common-law partner follows the exact same path/forms as a married
+    spouse, with one addition: IMM 5409 (Statutory Declaration of
+    Common-law Union) is required wherever the relationship would
+    otherwise be proven by a marriage certificate.
+    """
     rules = _ruleset().spouse
     eligible = study_level in rules.eligible_study_levels
 
@@ -46,9 +56,16 @@ def get_spouse_path(study_level: StudyLevel) -> SpouseEligibilityResult:
         alternatives = [p for p in rules.alternatives_if_ineligible if p != recommended]
 
     forms = list(rules.forms_by_path[recommended.value])
+    if (
+        relationship_type == RelationshipType.common_law
+        and recommended in rules.common_law_proof_paths
+        and rules.common_law_proof_form not in forms
+    ):
+        forms.append(rules.common_law_proof_form)
 
     return SpouseEligibilityResult(
         study_level=study_level,
+        relationship_type=relationship_type,
         sowp_eligible=eligible,
         recommended_path=recommended,
         alternative_paths=alternatives,

@@ -192,6 +192,20 @@ def split_date(date_str: str) -> tuple[str, str, str]:
     return parts[0], parts[1], parts[2]
 
 
+def history_sort_key(entry) -> tuple[int, int]:
+    """Chronological sort key (oldest first) for occupation/education entries.
+    Clients can fill these out in any order — don't trust submission order."""
+    try:
+        year = int(entry.from_year)
+    except (TypeError, ValueError):
+        year = 0
+    try:
+        month = int(entry.from_month)
+    except (TypeError, ValueError):
+        month = 0
+    return (year, month)
+
+
 def is_na_phone(country_code: str, number: str = "") -> bool:
     """Heuristic: a phone is North American when the country code is 1 (or blank)."""
     cc = (country_code or "").lstrip("+").strip()

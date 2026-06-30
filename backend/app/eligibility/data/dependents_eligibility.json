@@ -30,13 +30,15 @@
     ],
     "alternatives_if_ineligible": ["visitor", "employer_specific_work_permit", "own_study_permit"],
     "forms_by_path": {
-      "open_work_permit": ["IMM1295", "IMM5707", "IMM5409", "IMM5476", "IMM5475", "IMM5488"],
-      "employer_specific_work_permit": ["IMM1295", "IMM5707", "IMM5409", "IMM5476", "IMM5475", "IMM5488"],
-      "visitor": ["IMM5257", "IMM5257_SCH1", "IMM5707", "IMM5409", "IMM5476", "IMM5475", "IMM5484"],
+      "open_work_permit": ["IMM1295", "IMM5707", "IMM5476", "IMM5475", "IMM5488"],
+      "employer_specific_work_permit": ["IMM1295", "IMM5707", "IMM5476", "IMM5475", "IMM5488"],
+      "visitor": ["IMM5257", "IMM5257_SCH1", "IMM5707", "IMM5476", "IMM5475", "IMM5484"],
       "own_study_permit": ["IMM1294", "IMM5707", "IMM5483"]
     },
     "conditional_forms": ["IMM5409", "IMM5476", "IMM5475"],
-    "notes": "Validity cannot exceed the principal's study permit expiry; SOWP generally cannot be applied for once the principal is in their final semester.",
+    "common_law_proof_paths": ["open_work_permit", "employer_specific_work_permit", "visitor"],
+    "common_law_proof_form": "IMM5409",
+    "notes": "Validity cannot exceed the principal's study permit expiry; SOWP generally cannot be applied for once the principal is in their final semester. IMM 5409 (Statutory Declaration of Common-law Union) is required only when the relationship is common-law, in place of a marriage certificate; not required for the own_study_permit path since the partner applies independently as a student.",
     "source_refs": [1, 2, 3, 4, 5, 6]
   },
   "child": {

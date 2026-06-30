@@ -346,12 +346,30 @@ def children_rows(data: StudyPermitData, drive_results: dict | None = None) -> l
     return rows
 
 
+def _history_sort_key(entry) -> tuple[int, int]:
+    """Chronological sort key (oldest first) for occupation/education entries.
+
+    Clients can fill these out in any order in the wizard — IRCC's "Row 1 = most
+    recent" convention and the Sheet both need them oldest-to-newest regardless
+    of submission order, so every consumer sorts through this one key instead of
+    trusting array position."""
+    try:
+        year = int(entry.from_year)
+    except (TypeError, ValueError):
+        year = 0
+    try:
+        month = int(entry.from_month)
+    except (TypeError, ValueError):
+        month = 0
+    return (year, month)
+
+
 # ---------------------------------------------------------------------------
 # Employment tab (from IMM 1294 occupation history)
 # ---------------------------------------------------------------------------
 
 EMPLOYMENT_HEADERS = [
-    "employment_id", "submission_id", "entry_index",
+    "employment_id", "submission_id", "entry_index", "applicant",
     "employer", "occupation",
     "city", "province_state", "country",
     "from_date", "to_date",
@@ -360,15 +378,28 @@ EMPLOYMENT_HEADERS = [
 
 def employment_rows(data: StudyPermitData) -> list[list]:
     rows = []
-    for i, o in enumerate(data.occupation_history or [], start=1):
+    main_entries = sorted(data.occupation_history or [], key=_history_sort_key)
+    for i, o in enumerate(main_entries, start=1):
         from_date = f"{o.from_year}-{o.from_month}"
         to_date = f"{o.to_year}-{o.to_month}"
         rows.append([
-            str(uuid.uuid4()), data.submission_id, i,
+            str(uuid.uuid4()), data.submission_id, i, "main",
             o.employer, o.occupation,
             o.city, o.province_state, o.country,
             from_date, to_date,
         ])
+    spouse = data.family.spouse_study_applicant
+    if spouse:
+        spouse_entries = sorted(getattr(spouse, "occupation_history", None) or [], key=_history_sort_key)
+        for i, o in enumerate(spouse_entries, start=1):
+            from_date = f"{o.from_year}-{o.from_month}"
+            to_date = f"{o.to_year}-{o.to_month}"
+            rows.append([
+                str(uuid.uuid4()), data.submission_id, i, "spouse",
+                o.employer, o.occupation,
+                o.city, o.province_state, o.country,
+                from_date, to_date,
+            ])
     return rows
 
 
@@ -377,7 +408,7 @@ def employment_rows(data: StudyPermitData) -> list[list]:
 # ---------------------------------------------------------------------------
 
 EDUCATION_HEADERS = [
-    "education_id", "submission_id", "entry_index",
+    "education_id", "submission_id", "entry_index", "applicant",
     "institution", "field_of_study",
     "city", "province_state", "country",
     "from_date", "to_date",
@@ -386,15 +417,28 @@ EDUCATION_HEADERS = [
 
 def education_rows(data: StudyPermitData) -> list[list]:
     rows = []
-    for i, e in enumerate(data.education_history or [], start=1):
+    main_entries = sorted(data.education_history or [], key=_history_sort_key)
+    for i, e in enumerate(main_entries, start=1):
         from_date = f"{e.from_year}-{e.from_month}"
         to_date = f"{e.to_year}-{e.to_month}"
         rows.append([
-            str(uuid.uuid4()), data.submission_id, i,
+            str(uuid.uuid4()), data.submission_id, i, "main",
             e.school, e.field_of_study,
             e.city, e.province_state, e.country,
             from_date, to_date,
         ])
+    spouse = data.family.spouse_study_applicant
+    if spouse:
+        spouse_entries = sorted(getattr(spouse, "education_history", None) or [], key=_history_sort_key)
+        for i, e in enumerate(spouse_entries, start=1):
+            from_date = f"{e.from_year}-{e.from_month}"
+            to_date = f"{e.to_year}-{e.to_month}"
+            rows.append([
+                str(uuid.uuid4()), data.submission_id, i, "spouse",
+                e.school, e.field_of_study,
+                e.city, e.province_state, e.country,
+                from_date, to_date,
+            ])
     return rows
 
 
@@ -418,8 +462,6 @@ REPRESENTATIVES_HEADERS = [
     "phone_country_code", "phone_number",
     "fax_country_code", "fax_number",
     "email",
-    # Signatures
-    "rep_signature", "rep_date_signed",
 ]
 
 
@@ -441,7 +483,6 @@ def representatives_row(data: StudyPermitData) -> Optional[list]:
         rep.phone_country_code, rep.phone_number,
         rep.fax_country_code, rep.fax_number,
         rep.email,
-        rep.rep_signature, rep.rep_date_signed,
     ]
 
 

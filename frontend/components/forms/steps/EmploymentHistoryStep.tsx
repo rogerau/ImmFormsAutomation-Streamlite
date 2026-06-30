@@ -112,18 +112,22 @@ export function EmploymentHistoryStep({ control, register, errors, watch, setVal
 
       {/* Occupation */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-3">Work / Activity History (IMM 1294)</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-3">Employment History (IMM 1294)</h2>
         <p className="text-sm text-gray-500 mb-2">
-          Provide details of your personal history for the last <strong>10 years</strong>. List from oldest to most recent;
-          include all employment, self-employment, unemployment, studies, travel, etc. If you have more
-          entries than space allows (the IMM 1294 supports up to 3 rows), let your representative know so the remainder
-          can be communicated separately.
+          Give details of your employment for the past <strong>10 years</strong>, including if you have held
+          any government positions (such as civil servant, judge, police officer, mayor, member of parliament,
+          hospital administrator).
+        </p>
+        <p className="text-sm text-gray-500 mb-2">
+          It's recommended to enter your employment from oldest to most recent. Self-employment may be
+          included. If you have more entries than space allows (the IMM 1294 supports up to 3 rows), let your
+          representative know so the remainder can be communicated separately.
         </p>
         <p className="text-sm text-gray-500 mb-4">Up to 3 entries on the PDF.</p>
         {occFields.map((field, idx) => (
           <div key={field.id} className="border border-gray-200 rounded p-4 mb-3 space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-700">Activity {idx + 1}</span>
+              <span className="text-sm font-medium text-gray-700">Employment {idx + 1}</span>
               <button type="button" onClick={() => removeOcc(idx)} className="text-xs text-red-600 hover:underline">Remove</button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -134,10 +138,10 @@ export function EmploymentHistoryStep({ control, register, errors, watch, setVal
               ))}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Occupation / Activity" required error={errors.occupation_history?.[idx]?.occupation?.message}>
+              <Field label="Occupation / Job Title" required error={errors.occupation_history?.[idx]?.occupation?.message}>
                 <input {...register(`occupation_history.${idx}.occupation`)} className={inp} />
               </Field>
-              <Field label="Employer / School / Other" required error={errors.occupation_history?.[idx]?.employer?.message}>
+              <Field label="Employer" required error={errors.occupation_history?.[idx]?.employer?.message}>
                 <input {...register(`occupation_history.${idx}.employer`)} className={inp} />
               </Field>
               <Field label="City" required error={errors.occupation_history?.[idx]?.city?.message}>
@@ -154,7 +158,7 @@ export function EmploymentHistoryStep({ control, register, errors, watch, setVal
         ))}
         {occFields.length < 3 && (
           <button type="button" onClick={() => appendOcc(EMPTY_OCC)} className="text-sm text-blue-600 hover:underline border border-blue-300 rounded px-3 py-1">
-            + Add Activity
+            + Add Employment
           </button>
         )}
       </div>
