@@ -1,15 +1,22 @@
 """Bundle filler — fills all forms in the study permit bundle and returns PDF bytes."""
 from __future__ import annotations
 
-from ...eligibility.lookup import get_child_status
-from ...eligibility.schema import ChildSchoolLevel
+from ...eligibility.lookup import get_child_status, get_spouse_path
+from ...eligibility.schema import ChildSchoolLevel, SpousePath, StudyLevel
 from ..imm1294.filler import fill_pdf as fill_imm1294
+from ..imm1295.filler import fill_pdf as fill_imm1295
+from ..imm5257.filler import fill_pdf as fill_imm5257, fill_schedule1_pdf as fill_imm5257_sch1
 from ..imm5409.filler import fill_pdf as fill_imm5409
 from ..imm5475.filler import fill_pdf as fill_imm5475
 from ..imm5476.filler import fill_pdf as fill_imm5476
 from ..imm5646.filler import fill_pdf as fill_imm5646
 from ..imm5707.filler import fill_pdf as fill_imm5707
 from .dependents import build_child_principal_data
+from .dependents_spouse import (
+    build_spouse_imm1295_data,
+    build_spouse_imm5257_data,
+    build_spouse_principal_data,
+)
 from .schema import StudyPermitData
 
 
@@ -68,4 +75,49 @@ def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
                 if filler is None:
                     continue
                 result[f"{form_code.lower()}_child_{idx}"] = filler(child_data)
+
+    # --- Spouse forms (Phase 2) — accompanying spouse/common-law partner filing
+    # their own application. eligibility.lookup.get_spouse_path() decides the
+    # branch from the main applicant's program: recommended_path is always
+    # either open_work_permit (-> IMM 1295) or visitor (-> IMM 5257 + Schedule 1)
+    # — the other SpousePath values only ever appear as informational
+    # alternatives, never auto-selected. Re-derived here (not trusted from the
+    # client's pre-computed optional_forms axis) so eligibility stays decided
+    # in one place. IMM 5409/5476/5475 reuse the SAME data already captured for
+    # the main applicant's own bundle when those optional forms are active —
+    # the common-law declaration and representative/release-authority
+    # designations describe the same underlying facts, so no separate spouse
+    # data entry is needed. IMM 5484/5488 (document checklists) are not
+    # fillable, same precedent as IMM 5483 for the child path.
+    spouse_applicant = data.family.spouse_study_applicant
+    if (
+        ("spouse_work_permit" in data.optional_forms or "spouse_visitor" in data.optional_forms)
+        and spouse_applicant is not None
+    ):
+        spouse_path = get_spouse_path(data.spouse_study_level or StudyLevel.other)
+        spouse_data = build_spouse_principal_data(data, spouse_applicant)
+        result["imm5707_spouse"] = fill_imm5707(spouse_data)
+
+        if spouse_path.recommended_path == SpousePath.open_work_permit:
+            result["imm1295_spouse"] = fill_imm1295(build_spouse_imm1295_data(data, spouse_applicant))
+        else:
+            spouse_5257_data = build_spouse_imm5257_data(data, spouse_applicant)
+            result["imm5257_spouse"] = fill_imm5257(spouse_5257_data)
+            result["imm5257_sch1_spouse"] = fill_imm5257_sch1(spouse_5257_data)
+
+        if "imm5409" in data.optional_forms and data.common_law:
+            result["imm5409_spouse"] = fill_imm5409(data.common_law)
+        if "imm5476" in data.optional_forms and data.representative:
+            spouse_data.representative = data.representative
+            result["imm5476_spouse"] = fill_imm5476(spouse_data)
+        if "imm5475" in data.optional_forms and data.release_authority:
+            spi = spouse_data.personal_info
+            spouse_applicant_data = {
+                "family_name": spi.family_name,
+                "given_name": spi.given_name,
+                "date_of_birth": spi.date_of_birth,
+                "uci": spi.uci,
+            }
+            result["imm5475_spouse"] = fill_imm5475(data.release_authority, spouse_applicant_data)
+
     return result

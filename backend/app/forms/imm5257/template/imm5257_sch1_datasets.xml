@@ -1,0 +1,64 @@
+<xfa:datasets xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"
+><xfa:data
+><Schedule1
+><PrincipalApplicant xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"
+/><FormName
+>IMM5257 Schedule1</FormName
+><FormVersion
+>ENU-11-2018</FormVersion
+><MilitaryServiceInfo
+><ServedInMilitary xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"
+/><MilitaryServiceDetails
+><MilitaryServiceDetail
+/><MilitaryServiceDetail
+/><MilitaryServiceDetail
+/><MilitaryServiceDetail
+/></MilitaryServiceDetails
+></MilitaryServiceInfo
+><WarHumanityCrimesInfo
+><HaveWitnessedParticipated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"
+/><WarHumanityCrimesDetails
+><WarHumanityCrimesDetail
+/><WarHumanityCrimesDetail
+/><WarHumanityCrimesDetail
+/></WarHumanityCrimesDetails
+></WarHumanityCrimesInfo
+><MembershipAssociationInfo
+><BeenMemberAssociated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"
+/><MembershipAssociationDetails
+><MembershipAssociationDetail
+/><MembershipAssociationDetail
+/><MembershipAssociationDetail
+/><MembershipAssociationDetail
+/></MembershipAssociationDetails
+></MembershipAssociationInfo
+><GovernmentPositionsInfo
+><HeldGovernmentPositions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"
+/><GovernmentPositionsDetails
+><GovernmentPositionsDetail
+/><GovernmentPositionsDetail
+/><GovernmentPositionsDetail
+/><GovernmentPositionsDetail
+/></GovernmentPositionsDetails
+></GovernmentPositionsInfo
+><PreviousTravelInfo
+><TraveledOtherCountry xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"
+/><PreviousTravelDetails
+><PreviousTravelDetail
+/><PreviousTravelDetail
+/><PreviousTravelDetail
+/><PreviousTravelDetail
+/></PreviousTravelDetails
+></PreviousTravelInfo
+><ApplicationValidationDate
+><Year
+>2012</Year
+><Month
+>01</Month
+><Day
+>01</Day
+></ApplicationValidationDate
+></Schedule1
+></xfa:data
+></xfa:datasets
+>

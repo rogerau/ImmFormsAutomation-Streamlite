@@ -23,11 +23,14 @@ from ..imm1294.schema import (
     Language,
     Sex,
 )
+from ..imm1295.schema import WorkDetails
+from ..imm5257.schema import Imm5257Schedule1Data, VisitDetails
 from ..imm5409.schema import Imm5409Data
 from ..imm5475.schema import Imm5475Data
 from ..imm5476.schema import Imm5476Data
 from ..imm5646.schema import Imm5646Data
 from ..imm5707.schema import Child5707, MaritalStatus, Parent5707, Person5707
+from ...eligibility.schema import StudyLevel
 
 
 class ContactInfo(BaseModel):
@@ -120,6 +123,29 @@ class ChildEntry(Child5707):
     study_applicant: Optional[ChildStudyApplicant] = None
 
 
+class SpouseStudyApplicant(BaseModel):
+    """Extra identity + path-specific fields a spouse/common-law partner needs to
+    file their OWN application alongside the main applicant's study permit —
+    Phase 2: an open work permit (IMM 1295) when the main applicant's program
+    qualifies, or a visitor visa (IMM 5257 + Schedule 1) when it doesn't (see
+    eligibility.lookup.get_spouse_path). Reused where possible from the main
+    applicant / the spouse's existing Person5707 entry: contact, language,
+    service_in are inherited by the spouse-principal projection (see
+    forms/study_permit/dependents_spouse.py). Only sex / place_birth_city /
+    citizenship / passport / the path-specific block are genuinely
+    spouse-specific and collected in the wizard. Exactly one of `work` / `visit`
+    is populated, decided server-side by spouse_study_level at fill time — never
+    trust a client-precomputed path for which block is "the" one."""
+    sex: Optional[Sex] = None
+    place_birth_city: str = Field(default="", max_length=100)
+    citizenship: str = ""             # defaults to the parent's if blank
+    current_country: str = ""         # defaults to the parent's if blank
+    passport: Optional[Imm1294Passport] = None
+    work: Optional[WorkDetails] = None                        # open_work_permit path (IMM 1295)
+    visit: Optional[VisitDetails] = None                      # visitor path (IMM 5257)
+    visit_background: Optional[Imm5257Schedule1Data] = None   # visitor path (Schedule 1)
+
+
 class FamilyInfo(BaseModel):
     """IMM 5707-specific data: occupation, marital status enum, family members."""
     applicant_marital_status: MaritalStatus
@@ -133,6 +159,9 @@ class FamilyInfo(BaseModel):
     spouse: Optional[Person5707] = None
     no_spouse_signature: str = ""
     no_spouse_date: str = ""
+
+    # Phase 2 — spouse filing their own work permit / visitor visa
+    spouse_study_applicant: Optional[SpouseStudyApplicant] = None
 
     # IMM 1294 subsection 11 — previous marriage / common-law (optional)
     previous_marriage: Optional[PreviousMarriage] = None
@@ -177,6 +206,10 @@ class StudyPermitData(BaseModel):
 
     # --- Steps 4–5: Family data (IMM 5707) ---
     family: FamilyInfo
+
+    # Phase 2 — main applicant's program of study, drives the spouse's required
+    # path (eligibility.lookup.get_spouse_path) when spouse_study_applicant is set.
+    spouse_study_level: Optional[StudyLevel] = None
 
     # --- Background (IMM 1294 Page 4) — verbatim IRCC questions ---
     # Q86: tuberculosis (no textbox)

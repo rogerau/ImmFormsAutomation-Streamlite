@@ -1,0 +1,141 @@
+"use client";
+import { Control, FieldErrors, UseFormRegister, useWatch } from "react-hook-form";
+import type { StudyPermitData } from "@/lib/schemas/study_permit";
+import { CountrySelect } from "@/components/forms/fields/CountrySelect";
+
+interface Props {
+  control: Control<StudyPermitData>;
+  register: UseFormRegister<StudyPermitData>;
+  errors: FieldErrors<StudyPermitData>;
+  optionalForms: string[];
+}
+
+const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
+
+function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-600">*</span>}
+      </label>
+      {children}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+export function DependentSpouseStep({ control, register, errors, optionalForms }: Props) {
+  const spouse = useWatch({ control, name: "family.spouse" });
+  const isWorkPermit = optionalForms.includes("spouse_work_permit");
+  const isVisitor = optionalForms.includes("spouse_visitor");
+  const sa = errors.family?.spouse_study_applicant;
+  const label = spouse ? [spouse.given_names, spouse.family_name].filter(Boolean).join(" ") : "Your spouse / partner";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-gray-800">
+          {isWorkPermit ? "Spouse — Open Work Permit (IMM 1295)" : "Spouse — Visitor Visa (IMM 5257)"}
+        </h2>
+        <p className="mt-1 text-sm text-gray-600">
+          {label} needs their own application alongside yours.{" "}
+          {isWorkPermit
+            ? "Because your program of study qualifies, they can apply for an open work permit."
+            : "Because your program of study doesn't qualify for an open work permit, they'll apply as a visitor."}
+          {" "}Their name, date of birth, country of birth and address are reused from the Family
+          Background step — no need to re-enter them.
+        </p>
+      </div>
+
+      {!spouse && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+          No spouse / partner was added in the Family Background step. Go back and add one first.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Sex" required error={sa?.sex?.message}>
+          <select {...register("family.spouse_study_applicant.sex" as any)} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </Field>
+        <Field label="City of Birth" required error={sa?.place_birth_city?.message}>
+          <input {...register("family.spouse_study_applicant.place_birth_city" as any)} className={inp} />
+        </Field>
+        <Field label="Citizenship" error={sa?.citizenship?.message}>
+          <CountrySelect {...register("family.spouse_study_applicant.citizenship" as any)} className={inp} />
+        </Field>
+        <Field label="Current Country of Residence" error={sa?.current_country?.message}>
+          <CountrySelect {...register("family.spouse_study_applicant.current_country" as any)} className={inp} />
+        </Field>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Passport</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Passport Number" required error={sa?.passport?.passport_number?.message}>
+            <input {...register("family.spouse_study_applicant.passport.passport_number" as any)} className={inp} />
+          </Field>
+          <Field label="Country of Issue" required error={sa?.passport?.country_of_issue?.message}>
+            <CountrySelect {...register("family.spouse_study_applicant.passport.country_of_issue" as any)} className={inp} />
+          </Field>
+          <Field label="Issue Date" error={(sa?.passport as any)?.issue_date?.message}>
+            <input {...register("family.spouse_study_applicant.passport.issue_date" as any)} placeholder="YYYY-MM-DD" className={inp} />
+          </Field>
+          <Field label="Expiry Date" error={(sa?.passport as any)?.expiry_date?.message}>
+            <input {...register("family.spouse_study_applicant.passport.expiry_date" as any)} placeholder="YYYY-MM-DD" className={inp} />
+          </Field>
+        </div>
+      </div>
+
+      {isWorkPermit && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Intended Work in Canada</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Work Permit Type" required error={(sa?.work as any)?.work_permit_type?.message}>
+              <select {...register("family.spouse_study_applicant.work.work_permit_type" as any)} className={inp}>
+                <option value="Open Work Permit">Open Work Permit</option>
+                <option value="Employer-Specific Work Permit">Employer-Specific Work Permit</option>
+              </select>
+            </Field>
+            <Field label="Job Title" error={(sa?.work as any)?.job_title?.message}>
+              <input {...register("family.spouse_study_applicant.work.job_title" as any)} className={inp} />
+            </Field>
+            <Field label="Intended City/Town in Canada" error={(sa?.work as any)?.intended_city_town?.message}>
+              <input {...register("family.spouse_study_applicant.work.intended_city_town" as any)} className={inp} />
+            </Field>
+            <Field label="Intended Province/State" error={(sa?.work as any)?.intended_province_state?.message}>
+              <input {...register("family.spouse_study_applicant.work.intended_province_state" as any)} className={inp} />
+            </Field>
+          </div>
+        </div>
+      )}
+
+      {isVisitor && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Details of Visit</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Purpose of Visit" required error={(sa?.visit as any)?.purpose_of_visit?.message}>
+              <select {...register("family.spouse_study_applicant.visit.purpose_of_visit" as any)} className={inp}>
+                <option value="Visit">Visit</option>
+                <option value="Business">Business</option>
+                <option value="Other">Other</option>
+              </select>
+            </Field>
+            <Field label="Funds Available (CAD)" error={(sa?.visit as any)?.funds_available?.message}>
+              <input {...register("family.spouse_study_applicant.visit.funds_available" as any)} className={inp} />
+            </Field>
+            <Field label="Visit Start Date" required error={(sa?.visit as any)?.how_long_from?.message}>
+              <input {...register("family.spouse_study_applicant.visit.how_long_from" as any)} placeholder="YYYY-MM-DD" className={inp} />
+            </Field>
+            <Field label="Visit End Date" required error={(sa?.visit as any)?.how_long_to?.message}>
+              <input {...register("family.spouse_study_applicant.visit.how_long_to" as any)} placeholder="YYYY-MM-DD" className={inp} />
+            </Field>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

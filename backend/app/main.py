@@ -142,6 +142,9 @@ _FORM_NUM = {
     "imm5409": "IMM5409",
     "imm5646": "IMM5646",
     "imm5476": "IMM5476",
+    "imm1295": "IMM1295",
+    "imm5257": "IMM5257",
+    "imm5257_sch1": "IMM5257_SCH1",
 }
 
 
@@ -149,9 +152,12 @@ def _filename(form_id: str, case_id: str, family_name: str, given_name: str) -> 
     safe_family = "".join(c for c in family_name.upper() if c.isalnum()) or "UNKNOWN"
     safe_given = "".join(c for c in given_name.upper() if c.isalnum()) or "UNKNOWN"
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    # Dependant child forms are keyed e.g. "imm1294_child_2"; the prefix comes
-    # from the base form id, and the name passed in is the child's.
+    # Dependant child forms are keyed e.g. "imm1294_child_2"; spouse forms are
+    # keyed e.g. "imm1295_spouse". The prefix comes from the base form id, and
+    # the name passed in is the dependant's (child's or spouse's).
     base_id = form_id.split("_child_")[0]
+    if base_id.endswith("_spouse"):
+        base_id = base_id[: -len("_spouse")]
     prefix = _FORM_NUM.get(base_id, base_id.upper())
     return f"{prefix}_{case_id}_{safe_family}_{safe_given}_{ts}.pdf"
 
@@ -204,12 +210,14 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
     upload_errors: list[str] = []
 
     for form_id, pdf_bytes in pdf_bundle.items():
-        # Dependant child forms ("..._child_N") are named after the child, not
-        # the main applicant.
+        # Dependant child forms ("..._child_N") are named after the child, spouse
+        # forms ("..._spouse") after the spouse — not the main applicant.
         if "_child_" in form_id:
             ci = int(form_id.rsplit("_child_", 1)[1]) - 1
             child = payload.family.children[ci]
             fam_n, giv_n = child.family_name, child.given_names
+        elif form_id.endswith("_spouse") and payload.family.spouse:
+            fam_n, giv_n = payload.family.spouse.family_name, payload.family.spouse.given_names
         else:
             fam_n, giv_n = family_name, given_name
         filename = _filename(form_id, payload.case_id, fam_n, giv_n)

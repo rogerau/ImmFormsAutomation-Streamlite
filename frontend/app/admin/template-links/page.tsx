@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import {
   EMPTY_INTAKE_ANSWERS,
   MARITAL_STATUS_OPTIONS,
+  STUDY_LEVEL_OPTIONS,
   DEPENDENT_CHILD_FORM,
+  SPOUSE_WORK_PERMIT_FORM,
+  SPOUSE_VISITOR_FORM,
   deriveOptionalForms,
   isIntakeComplete,
   matchBaseUseCase,
@@ -27,6 +30,8 @@ const FORM_LABELS: Record<string, string> = {
   imm5646: "IMM 5646 — Custodian",
   imm5475: "IMM 5475 — Release Authority",
   child_study_permit: "Dependent Children — IMM 1294 / 5707",
+  spouse_work_permit: "Spouse Work Permit — IMM 1295 / 5707",
+  spouse_visitor: "Spouse Visitor Visa — IMM 5257 / Schedule 1 / 5707",
 };
 
 // Pre-baked template links are issued for this tenant; the dynamic dependent-child
@@ -92,13 +97,31 @@ export default function TemplateLinksPage() {
     setAssessError("");
     const forms = deriveOptionalForms(answers);
 
-    // Dependent-child cases are orthogonal to the 8 pre-baked links, so issue a
-    // link dynamically with the full derived form set.
-    if (forms.includes(DEPENDENT_CHILD_FORM)) {
+    const hasChild = forms.includes(DEPENDENT_CHILD_FORM);
+    const hasSpouseWork = forms.includes(SPOUSE_WORK_PERMIT_FORM);
+    const hasSpouseVisitor = forms.includes(SPOUSE_VISITOR_FORM);
+
+    // Dependent-child and spouse cases are orthogonal to the 8 pre-baked
+    // links, so issue a link dynamically with the full derived form set.
+    if (hasChild || hasSpouseWork || hasSpouseVisitor) {
       const base = matchBaseUseCase(answers);
       if (!base) {
         setAssessError("Could not match a use case — check answers.");
         return;
+      }
+      const extraLabels: string[] = [];
+      const extraDescriptions: string[] = [];
+      if (hasChild) {
+        extraLabels.push("Dependent Children");
+        extraDescriptions.push("IMM 1294 / IMM 5707 for each minor child applying for their own study permit.");
+      }
+      if (hasSpouseWork) {
+        extraLabels.push("Spouse Work Permit");
+        extraDescriptions.push("IMM 1295 / IMM 5707 for the accompanying spouse's own open work permit.");
+      }
+      if (hasSpouseVisitor) {
+        extraLabels.push("Spouse Visitor Visa");
+        extraDescriptions.push("IMM 5257 + Schedule 1 / IMM 5707 for the accompanying spouse's own visitor visa.");
       }
       setAssessing(true);
       try {
@@ -119,9 +142,8 @@ export default function TemplateLinksPage() {
         const data = await res.json();
         setDynamicResult({
           id: "dynamic",
-          label: `${base.label} + Dependent Children`,
-          description:
-            `${base.description} Plus IMM 1294 / IMM 5707 for each minor child applying for their own study permit.`,
+          label: `${base.label} + ${extraLabels.join(" + ")}`,
+          description: `${base.description} Plus ${extraDescriptions.join(" Plus ")}`,
           optional_forms: forms,
           url: data.url,
         });
@@ -268,6 +290,51 @@ export default function TemplateLinksPage() {
               </label>
             </div>
           </div>
+          <div>
+            <span className="block text-sm font-medium text-gray-700 mb-1">
+              Is there an accompanying spouse / common-law partner who needs their own work permit or visitor visa?
+            </span>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name="hasSpouseAccompanying"
+                  checked={answers.hasSpouseAccompanying === true}
+                  onChange={() => setAnswers((a) => ({ ...a, hasSpouseAccompanying: true }))}
+                />
+                Yes
+              </label>
+              <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name="hasSpouseAccompanying"
+                  checked={answers.hasSpouseAccompanying === false}
+                  onChange={() => setAnswers((a) => ({ ...a, hasSpouseAccompanying: false, principalStudyLevel: "" }))}
+                />
+                No
+              </label>
+            </div>
+          </div>
+          {answers.hasSpouseAccompanying === true && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Principal applicant's program of study
+              </label>
+              <select
+                value={answers.principalStudyLevel}
+                onChange={(e) => setAnswers((a) => ({ ...a, principalStudyLevel: e.target.value }))}
+                className={inp}
+              >
+                <option value="">— Select —</option>
+                {STUDY_LEVEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Decides whether the spouse gets an open work permit (IMM 1295) or a visitor visa (IMM 5257).
+              </p>
+            </div>
+          )}
           {assessError && <p className="text-sm text-red-600">{assessError}</p>}
           <button
             onClick={handleAssess}
@@ -277,7 +344,7 @@ export default function TemplateLinksPage() {
             {assessing ? "Assessing…" : "Assess"}
           </button>
           {!isIntakeComplete(answers) && (
-            <p className="text-xs text-gray-500">Answer all 4 questions to assess.</p>
+            <p className="text-xs text-gray-500">Answer all questions to assess.</p>
           )}
         </div>
       </main>

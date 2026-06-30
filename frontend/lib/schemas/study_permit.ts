@@ -36,6 +36,22 @@ export const SexEnum = z.enum(["Male", "Female"]);
 export const LanguageEnum = z.enum(["English", "French", "Both", "Neither"]);
 export const ServiceInEnum = z.enum(["English", "French"]);
 export const ParentStatusEnum = z.enum(["Living", "Deceased"]);
+// Mirrors backend eligibility.schema.StudyLevel — the principal applicant's
+// program of study, which decides the spouse's path (open work permit vs
+// visitor visa) via get_spouse_path. Asked once at intake (Phase 2), not a
+// per-field wizard question.
+export const StudyLevelEnum = z.enum([
+  "doctoral",
+  "masters_16_plus_months",
+  "masters_under_16_months",
+  "professional_degree",
+  "pilot_program",
+  "bachelors",
+  "college_diploma",
+  "certificate",
+  "language_program",
+  "other",
+]);
 export const RepActionEnum = z.enum([
   "appointing",
   "updating",
@@ -231,6 +247,62 @@ const child5707Schema = person5707Schema.extend({
   study_applicant: childStudyApplicantSchema.nullable().optional(),
 });
 
+// ---- Dependant spouse work permit / visitor visa (Phase 2) ----
+// Lenient by design: every field defaults, so a spouse not filing their own
+// application never errors. When optional_forms includes "spouse_work_permit"
+// or "spouse_visitor", the master superRefine enforces the required subset.
+const spouseWorkDetailsSchema = z.object({
+  work_permit_type: z.string().default("Open Work Permit"),
+  employer_name: z.string().default(""),
+  employer_address: z.string().default(""),
+  intended_province_state: z.string().default(""),
+  intended_city_town: z.string().default(""),
+  intended_address: z.string().default(""),
+  job_title: z.string().default(""),
+  position_description: z.string().default(""),
+  how_long_from: dateStr,
+  how_long_to: dateStr,
+  lmia_number: z.string().default(""),
+});
+
+const spouseVisitDetailsSchema = z.object({
+  purpose_of_visit: z.string().default("Visit"),
+  purpose_other: z.string().default(""),
+  how_long_from: dateStr,
+  how_long_to: dateStr,
+  funds_available: z.string().default(""),
+  contact1_name: z.string().default(""),
+  contact1_relationship: z.string().default(""),
+  contact1_address_in_canada: z.string().default(""),
+  contact2_name: z.string().default(""),
+  contact2_relationship: z.string().default(""),
+  contact2_address_in_canada: z.string().default(""),
+});
+
+const schedule1CategorySchema = z.object({
+  has: boolFromString.default(false),
+  details: z.array(z.string()).max(4).default([]),
+});
+
+const schedule1Schema = z.object({
+  military_service: schedule1CategorySchema.default({ has: false, details: [] }),
+  war_humanity_crimes: schedule1CategorySchema.default({ has: false, details: [] }),
+  membership_association: schedule1CategorySchema.default({ has: false, details: [] }),
+  government_positions: schedule1CategorySchema.default({ has: false, details: [] }),
+  previous_travel: schedule1CategorySchema.default({ has: false, details: [] }),
+});
+
+const spouseStudyApplicantSchema = z.object({
+  sex: z.preprocess((v) => (v === "" || v == null ? null : v), SexEnum.nullable().optional()),
+  place_birth_city: z.string().default(""),
+  citizenship: z.string().default(""),   // defaults to the main applicant's on the backend if blank
+  current_country: z.string().default(""),
+  passport: childPassportSchema.default({ passport_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
+  work: spouseWorkDetailsSchema.nullable().optional(),
+  visit: spouseVisitDetailsSchema.nullable().optional(),
+  visit_background: schedule1Schema.nullable().optional(),
+});
+
 // ---- IMM 5409 sub-schema ----
 const commonLawSchema = z.object({
   jurisdiction_country: z.string().min(1, "Required"),
@@ -383,6 +455,8 @@ const familyInfoSchema = z.object({
   spouse: person5707Schema.nullable().optional(),
   no_spouse_signature: z.string().default(""),
   no_spouse_date: z.string().default(""),
+  // Phase 2 — spouse filing their own work permit / visitor visa
+  spouse_study_applicant: spouseStudyApplicantSchema.nullable().optional(),
   previous_marriage: previousMarriageSchema.nullable().optional(),
   father: parent5707Schema,
   mother: parent5707Schema,
@@ -463,6 +537,14 @@ export const StudyPermitSchema = z
 
     // Steps 4-5: Family
     family: familyInfoSchema,
+
+    // Phase 2 — main applicant's program of study, drives the spouse's
+    // required path (eligibility.lookup.get_spouse_path) when
+    // family.spouse_study_applicant is set.
+    spouse_study_level: z.preprocess(
+      (v) => (v === "" || v == null ? null : v),
+      StudyLevelEnum.nullable().optional(),
+    ),
 
     // Background — IRCC IMM 1294 Page 4 verbatim questions
     tuberculosis: requiredBoolFromString,
@@ -545,6 +627,37 @@ export const StudyPermitSchema = z
         need(sa?.study?.start_date, "Required", "study", "start_date");
         need(sa?.study?.end_date, "Required", "study", "end_date");
       });
+    }
+
+    // Phase 2 — when the spouse files their own work permit / visitor visa,
+    // require the spouse-specific identity/passport fields plus the
+    // path-specific block IRCC's IMM 1295 / IMM 5257 needs.
+    const wantsSpouseWork = d.optional_forms.includes("spouse_work_permit");
+    const wantsSpouseVisit = d.optional_forms.includes("spouse_visitor");
+    if (wantsSpouseWork || wantsSpouseVisit) {
+      const sa = d.family.spouse_study_applicant;
+      const need = (ok: unknown, msg: string, ...path: (string | number)[]) => {
+        if (!ok) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: msg,
+            path: ["family", "spouse_study_applicant", ...path],
+          });
+        }
+      };
+      need(d.family.spouse, "Spouse / partner info is required for this application.");
+      need(sa?.sex, "Required", "sex");
+      need(sa?.place_birth_city, "Required", "place_birth_city");
+      need(sa?.passport?.passport_number, "Required", "passport", "passport_number");
+      need(sa?.passport?.country_of_issue, "Required", "passport", "country_of_issue");
+      if (wantsSpouseWork) {
+        need(sa?.work?.work_permit_type, "Required", "work", "work_permit_type");
+      }
+      if (wantsSpouseVisit) {
+        need(sa?.visit?.purpose_of_visit, "Required", "visit", "purpose_of_visit");
+        need(sa?.visit?.how_long_from, "Required", "visit", "how_long_from");
+        need(sa?.visit?.how_long_to, "Required", "visit", "how_long_to");
+      }
     }
   });
 

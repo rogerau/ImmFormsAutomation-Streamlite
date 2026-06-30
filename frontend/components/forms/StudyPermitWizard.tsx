@@ -14,6 +14,7 @@ import { CustodianStep } from "./steps/CustodianStep";
 import { RepresentativeStep } from "./steps/RepresentativeStep";
 import { ReleaseAuthorityStep } from "./steps/ReleaseAuthorityStep";
 import { DependentChildrenStep } from "./steps/DependentChildrenStep";
+import { DependentSpouseStep } from "./steps/DependentSpouseStep";
 import { ReviewSignStep } from "./steps/ReviewSignStep";
 import { FormsGuidance } from "./FormsGuidance";
 import type { TokenClaims } from "@/lib/token";
@@ -36,15 +37,6 @@ const STEP_LABELS_BASE = [
   "Education & Employment",
 ];
 const STEP_LABEL_REVIEW = "Review & Sign";
-
-// Steps requiring optional forms
-const OPT_STEPS: Record<string, string> = {
-  imm5409: "Common-law Declaration",
-  imm5646: "Custodian Declaration",
-  imm5476: "Representative",
-  imm5475: "Authority to Release Info",
-  child_study_permit: "Dependent Children",
-};
 
 // Turn a field-path segment into a human label: "place_birth_city" -> "Place Birth City",
 // "study_applicant" -> "Study Applicant", array index "0" -> "#1".
@@ -122,13 +114,6 @@ function formatApiErrorDetail(detail: unknown, status: number): string {
 
 export function StudyPermitWizard({ token, claims }: Props) {
   const optionalForms = claims.optional_forms ?? [];
-  const activeOptSteps = Object.entries(OPT_STEPS).filter(([key]) => optionalForms.includes(key));
-  const totalSteps = STEP_LABELS_BASE.length + activeOptSteps.length + 1; // +1 for review
-  const stepLabels = [
-    ...STEP_LABELS_BASE,
-    ...activeOptSteps.map(([, label]) => label),
-    STEP_LABEL_REVIEW,
-  ];
 
   const [currentStep, setCurrentStep] = useState(1);
   const [submitResult, setSubmitResult] = useState<any>(null);
@@ -196,6 +181,75 @@ export function StudyPermitWizard({ token, claims }: Props) {
     return () => subscription.unsubscribe();
   }, [watch, DRAFT_KEY]);
 
+  // Single source of truth for every optional-form-driven step: its label,
+  // the RHF field paths "Next" should validate, and the rendered component.
+  // Steps fill slots 6, 7, 8, ... in this fixed priority order, but ONLY for
+  // forms that are actually active in optionalForms — labels/totalSteps,
+  // STEP_FIELDS and stepComponents used to be computed independently from
+  // three different hardcoded sources (an OPT_STEPS label map, a literal
+  // step-number → fields map, and a separate if-chain), which could drift out
+  // of sync whenever a sparse subset of optional forms was active: e.g. a
+  // representative (imm5476) but no common-law declaration (imm5409) would
+  // render RepresentativeStep at step 6 while STEP_FIELDS[6] still checked
+  // for imm5409, silently skipping "Next" validation on that step. Deriving
+  // labels, fields, and the rendered component from one ordered array makes
+  // that drift structurally impossible — there's only one place position is
+  // ever assigned.
+  const optStepConfigs: { key: string; label: string; fields: string[]; render: () => React.ReactNode }[] = [
+    {
+      key: "imm5409",
+      label: "Common-law Declaration",
+      fields: ["common_law"],
+      render: () => <CommonLawStep register={register} errors={errors} getValues={getValues} setValue={setValue} />,
+    },
+    {
+      key: "imm5646",
+      label: "Custodian Declaration",
+      fields: ["custodian"],
+      render: () => <CustodianStep register={register} errors={errors} control={control} getValues={getValues} setValue={setValue} />,
+    },
+    {
+      key: "imm5476",
+      label: "Representative",
+      fields: ["representative"],
+      render: () => <RepresentativeStep register={register} errors={errors} getValues={getValues} setValue={setValue} control={control} />,
+    },
+    {
+      key: "imm5475",
+      label: "Authority to Release Info",
+      fields: ["release_authority"],
+      render: () => <ReleaseAuthorityStep register={register} errors={errors} getValues={getValues} setValue={setValue} />,
+    },
+    {
+      key: "child_study_permit",
+      label: "Dependent Children",
+      fields: ["family.children"],
+      render: () => <DependentChildrenStep control={control} register={register} errors={errors} />,
+    },
+    // Mutually exclusive (intake derives exactly one, never both) — whichever
+    // is active fills this slot with its own label.
+    {
+      key: "spouse_work_permit",
+      label: "Spouse — Work Permit",
+      fields: ["family.spouse_study_applicant"],
+      render: () => <DependentSpouseStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
+    },
+    {
+      key: "spouse_visitor",
+      label: "Spouse — Visitor Visa",
+      fields: ["family.spouse_study_applicant"],
+      render: () => <DependentSpouseStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
+    },
+  ];
+  const activeOptSteps = optStepConfigs.filter((c) => optionalForms.includes(c.key));
+
+  const totalSteps = STEP_LABELS_BASE.length + activeOptSteps.length + 1; // +1 for review
+  const stepLabels = [
+    ...STEP_LABELS_BASE,
+    ...activeOptSteps.map((c) => c.label),
+    STEP_LABEL_REVIEW,
+  ];
+
   // Step-level field groups to validate on "Next"
   const STEP_FIELDS: Record<number, string[]> = {
     1: ["personal_info", "passport", "national_id", "us_pr_card", "contact"],
@@ -203,12 +257,10 @@ export function StudyPermitWizard({ token, claims }: Props) {
     3: ["family.applicant_marital_status", "family.father", "family.mother", "family.section_c_signature", "family.section_c_date"],
     4: ["family.children", "family.no_children_signature"],
     5: [],  // education/occupation optional
-    6: optionalForms.includes("imm5409") ? ["common_law"] : [],
-    7: optionalForms.includes("imm5646") ? ["custodian"] : [],
-    8: optionalForms.includes("imm5476") ? ["representative"] : [],
-    9: optionalForms.includes("imm5475") ? ["release_authority"] : [],
-    10: optionalForms.includes("child_study_permit") ? ["family.children"] : [],
   };
+  activeOptSteps.forEach((c, i) => {
+    STEP_FIELDS[6 + i] = c.fields;
+  });
 
   const handleNext = useCallback(async () => {
     const fields = STEP_FIELDS[currentStep] ?? [];
@@ -266,23 +318,10 @@ export function StudyPermitWizard({ token, claims }: Props) {
     5: <EmploymentHistoryStep control={control} register={register} errors={errors} watch={watch} setValue={setValue} />,
   };
 
-  // Dynamically add optional steps
-  let optIdx = 6;
-  if (optionalForms.includes("imm5409")) {
-    stepComponents[optIdx++] = <CommonLawStep register={register} errors={errors} getValues={getValues} setValue={setValue} />;
-  }
-  if (optionalForms.includes("imm5646")) {
-    stepComponents[optIdx++] = <CustodianStep register={register} errors={errors} control={control} getValues={getValues} setValue={setValue} />;
-  }
-  if (optionalForms.includes("imm5476")) {
-    stepComponents[optIdx++] = <RepresentativeStep register={register} errors={errors} getValues={getValues} setValue={setValue} control={control} />;
-  }
-  if (optionalForms.includes("imm5475")) {
-    stepComponents[optIdx++] = <ReleaseAuthorityStep register={register} errors={errors} getValues={getValues} setValue={setValue} />;
-  }
-  if (optionalForms.includes("child_study_permit")) {
-    stepComponents[optIdx++] = <DependentChildrenStep control={control} register={register} errors={errors} />;
-  }
+  // Dynamically add optional steps — same activeOptSteps order as labels/STEP_FIELDS above.
+  activeOptSteps.forEach((c, i) => {
+    stepComponents[6 + i] = c.render();
+  });
   stepComponents[totalSteps] = (
     <ReviewSignStep
       register={register}

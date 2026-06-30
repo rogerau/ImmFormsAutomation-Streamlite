@@ -100,6 +100,12 @@ SUBMISSIONS_HEADERS = [
     "pdf_imm5646_id", "pdf_imm5646_url",
     "pdf_imm5476_id", "pdf_imm5476_url",
     "pdf_imm5475_id", "pdf_imm5475_url",
+    # Phase 2 — spouse filing their own work permit (IMM 1295) or visitor visa
+    # (IMM 5257 + Schedule 1). Reuses the spouse identity columns above — no
+    # duplication. "" when the spouse isn't filing their own application.
+    "spouse_applying_for",
+    "imm1295_spouse_url", "imm5707_spouse_url",
+    "imm5257_spouse_url", "imm5257_sch1_spouse_url",
 ]
 
 
@@ -280,6 +286,16 @@ def submissions_row(
         _drive("imm5646", "id"), _drive("imm5646", "webViewLink"),
         _drive("imm5476", "id"), _drive("imm5476", "webViewLink"),
         _drive("imm5475", "id"), _drive("imm5475", "webViewLink"),
+        # Phase 2 — spouse's own work permit / visitor visa
+        (
+            "work_permit" if "imm1295_spouse" in drive_results
+            else "visitor" if "imm5257_spouse" in drive_results
+            else ""
+        ),
+        _drive("imm1295_spouse", "webViewLink"),
+        _drive("imm5707_spouse", "webViewLink"),
+        _drive("imm5257_spouse", "webViewLink"),
+        _drive("imm5257_sch1_spouse", "webViewLink"),
     ]
 
 
