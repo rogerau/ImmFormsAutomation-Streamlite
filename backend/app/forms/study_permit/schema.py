@@ -94,17 +94,46 @@ class PreviousMarriage(BaseModel):
 
 class ChildStudyApplicant(BaseModel):
     """Extra identity fields a minor child needs to file their OWN study permit
-    (IMM 1294) as the principal applicant. Reused where possible from the main
-    applicant: citizenship / current_country default to the parent's when blank,
-    and contact/funding are inherited by the child-principal projection (see
-    forms/study_permit/dependents.py). Only sex / place_birth_city / passport /
-    study are genuinely child-specific and collected in the wizard."""
+    (IMM 1294) as the principal applicant. Only the household contact address /
+    phone / email and the child's parents (= main applicant + spouse) are
+    legitimately inherited by the child-principal projection (see
+    forms/study_permit/dependents.py); citizenship / current_country still
+    default to the parent's when blank. Everything else below is the child's OWN
+    data (Phase X2 — previously wrongly inferred/left blank), collected in the
+    wizard. Marital status is kept "Single" (children are treated as minors)."""
     sex: Optional[Sex] = None
     place_birth_city: str = Field(default="", max_length=100)
     citizenship: str = ""             # defaults to the parent's if blank
     current_country: str = ""         # defaults to the parent's if blank
     passport: Optional[Imm1294Passport] = None
     study: Optional[Imm1294StudyDetails] = None
+
+    # --- Phase X2 — the child's own data (was inferred from the main applicant) ---
+    language: Language = Language.english
+    service_in: str = "English"
+    national_id: Imm1294NationalID = Imm1294NationalID()
+    us_pr_card: Imm1294USCard = Imm1294USCard()
+    # Residence history (IMM 1294 subsections 7-9)
+    current_residence: Optional[Imm1294ResidenceRow] = None
+    has_previous_residence: bool = False
+    previous_residences: list[Imm1294ResidenceRow] = []
+    applying_country_same_as_current: bool = True
+    applying_country: Optional[Imm1294ResidenceRow] = None
+    # Background declarations (IMM 1294 Page 4) — the child's own answers
+    tuberculosis: bool = False
+    medical_condition: bool = False
+    medical_condition_details: str = Field(default="", max_length=1000)
+    previously_remained_status: bool = False
+    previously_applied_canada: bool = False
+    previously_refused_visa: bool = False
+    previously_refused_visa_details: str = Field(default="", max_length=1000)
+    criminal_record: bool = False
+    criminal_record_details: str = Field(default="", max_length=1000)
+    military_service: bool = False
+    military_service_details: str = Field(default="", max_length=1000)
+    political_party: bool = False
+    war_crimes: bool = False
+    consent_to_contact: bool = True
 
 
 class ChildEntry(Child5707):
@@ -167,6 +196,35 @@ class SpouseStudyApplicant(BaseModel):
     political_party: bool = False
     war_crimes: bool = False
     consent_to_contact: bool = True
+
+    # --- Phase X2 — remaining spouse-own data (was inferred from the main applicant) ---
+    national_id: Imm1294NationalID = Imm1294NationalID()
+    us_pr_card: Imm1294USCard = Imm1294USCard()
+    # Residence history (IMM 1295/5257 subsections 7-9)
+    current_residence: Optional[Imm1294ResidenceRow] = None
+    has_previous_residence: bool = False
+    previous_residences: list[Imm1294ResidenceRow] = []
+    applying_country_same_as_current: bool = True
+    applying_country: Optional[Imm1294ResidenceRow] = None
+    # Previous marriage / common-law (the spouse may be in a second marriage)
+    previously_married: bool = False
+    prev_spouse_family_name: str = ""
+    prev_spouse_given_name: str = ""
+    prev_spouse_date_of_birth: str = ""
+    prev_relationship_type: str = ""       # "Married" / "Common-law"
+    prev_relationship_from: str = ""       # YYYY-MM-DD
+    prev_relationship_to: str = ""         # YYYY-MM-DD
+    # The spouse's OWN address. When address_same_as_main is True (default), the
+    # spouse-principal projection reuses the main applicant's household address;
+    # otherwise these structured fields are used.
+    address_same_as_main: bool = True
+    mailing_address: Optional[Imm1294Address] = None
+    residential_address_same_as_mailing: bool = True
+    residential_address: Optional[Imm1294Address] = None
+    # The spouse's OWN parents for their IMM 5707 (Section A) + whether each
+    # accompanies. Reuses Parent5707 exactly like the main applicant's father/mother.
+    father: Optional[Parent5707] = None
+    mother: Optional[Parent5707] = None
 
 
 class FamilyInfo(BaseModel):

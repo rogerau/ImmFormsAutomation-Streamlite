@@ -125,7 +125,15 @@ def build_child_principal_data(parent: StudyPermitData, child: ChildEntry) -> St
         place_birth_country=child.country_of_birth,
         citizenship=sa.citizenship or ppi.citizenship,
         current_country=sa.current_country or ppi.current_country,
-        service_in=ppi.service_in,
+        # Phase X2 — the child's OWN language + residence history (was inferred
+        # from the parent / left blank, which produced empty residence FROM/TO).
+        language=sa.language,
+        service_in=sa.service_in,
+        current_residence=sa.current_residence,
+        has_previous_residence=sa.has_previous_residence,
+        previous_residences=sa.previous_residences,
+        applying_country_same_as_current=sa.applying_country_same_as_current,
+        applying_country=sa.applying_country,
     )
 
     child_family = FamilyInfo(
@@ -151,10 +159,27 @@ def build_child_principal_data(parent: StudyPermitData, child: ChildEntry) -> St
         optional_forms=[],                # the child bundle does not recurse
         personal_info=child_personal,
         passport=sa.passport,
+        # Phase X2 — the child's OWN national ID / US PR card (was left default).
+        national_id=sa.national_id,
+        us_pr_card=sa.us_pr_card,
         contact=deepcopy(parent.contact),  # same household
         study=sa.study,
         family=child_family,
-        consent_to_contact=parent.consent_to_contact,
+        # Phase X2 — the child's OWN Page-4 background declarations (were defaulted).
+        tuberculosis=sa.tuberculosis,
+        medical_condition=sa.medical_condition,
+        medical_condition_details=sa.medical_condition_details,
+        previously_remained_status=sa.previously_remained_status,
+        previously_applied_canada=sa.previously_applied_canada,
+        previously_refused_visa=sa.previously_refused_visa,
+        previously_refused_visa_details=sa.previously_refused_visa_details,
+        criminal_record=sa.criminal_record,
+        criminal_record_details=sa.criminal_record_details,
+        military_service=sa.military_service,
+        military_service_details=sa.military_service_details,
+        political_party=sa.political_party,
+        war_crimes=sa.war_crimes,
+        consent_to_contact=sa.consent_to_contact,
         applicant_signature=sign,          # the parent signs for the minor
         applicant_signature_date=sign_date,
         # NB: no custodian declaration (IMM 5646) — see module docstring.

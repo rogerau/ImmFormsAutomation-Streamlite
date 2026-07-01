@@ -105,7 +105,7 @@ SUBMISSIONS_HEADERS = [
     # duplication. "" when the spouse isn't filing their own application.
     "spouse_applying_for",
     "imm1295_spouse_url", "imm5707_spouse_url",
-    "imm5257_spouse_url", "imm5257_sch1_spouse_url",
+    "imm5257_spouse_url", "imm5257_sch1_spouse_url", "imm5476_spouse_url",
 ]
 
 
@@ -296,6 +296,7 @@ def submissions_row(
         _drive("imm5707_spouse", "webViewLink"),
         _drive("imm5257_spouse", "webViewLink"),
         _drive("imm5257_sch1_spouse", "webViewLink"),
+        _drive("imm5476_spouse", "webViewLink"),
     ]
 
 
@@ -314,6 +315,24 @@ CHILDREN_HEADERS = [
     "applying_study_permit",
     "child_passport_number", "child_dli_number", "child_school", "child_study_level",
     "imm1294_child_url", "imm5707_child_url",
+    # Phase X2 — the child's OWN data (previously inferred from the main applicant)
+    "child_language", "child_service_in",
+    "child_has_national_id", "child_nat_id_number", "child_nat_id_country",
+    "child_nat_id_issue", "child_nat_id_expiry",
+    "child_has_us_pr_card", "child_us_pr_number", "child_us_pr_uscis", "child_us_pr_expiry",
+    "child_current_residence_country", "child_current_residence_status",
+    "child_current_residence_from", "child_current_residence_to",
+    "child_has_previous_residence",
+    "child_prev_res_1_country", "child_prev_res_1_status", "child_prev_res_1_from", "child_prev_res_1_to",
+    "child_prev_res_2_country", "child_prev_res_2_status", "child_prev_res_2_from", "child_prev_res_2_to",
+    "child_applying_country_same", "child_applying_country", "child_applying_status",
+    "child_applying_from", "child_applying_to",
+    "child_tuberculosis", "child_medical_condition", "child_medical_details",
+    "child_prev_remained_status", "child_prev_applied_canada",
+    "child_prev_refused_visa", "child_prev_refused_details",
+    "child_criminal_record", "child_criminal_details",
+    "child_military_service", "child_military_details",
+    "child_political_party", "child_war_crimes", "child_consent_to_contact",
 ]
 
 
@@ -323,10 +342,22 @@ def children_rows(data: StudyPermitData, drive_results: dict | None = None) -> l
     def _url(form_id: str) -> str:
         return (drive_results.get(form_id) or {}).get("webViewLink", "")
 
+    yn = lambda v: "Yes" if v else "No"
+
+    def _res(row, attr):
+        return getattr(row, attr) if row is not None else ""
+
     rows = []
     for i, c in enumerate(data.family.children or [], start=1):
         sa = getattr(c, "study_applicant", None)
         applying = getattr(c, "applying_study_permit", False)
+        cr = sa.current_residence if sa else None
+        prev = (sa.previous_residences if sa else None) or []
+        prev1 = prev[0] if len(prev) > 0 else None
+        prev2 = prev[1] if len(prev) > 1 else None
+        ac = sa.applying_country if sa else None
+        nid = sa.national_id if sa else None
+        usc = sa.us_pr_card if sa else None
         rows.append([
             str(uuid.uuid4()), data.submission_id, i,
             c.family_name, c.given_names, c.native_name,
@@ -342,6 +373,31 @@ def children_rows(data: StudyPermitData, drive_results: dict | None = None) -> l
             (sa.study.level if sa and sa.study else ""),
             _url(f"imm1294_child_{i}") if applying else "",
             _url(f"imm5707_child_{i}") if applying else "",
+            # Phase X2 — the child's own data
+            (sa.language.value if sa and sa.language else "") if sa else "",
+            (sa.service_in if sa else ""),
+            yn(nid.has_document) if nid else "",
+            (nid.doc_number if nid else ""), (nid.country_of_issue if nid else ""),
+            (nid.issue_date if nid else ""), (nid.expiry_date if nid else ""),
+            yn(usc.has_card) if usc else "",
+            (usc.doc_number if usc else ""), (usc.uscis_number if usc else ""),
+            (usc.expiry_date if usc else ""),
+            _res(cr, "country"), _res(cr, "status"), _res(cr, "from_date"), _res(cr, "to_date"),
+            yn(sa.has_previous_residence) if sa else "",
+            _res(prev1, "country"), _res(prev1, "status"), _res(prev1, "from_date"), _res(prev1, "to_date"),
+            _res(prev2, "country"), _res(prev2, "status"), _res(prev2, "from_date"), _res(prev2, "to_date"),
+            yn(sa.applying_country_same_as_current) if sa else "",
+            _res(ac, "country"), _res(ac, "status"), _res(ac, "from_date"), _res(ac, "to_date"),
+            yn(sa.tuberculosis) if sa else "",
+            yn(sa.medical_condition) if sa else "", (sa.medical_condition_details if sa else ""),
+            yn(sa.previously_remained_status) if sa else "",
+            yn(sa.previously_applied_canada) if sa else "",
+            yn(sa.previously_refused_visa) if sa else "", (sa.previously_refused_visa_details if sa else ""),
+            yn(sa.criminal_record) if sa else "", (sa.criminal_record_details if sa else ""),
+            yn(sa.military_service) if sa else "", (sa.military_service_details if sa else ""),
+            yn(sa.political_party) if sa else "",
+            yn(sa.war_crimes) if sa else "",
+            yn(sa.consent_to_contact) if sa else "",
         ])
     return rows
 
@@ -440,6 +496,187 @@ def education_rows(data: StudyPermitData) -> list[list]:
                 from_date, to_date,
             ])
     return rows
+
+
+# ---------------------------------------------------------------------------
+# Spouse_Submissions tab (Phase X2) — the accompanying spouse's OWN application
+# data (IMM 1295 / 5257 / SCH1 / 5707 / 5476). Kept in a dedicated tab, keyed by
+# submission_id, so the main Submissions row stays the main applicant's data.
+# The spouse's education/employment history live in the Employment/Education tabs
+# (tagged applicant="spouse"), so they are not duplicated here.
+# ---------------------------------------------------------------------------
+
+SPOUSE_SUBMISSIONS_HEADERS = [
+    "submission_id", "case_id",
+    # Identity — fields NOT already stored as spouse_* in the main Submissions tab
+    # (family_name/given_names/dob/country_of_birth/marital_status live there already)
+    "native_name", "sex", "place_birth_city", "citizenship", "current_country",
+    "language", "service_in",
+    # Passport
+    "passport_number", "passport_country_of_issue", "passport_issue_date", "passport_expiry_date",
+    # National ID
+    "has_national_id", "nat_id_number", "nat_id_country", "nat_id_issue", "nat_id_expiry",
+    # US PR card
+    "has_us_pr_card", "us_pr_number", "us_pr_uscis", "us_pr_expiry",
+    # Address (own vs shared with main applicant)
+    "address_same_as_main",
+    "mailing_unit", "mailing_street_number", "mailing_street_name",
+    "mailing_city", "mailing_province_state", "mailing_country", "mailing_postal_code",
+    "residential_same_as_mailing",
+    "residential_unit", "residential_street_number", "residential_street_name",
+    "residential_city", "residential_province_state", "residential_country", "residential_postal_code",
+    # Residence history
+    "current_residence_country", "current_residence_status", "current_residence_from", "current_residence_to",
+    "has_previous_residence",
+    "prev_res_1_country", "prev_res_1_status", "prev_res_1_from", "prev_res_1_to",
+    "prev_res_2_country", "prev_res_2_status", "prev_res_2_from", "prev_res_2_to",
+    "applying_country_same", "applying_country", "applying_status", "applying_from", "applying_to",
+    # Previous marriage
+    "previously_married", "prev_spouse_family_name", "prev_spouse_given_name",
+    "prev_spouse_dob", "prev_relationship_type", "prev_relationship_from", "prev_relationship_to",
+    # Own parents (IMM 5707 Section A)
+    "father_family_name", "father_given_names", "father_dob", "father_country_of_birth",
+    "father_status", "father_address", "father_occupation", "father_accompanies",
+    "mother_family_name", "mother_given_names", "mother_dob", "mother_country_of_birth",
+    "mother_status", "mother_address", "mother_occupation", "mother_accompanies",
+    # Background declarations
+    "tuberculosis", "medical_condition", "medical_details",
+    "prev_remained_status", "prev_applied_canada", "prev_refused_visa", "prev_refused_details",
+    "criminal_record", "criminal_details", "military_service", "military_details",
+    "political_party", "war_crimes", "consent_to_contact",
+    # Work permit (IMM 1295)
+    "work_permit_type", "work_employer_name", "work_job_title", "work_position_description",
+    "work_intended_city", "work_intended_province", "work_from", "work_to", "work_lmia_number",
+    # Visit (IMM 5257)
+    "visit_purpose", "visit_purpose_other", "visit_from", "visit_to", "visit_funds",
+    "visit_contact1_name", "visit_contact1_relationship", "visit_contact1_address",
+    "visit_contact2_name", "visit_contact2_relationship", "visit_contact2_address",
+    # Schedule 1 (IMM 5257 SCH1)
+    "sch1_military_service", "sch1_military_details",
+    "sch1_war_humanity_crimes", "sch1_war_humanity_details",
+    "sch1_membership_association", "sch1_membership_details",
+    "sch1_government_positions", "sch1_government_details",
+    "sch1_previous_travel", "sch1_previous_travel_details",
+    # Signature + own PDF (imm1295/5257/5707 URLs already in main Submissions tab)
+    "applicant_signature", "applicant_signature_date",
+    "imm5476_spouse_url",
+]
+
+
+def spouse_submission_row(data: StudyPermitData, drive_results: dict | None = None) -> Optional[list]:
+    """One row of the spouse's OWN application data. Returns None unless a spouse
+    application was generated (spouse_study_applicant present)."""
+    sa = data.family.spouse_study_applicant
+    if sa is None:
+        return None
+    drive_results = drive_results or {}
+    sp = data.family.spouse
+
+    def _url(form_id: str) -> str:
+        return (drive_results.get(form_id) or {}).get("webViewLink", "")
+
+    def _res(row, attr):
+        return getattr(row, attr) if row is not None else ""
+
+    yn = lambda v: "Yes" if v else "No"
+
+    spouse_name = " ".join(
+        p for p in [(sp.given_names if sp else ""), (sp.family_name if sp else "")] if p
+    ).strip()
+
+    pp = sa.passport
+    nid = sa.national_id
+    usc = sa.us_pr_card
+    ma = sa.mailing_address
+    ra = sa.residential_address
+    cr = sa.current_residence
+    prev = sa.previous_residences or []
+    prev1 = prev[0] if len(prev) > 0 else None
+    prev2 = prev[1] if len(prev) > 1 else None
+    ac = sa.applying_country
+    fa = sa.father
+    mo = sa.mother
+    wk = sa.work
+    vi = sa.visit
+    s1 = sa.visit_background
+
+    def _cat(name: str):
+        c = getattr(s1, name, None) if s1 else None
+        if c is None:
+            return "", ""
+        return yn(c.has), "; ".join(c.details or [])
+
+    s1_mil = _cat("military_service")
+    s1_war = _cat("war_humanity_crimes")
+    s1_mem = _cat("membership_association")
+    s1_gov = _cat("government_positions")
+    s1_trav = _cat("previous_travel")
+
+    return [
+        data.submission_id, data.case_id,
+        # Identity — only fields not already in main Submissions' spouse_* columns
+        (sp.native_name if sp else ""),
+        (sa.sex.value if sa.sex else ""),
+        sa.place_birth_city, sa.citizenship, sa.current_country,
+        (sa.language.value if sa.language else ""), sa.service_in,
+        # Passport
+        (pp.passport_number if pp else ""), (pp.country_of_issue if pp else ""),
+        (pp.issue_date if pp else ""), (pp.expiry_date if pp else ""),
+        # National ID
+        yn(nid.has_document), nid.doc_number, nid.country_of_issue, nid.issue_date, nid.expiry_date,
+        # US PR card
+        yn(usc.has_card), usc.doc_number, usc.uscis_number, usc.expiry_date,
+        # Address
+        yn(sa.address_same_as_main),
+        _res(ma, "unit"), _res(ma, "street_number"), _res(ma, "street_name"),
+        _res(ma, "city"), _res(ma, "province_state"), _res(ma, "country"), _res(ma, "postal_code"),
+        yn(sa.residential_address_same_as_mailing),
+        _res(ra, "unit"), _res(ra, "street_number"), _res(ra, "street_name"),
+        _res(ra, "city"), _res(ra, "province_state"), _res(ra, "country"), _res(ra, "postal_code"),
+        # Residence history
+        _res(cr, "country"), _res(cr, "status"), _res(cr, "from_date"), _res(cr, "to_date"),
+        yn(sa.has_previous_residence),
+        _res(prev1, "country"), _res(prev1, "status"), _res(prev1, "from_date"), _res(prev1, "to_date"),
+        _res(prev2, "country"), _res(prev2, "status"), _res(prev2, "from_date"), _res(prev2, "to_date"),
+        yn(sa.applying_country_same_as_current),
+        _res(ac, "country"), _res(ac, "status"), _res(ac, "from_date"), _res(ac, "to_date"),
+        # Previous marriage
+        yn(sa.previously_married), sa.prev_spouse_family_name, sa.prev_spouse_given_name,
+        sa.prev_spouse_date_of_birth, sa.prev_relationship_type,
+        sa.prev_relationship_from, sa.prev_relationship_to,
+        # Parents
+        _res(fa, "family_name"), _res(fa, "given_names"), _res(fa, "date_of_birth"),
+        _res(fa, "country_of_birth"),
+        (fa.status.value if fa and fa.status else ""), _res(fa, "address"), _res(fa, "occupation"),
+        (yn(fa.will_accompany) if fa else ""),
+        _res(mo, "family_name"), _res(mo, "given_names"), _res(mo, "date_of_birth"),
+        _res(mo, "country_of_birth"),
+        (mo.status.value if mo and mo.status else ""), _res(mo, "address"), _res(mo, "occupation"),
+        (yn(mo.will_accompany) if mo else ""),
+        # Background
+        yn(sa.tuberculosis), yn(sa.medical_condition), sa.medical_condition_details,
+        yn(sa.previously_remained_status), yn(sa.previously_applied_canada),
+        yn(sa.previously_refused_visa), sa.previously_refused_visa_details,
+        yn(sa.criminal_record), sa.criminal_record_details,
+        yn(sa.military_service), sa.military_service_details,
+        yn(sa.political_party), yn(sa.war_crimes), yn(sa.consent_to_contact),
+        # Work permit
+        _res(wk, "work_permit_type"), _res(wk, "employer_name"), _res(wk, "job_title"),
+        _res(wk, "position_description"), _res(wk, "intended_city_town"),
+        _res(wk, "intended_province_state"), _res(wk, "how_long_from"), _res(wk, "how_long_to"),
+        _res(wk, "lmia_number"),
+        # Visit
+        _res(vi, "purpose_of_visit"), _res(vi, "purpose_other"),
+        _res(vi, "how_long_from"), _res(vi, "how_long_to"), _res(vi, "funds_available"),
+        _res(vi, "contact1_name"), _res(vi, "contact1_relationship"), _res(vi, "contact1_address_in_canada"),
+        _res(vi, "contact2_name"), _res(vi, "contact2_relationship"), _res(vi, "contact2_address_in_canada"),
+        # Schedule 1
+        s1_mil[0], s1_mil[1], s1_war[0], s1_war[1], s1_mem[0], s1_mem[1],
+        s1_gov[0], s1_gov[1], s1_trav[0], s1_trav[1],
+        # Signature + own PDF (imm1295/5257/5707 URLs already in main Submissions tab)
+        spouse_name, data.applicant_signature_date,
+        _url("imm5476_spouse"),
+    ]
 
 
 # ---------------------------------------------------------------------------

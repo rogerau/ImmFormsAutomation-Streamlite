@@ -2,6 +2,12 @@
 import { Control, FieldErrors, UseFormRegister, useWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
+import {
+  ResidenceHistory,
+  NationalIdBlock,
+  UsCardBlock,
+  BackgroundQuestions,
+} from "@/components/forms/fields/DependentFields";
 
 interface Props {
   control: Control<StudyPermitData>;
@@ -151,6 +157,30 @@ export function DependentChildrenStep({ control, register, errors }: Props) {
                     </Field>
                   </div>
                 </div>
+
+                {/* Phase X2 — the child's OWN language / status / residence /
+                    background (was previously inferred from the main applicant). */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field label="Language" error={(ce as any)?.language?.message}>
+                    <select {...register(`family.children.${idx}.study_applicant.language` as any)} className={inp}>
+                      <option value="English">English</option>
+                      <option value="French">French</option>
+                      <option value="Both">Both</option>
+                      <option value="Neither">Neither</option>
+                    </select>
+                  </Field>
+                  <Field label="Service In" error={(ce as any)?.service_in?.message}>
+                    <select {...register(`family.children.${idx}.study_applicant.service_in` as any)} className={inp}>
+                      <option value="English">English</option>
+                      <option value="French">French</option>
+                    </select>
+                  </Field>
+                </div>
+
+                <NationalIdBlock prefix={`family.children.${idx}.study_applicant`} control={control} register={register} errors={ce} />
+                <UsCardBlock prefix={`family.children.${idx}.study_applicant`} control={control} register={register} errors={ce} />
+                <ResidenceHistory prefix={`family.children.${idx}.study_applicant`} control={control} register={register} errors={ce} />
+                <BackgroundQuestions prefix={`family.children.${idx}.study_applicant`} control={control} register={register} errors={ce} />
               </div>
             )}
           </div>

@@ -252,13 +252,13 @@ export function StudyPermitWizard({ token, claims }: Props) {
       key: "spouse_work_permit",
       label: "Spouse — Background",
       fields: ["family.spouse_study_applicant"],
-      render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} />,
+      render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
     },
     {
       key: "spouse_visitor",
       label: "Spouse — Background",
       fields: ["family.spouse_study_applicant"],
-      render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} />,
+      render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
     },
   ];
   const activeOptSteps = optStepConfigs.filter((c) => optionalForms.includes(c.key));

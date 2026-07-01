@@ -108,7 +108,20 @@ def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
         if "imm5409" in data.optional_forms and data.common_law:
             result["imm5409_spouse"] = fill_imm5409(data.common_law)
         if "imm5476" in data.optional_forms and data.representative:
-            spouse_data.representative = data.representative
+            # obs #7 — the spouse fills & signs their OWN IMM 5476. Reuse the
+            # same representative (same lawyer) but override Section A applicant
+            # identity + the applicant signature with the spouse's own, instead
+            # of reusing the main applicant's identity verbatim.
+            spi = spouse_data.personal_info
+            spouse_data.representative = data.representative.model_copy(update={
+                "applicant_family_name": spi.family_name,
+                "applicant_given_name": spi.given_name,
+                "applicant_dob": spi.date_of_birth,
+                "uci_number": spi.uci,
+                "applicant_email": spouse_data.contact.email,
+                "applicant_signature": spouse_data.applicant_signature,
+                "applicant_date_signed": spouse_data.applicant_signature_date,
+            })
             result["imm5476_spouse"] = fill_imm5476(spouse_data)
         if "imm5475" in data.optional_forms and data.release_authority:
             spi = spouse_data.personal_info

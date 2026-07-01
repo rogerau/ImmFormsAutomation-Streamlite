@@ -2,11 +2,13 @@
 import { Control, FieldErrors, UseFormRegister, useFieldArray, useWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
+import { PrevMarriageBlock, ParentBlock, Schedule1Block } from "@/components/forms/fields/DependentFields";
 
 interface Props {
   control: Control<StudyPermitData>;
   register: UseFormRegister<StudyPermitData>;
   errors: FieldErrors<StudyPermitData>;
+  optionalForms: string[];
 }
 
 const inp = "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -31,9 +33,10 @@ const EMPTY_OCC = { from_year: "", from_month: "", to_year: "", to_month: "", oc
 // employment and background-question data — these used to be silently borrowed
 // from the main applicant (see dependents_spouse.py's old _common_application_fields),
 // which is wrong; the spouse answers these for themself, same questions, same wording.
-export function DependentSpouseHistoryStep({ control, register, errors }: Props) {
+export function DependentSpouseHistoryStep({ control, register, errors, optionalForms }: Props) {
   const sa = errors.family?.spouse_study_applicant as any;
   const e = (path: string) => sa?.[path]?.message as string | undefined;
+  const isVisitor = optionalForms.includes("spouse_visitor");
 
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control, name: "family.spouse_study_applicant.education_history" as any });
   const { fields: occFields, append: appendOcc, remove: removeOcc } = useFieldArray({ control, name: "family.spouse_study_applicant.occupation_history" as any });
@@ -288,6 +291,21 @@ export function DependentSpouseHistoryStep({ control, register, errors }: Props)
           </Field>
         </div>
       </div>
+
+      {/* Phase X2 — previous marriage, the spouse's own parents (IMM 5707), and
+          (visitor path) Schedule 1 background declaration. */}
+      <PrevMarriageBlock prefix="family.spouse_study_applicant" control={control} register={register} errors={sa} />
+
+      <div className="space-y-4">
+        <h3 className="text-base font-semibold text-gray-800">Spouse's Parents (IMM 5707)</h3>
+        <p className="text-sm text-gray-600">Your spouse / partner must declare their own parents and whether each is accompanying to Canada.</p>
+        <ParentBlock prefix="family.spouse_study_applicant.father" register={register} errors={sa?.father} label="Father" />
+        <ParentBlock prefix="family.spouse_study_applicant.mother" register={register} errors={sa?.mother} label="Mother" />
+      </div>
+
+      {isVisitor && (
+        <Schedule1Block prefix="family.spouse_study_applicant" control={control} register={register} errors={sa} />
+      )}
     </div>
   );
 }

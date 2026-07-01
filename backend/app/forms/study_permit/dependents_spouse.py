@@ -72,6 +72,33 @@ def _require_spouse(parent: StudyPermitData) -> Person5707:
     return spouse
 
 
+def _spouse_full_name(spouse: Person5707) -> str:
+    """The spouse's own full name, used for every signature on the spouse's own
+    forms (Phase X2 obs #4/#5/#7 — previously the main applicant's name leaked
+    onto the spouse's IMM 5707 / 1295 / 5257 / 5476 signature lines)."""
+    return " ".join(p for p in [spouse.given_names, spouse.family_name] if p).strip()
+
+
+def _blank_parent() -> Parent5707:
+    return Parent5707(
+        family_name="", given_names="", date_of_birth="",
+        country_of_birth="", address="", occupation="",
+        status=ParentStatus.living,
+    )
+
+
+def _spouse_contact(parent: StudyPermitData, sa: SpouseStudyApplicant):
+    """The spouse's contact block. When address_same_as_main is True (default —
+    cohabiting), reuse the main applicant's household contact; otherwise use the
+    spouse's own structured address, keeping the household phone/email."""
+    contact = deepcopy(parent.contact)
+    if not sa.address_same_as_main and sa.mailing_address is not None:
+        contact.mailing_address = sa.mailing_address
+        contact.residential_address_same_as_mailing = sa.residential_address_same_as_mailing
+        contact.residential_address = sa.residential_address
+    return contact
+
+
 def build_spouse_principal_data(parent: StudyPermitData, spouse_applicant: SpouseStudyApplicant) -> StudyPermitData:
     """Project a StudyPermitData in which the spouse is the principal applicant,
     so the existing fill_imm5707 can fill the spouse's own Family Information
@@ -93,7 +120,8 @@ def build_spouse_principal_data(parent: StudyPermitData, spouse_applicant: Spous
         will_accompany=True,
     )
 
-    sign = parent.applicant_signature
+    # Phase X2 obs #4 — the spouse signs their OWN forms with their OWN name.
+    sign = _spouse_full_name(spouse)
     sign_date = parent.applicant_signature_date
 
     spouse_personal = PersonalInfo(
@@ -106,19 +134,14 @@ def build_spouse_principal_data(parent: StudyPermitData, spouse_applicant: Spous
         place_birth_country=spouse.country_of_birth,
         citizenship=spouse_applicant.citizenship or ppi.citizenship,
         current_country=spouse_applicant.current_country or ppi.current_country,
-        service_in=ppi.service_in,
+        language=spouse_applicant.language,
+        service_in=spouse_applicant.service_in,
     )
 
-    # The spouse's OWN parents (the children's grandparents) aren't captured
-    # anywhere in this system — only the main applicant's father/mother are.
-    # IRCC's spouse-accompanying IMM 5707 doesn't require this for the
-    # work-permit/visitor bundle, so these are left blank rather than asking
-    # for data nobody has.
-    blank_parent = Parent5707(
-        family_name="", given_names="", date_of_birth="",
-        country_of_birth="", address="", occupation="",
-        status=ParentStatus.living,
-    )
+    # Phase X2 obs #4 — the spouse declares their OWN parents (+ accompany flags)
+    # on their IMM 5707 Section A. Falls back to blank only if not collected.
+    father = spouse_applicant.father or _blank_parent()
+    mother = spouse_applicant.mother or _blank_parent()
 
     spouse_family = FamilyInfo(
         applicant_marital_status=spouse.marital_status or parent.family.applicant_marital_status,
@@ -126,8 +149,8 @@ def build_spouse_principal_data(parent: StudyPermitData, spouse_applicant: Spous
         spouse=main_applicant_as_spouse,
         no_spouse_signature=sign,
         no_spouse_date=sign_date,
-        father=blank_parent,
-        mother=blank_parent,
+        father=father,
+        mother=mother,
         section_a_signature=sign,
         section_a_date=sign_date,
         children=parent.family.children,    # same children as the main applicant
@@ -143,10 +166,10 @@ def build_spouse_principal_data(parent: StudyPermitData, spouse_applicant: Spous
         optional_forms=[],                  # the spouse bundle does not recurse
         personal_info=spouse_personal,
         passport=spouse_applicant.passport,
-        contact=deepcopy(parent.contact),   # same household
+        contact=_spouse_contact(parent, spouse_applicant),   # own address if it differs
         study=parent.study,                 # not read by fill_imm5707; satisfies the required field
         family=spouse_family,
-        consent_to_contact=parent.consent_to_contact,
+        consent_to_contact=spouse_applicant.consent_to_contact,
         applicant_signature=sign,           # the spouse signs their own form
         applicant_signature_date=sign_date,
     )
@@ -166,7 +189,7 @@ def _common_application_fields(parent: StudyPermitData, spouse_applicant: Spouse
         raise ValueError("spouse_study_applicant is missing passport details")
     spouse = _require_spouse(parent)
     ppi = parent.personal_info
-    contact = parent.contact
+    contact = _spouse_contact(parent, spouse_applicant)   # own address if it differs (obs #5)
     sa = spouse_applicant
 
     return dict(
@@ -181,10 +204,28 @@ def _common_application_fields(parent: StudyPermitData, spouse_applicant: Spouse
         marital_status=_marital_text(spouse.marital_status or parent.family.applicant_marital_status),
         language=sa.language,
         service_in=sa.service_in,
+        # Residence history — the spouse's OWN (obs #5, was missing entirely).
+        current_residence=sa.current_residence,
+        has_previous_residence=sa.has_previous_residence,
+        previous_residences=sa.previous_residences,
+        applying_country_same_as_current=sa.applying_country_same_as_current,
+        applying_country=sa.applying_country,
+        # Previous marriage — the spouse may be in a second marriage (obs #5).
+        previously_married=sa.previously_married,
+        prev_spouse_family_name=sa.prev_spouse_family_name,
+        prev_spouse_given_name=sa.prev_spouse_given_name,
+        prev_spouse_date_of_birth=sa.prev_spouse_date_of_birth,
+        prev_relationship_type=sa.prev_relationship_type,
+        prev_relationship_from=sa.prev_relationship_from,
+        prev_relationship_to=sa.prev_relationship_to,
+        # Current spouse = the main applicant (reciprocal, derived).
         spouse_family_name=ppi.family_name,
         spouse_given_name=ppi.given_name,
         marriage_date=parent.family.marriage_date,
         passport=sa.passport,
+        # National ID / US PR card — the spouse's OWN (obs #5, was default-blank).
+        national_id=sa.national_id,
+        us_pr_card=sa.us_pr_card,
         mailing_address=contact.mailing_address,
         residential_address_same_as_mailing=contact.residential_address_same_as_mailing,
         residential_address=contact.residential_address,
@@ -212,7 +253,8 @@ def _common_application_fields(parent: StudyPermitData, spouse_applicant: Spouse
         political_party=sa.political_party,
         war_crimes=sa.war_crimes,
         consent_to_contact=sa.consent_to_contact,
-        applicant_signature=parent.applicant_signature,
+        # obs #5 — the spouse signs their own 1295/5257 with their own name.
+        applicant_signature=_spouse_full_name(spouse),
         applicant_signature_date=parent.applicant_signature_date,
     )
 

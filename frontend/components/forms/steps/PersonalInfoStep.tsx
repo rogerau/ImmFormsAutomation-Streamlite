@@ -49,7 +49,7 @@ const RESIDENCE_STATUSES = [
 const PHONE_TYPES = ["Residence", "Work", "Cell"];
 const LANGUAGES = ["English", "French", "Both", "Neither"];
 
-function ResidenceRow({
+export function ResidenceRow({
   prefix,
   register,
   errors,

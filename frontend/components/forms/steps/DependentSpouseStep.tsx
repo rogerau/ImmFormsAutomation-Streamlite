@@ -3,6 +3,9 @@ import { useEffect } from "react";
 import { Control, FieldErrors, UseFormRegister, UseFormSetValue, useWatch } from "react-hook-form";
 import type { StudyPermitData } from "@/lib/schemas/study_permit";
 import { CountrySelect } from "@/components/forms/fields/CountrySelect";
+import { NationalIdBlock, UsCardBlock, ResidenceHistory } from "@/components/forms/fields/DependentFields";
+
+const isYes = (v: unknown) => v === true || v === "true";
 
 interface Props {
   control: Control<StudyPermitData>;
@@ -58,8 +61,8 @@ export function DependentSpouseStep({ control, register, errors, setValue, optio
           {isWorkPermit
             ? "Because your program of study qualifies, they can apply for an open work permit."
             : "Because your program of study doesn't qualify for an open work permit, they'll apply as a visitor."}
-          {" "}Their name, date of birth, country of birth and address are reused from the Family
-          Background step — no need to re-enter them.
+          {" "}Their name, date of birth and country of birth are reused from the Family
+          Background step. The rest below is the spouse's own information.
         </p>
       </div>
 
@@ -104,6 +107,47 @@ export function DependentSpouseStep({ control, register, errors, setValue, optio
             <input {...register("family.spouse_study_applicant.passport.expiry_date" as any)} placeholder="YYYY-MM-DD" className={inp} />
           </Field>
         </div>
+      </div>
+
+      {/* Phase X2 — the spouse's OWN national ID, US PR card, residence history,
+          and address (was previously inferred from the main applicant). */}
+      <NationalIdBlock prefix="family.spouse_study_applicant" control={control} register={register} errors={sa} />
+      <UsCardBlock prefix="family.spouse_study_applicant" control={control} register={register} errors={sa} />
+      <ResidenceHistory prefix="family.spouse_study_applicant" control={control} register={register} errors={sa} />
+
+      <div className="space-y-3">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Address</h4>
+        <Field label="Is the spouse's address the same as the main applicant's?">
+          <select {...register("family.spouse_study_applicant.address_same_as_main" as any)} className={inp}>
+            <option value="true">Yes — same household address</option>
+            <option value="false">No — different address</option>
+          </select>
+        </Field>
+        {isYes(useWatch({ control, name: "family.spouse_study_applicant.address_same_as_main" as any })) === false && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Unit" error={(sa?.mailing_address as any)?.unit?.message}>
+              <input {...register("family.spouse_study_applicant.mailing_address.unit" as any)} className={inp} />
+            </Field>
+            <Field label="Street Number" error={(sa?.mailing_address as any)?.street_number?.message}>
+              <input {...register("family.spouse_study_applicant.mailing_address.street_number" as any)} className={inp} />
+            </Field>
+            <Field label="Street Name" error={(sa?.mailing_address as any)?.street_name?.message}>
+              <input {...register("family.spouse_study_applicant.mailing_address.street_name" as any)} className={inp} />
+            </Field>
+            <Field label="City / Town" error={(sa?.mailing_address as any)?.city?.message}>
+              <input {...register("family.spouse_study_applicant.mailing_address.city" as any)} className={inp} />
+            </Field>
+            <Field label="Country / Territory" error={(sa?.mailing_address as any)?.country?.message}>
+              <CountrySelect {...register("family.spouse_study_applicant.mailing_address.country" as any)} className={inp} />
+            </Field>
+            <Field label="Province / State" error={(sa?.mailing_address as any)?.province_state?.message}>
+              <input {...register("family.spouse_study_applicant.mailing_address.province_state" as any)} className={inp} />
+            </Field>
+            <Field label="Postal Code" error={(sa?.mailing_address as any)?.postal_code?.message}>
+              <input {...register("family.spouse_study_applicant.mailing_address.postal_code" as any)} className={inp} />
+            </Field>
+          </div>
+        )}
       </div>
 
       {isWorkPermit && (

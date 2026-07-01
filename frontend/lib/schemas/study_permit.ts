@@ -157,6 +157,77 @@ const usCardSchema = z.object({
   expiry_date: z.string().default(""),
 });
 
+// Lenient variants for dependents (child / spouse) — the has-flag is optional at
+// the schema level (so a non-applying dependent never errors); requiredness is
+// enforced by the master superRefine only when the dependent is actually filing.
+const lenientNationalIdSchema = z.object({
+  has_document: boolFromString.optional(),
+  doc_number: z.string().default(""),
+  country_of_issue: z.string().default(""),
+  issue_date: z.string().default(""),
+  expiry_date: z.string().default(""),
+});
+
+const lenientUsCardSchema = z.object({
+  has_card: boolFromString.optional(),
+  doc_number: z.string().default(""),
+  uscis_number: z.string().default(""),
+  expiry_date: z.string().default(""),
+});
+
+// A dependent's own parent (IMM 5707 Section A) — lenient; key fields required
+// via superRefine when the dependent files their own forms.
+const dependentParentSchema = z.object({
+  family_name: z.string().default(""),
+  given_names: z.string().default(""),
+  native_name: z.string().default(""),
+  date_of_birth: dateStr,
+  country_of_birth: z.string().default(""),
+  address: z.string().default(""),
+  occupation: z.string().default(""),
+  status: ParentStatusEnum.default("Living"),
+  will_accompany: boolFromString.optional(),
+});
+
+// Previous-marriage block shared by child (n/a — Single) and spouse.
+const prevMarriageBlock = {
+  previously_married: boolFromString.optional(),
+  prev_spouse_family_name: z.string().default(""),
+  prev_spouse_given_name: z.string().default(""),
+  prev_spouse_date_of_birth: z.string().default(""),
+  prev_relationship_type: z.string().default(""),
+  prev_relationship_from: z.string().default(""),
+  prev_relationship_to: z.string().default(""),
+};
+
+// Residence-history block (current + previous + applying-from) shared by
+// child and spouse — mirrors the main applicant's personal_info fields.
+const residenceHistoryBlock = {
+  current_residence: residenceRowSchema.nullable().optional(),
+  has_previous_residence: boolFromString.optional(),
+  previous_residences: z.array(residenceRowSchema).max(2).default([]),
+  applying_country_same_as_current: boolFromString.optional(),
+  applying_country: residenceRowSchema.nullable().optional(),
+};
+
+// IMM 1294 Page-4 background declarations — lenient (enforced via superRefine).
+const backgroundDeclarationsBlock = {
+  tuberculosis: boolFromString.optional(),
+  medical_condition: boolFromString.optional(),
+  medical_condition_details: z.string().default(""),
+  previously_remained_status: boolFromString.optional(),
+  previously_applied_canada: boolFromString.optional(),
+  previously_refused_visa: boolFromString.optional(),
+  previously_refused_visa_details: z.string().default(""),
+  criminal_record: boolFromString.optional(),
+  criminal_record_details: z.string().default(""),
+  military_service: boolFromString.optional(),
+  military_service_details: z.string().default(""),
+  political_party: boolFromString.optional(),
+  war_crimes: boolFromString.optional(),
+  consent_to_contact: boolFromString.optional(),
+};
+
 const educationEntrySchema = z.object({
   from_year: yearStr,
   from_month: monthStr,
@@ -231,6 +302,14 @@ const childStudyApplicantSchema = z.object({
   current_country: z.string().default(""),
   passport: childPassportSchema.default({ passport_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
   study: childStudySchema.default({ school_name: "", level: "", program: "", city: "", province_state: "", dli_number: "", start_date: "", end_date: "" }),
+
+  // Phase X2 — the child's own data (was inferred from the main applicant).
+  language: LanguageEnum.default("English"),
+  service_in: ServiceInEnum.default("English"),
+  national_id: lenientNationalIdSchema.default({ has_document: undefined, doc_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
+  us_pr_card: lenientUsCardSchema.default({ has_card: undefined, doc_number: "", uscis_number: "", expiry_date: "" }),
+  ...residenceHistoryBlock,
+  ...backgroundDeclarationsBlock,
 });
 
 const child5707Schema = person5707Schema.extend({
@@ -330,6 +409,21 @@ const spouseStudyApplicantSchema = z.object({
   political_party: boolFromString.optional(),
   war_crimes: boolFromString.optional(),
   consent_to_contact: boolFromString.optional(),
+
+  // Phase X2 — remaining spouse-own data (was inferred from the main applicant).
+  national_id: lenientNationalIdSchema.default({ has_document: undefined, doc_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
+  us_pr_card: lenientUsCardSchema.default({ has_card: undefined, doc_number: "", uscis_number: "", expiry_date: "" }),
+  ...residenceHistoryBlock,
+  ...prevMarriageBlock,
+  // The spouse's own address: same-as-main toggle (default yes → reuse the main
+  // applicant's household address); full structured address only when different.
+  address_same_as_main: boolFromString.optional(),
+  mailing_address: residentialAddressSchema.nullable().optional(),
+  residential_address_same_as_mailing: boolFromString.optional(),
+  residential_address: residentialAddressSchema.nullable().optional(),
+  // The spouse's own parents for their IMM 5707.
+  father: dependentParentSchema.nullable().optional(),
+  mother: dependentParentSchema.nullable().optional(),
 });
 
 // ---- IMM 5409 sub-schema ----
@@ -600,6 +694,20 @@ export const StudyPermitSchema = z
     release_authority: releaseAuthoritySchema.nullable().optional(),
   })
   .superRefine((d, ctx) => {
+    // Phase X2 obs #1 — the current country of residence section is mandatory.
+    // Previously it was optional, so a client could submit it blank and the
+    // Sheet/PDF diverged. Require country + status + from-date.
+    const cr = d.personal_info.current_residence;
+    if (!cr?.country) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["personal_info", "current_residence", "country"] });
+    }
+    if (!cr?.status) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["personal_info", "current_residence", "status"] });
+    }
+    if (!cr?.from_date) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["personal_info", "current_residence", "from_date"] });
+    }
+
     const partnered = [
       "Common-law",
       "Married-physically present",
@@ -643,6 +751,15 @@ export const StudyPermitSchema = z
             });
           }
         };
+        const needAns = (ok: unknown, msg: string, ...path: (string | number)[]) => {
+          if (ok === undefined || ok === null) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: msg,
+              path: ["family", "children", i, "study_applicant", ...path],
+            });
+          }
+        };
         need(sa?.sex, "Required", "sex");
         need(sa?.place_birth_city, "Required", "place_birth_city");
         need(sa?.passport?.passport_number, "Required", "passport", "passport_number");
@@ -653,6 +770,23 @@ export const StudyPermitSchema = z
         need(sa?.study?.dli_number, "Required", "study", "dli_number");
         need(sa?.study?.start_date, "Required", "study", "start_date");
         need(sa?.study?.end_date, "Required", "study", "end_date");
+        // Phase X2 obs #3 — the child's own residence + national ID answer +
+        // background declarations (was inferred from the parent).
+        need(sa?.current_residence?.country, "Required", "current_residence", "country");
+        need(sa?.current_residence?.status, "Required", "current_residence", "status");
+        need(sa?.current_residence?.from_date, "Required", "current_residence", "from_date");
+        needAns(sa?.national_id?.has_document, "Required", "national_id", "has_document");
+        needAns(sa?.us_pr_card?.has_card, "Required", "us_pr_card", "has_card");
+        needAns(sa?.tuberculosis, "Required", "tuberculosis");
+        needAns(sa?.medical_condition, "Required", "medical_condition");
+        needAns(sa?.previously_remained_status, "Required", "previously_remained_status");
+        needAns(sa?.previously_applied_canada, "Required", "previously_applied_canada");
+        needAns(sa?.previously_refused_visa, "Required", "previously_refused_visa");
+        needAns(sa?.criminal_record, "Required", "criminal_record");
+        needAns(sa?.military_service, "Required", "military_service");
+        needAns(sa?.political_party, "Required", "political_party");
+        needAns(sa?.war_crimes, "Required", "war_crimes");
+        needAns(sa?.consent_to_contact, "Required", "consent_to_contact");
       });
     }
 
@@ -700,6 +834,18 @@ export const StudyPermitSchema = z
       needAnswered(sa?.political_party, "Required", "political_party");
       needAnswered(sa?.war_crimes, "Required", "war_crimes");
       needAnswered(sa?.consent_to_contact, "Required", "consent_to_contact");
+      // Phase X2 obs #5 — the spouse's own residence, national ID answer, prior
+      // marriage answer, and their own parents on IMM 5707.
+      need(sa?.current_residence?.country, "Required", "current_residence", "country");
+      need(sa?.current_residence?.status, "Required", "current_residence", "status");
+      need(sa?.current_residence?.from_date, "Required", "current_residence", "from_date");
+      needAnswered(sa?.national_id?.has_document, "Required", "national_id", "has_document");
+      needAnswered(sa?.us_pr_card?.has_card, "Required", "us_pr_card", "has_card");
+      needAnswered(sa?.previously_married, "Required", "previously_married");
+      need(sa?.father?.family_name, "Required", "father", "family_name");
+      need(sa?.mother?.family_name, "Required", "mother", "family_name");
+      // obs #6 — Schedule 1 categories are collected in the UI and stored; each
+      // defaults to "No" (IRCC-valid), so no explicit-answer gate is enforced.
       if (wantsSpouseWork) {
         need(sa?.work?.work_permit_type, "Required", "work", "work_permit_type");
         // Open Work Permit's job_title/position_description are hardcoded to

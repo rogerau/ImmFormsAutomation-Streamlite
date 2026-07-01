@@ -219,17 +219,15 @@ def _build_datasets_xml(data: "StudyPermitData") -> str:
                 _set(q7.find("faxNumber"), d.fax_number)
                 _set(q7.find("email"), d.email)
 
-            # Question 8: signatures. Only the applicant's slot is filled here —
-            # the representative's signature/date slot is left blank for the
-            # representative to fill by hand, not collected from the client.
-            q8 = sec_b.find("question8")
-            if q8 is not None:
-                sigs = q8.findall("signatrureApplicant")
-                dates = q8.findall("dateSigned")
-                if sigs:
-                    _set(sigs[0], d.applicant_signature)
-                if dates:
-                    _set(dates[0], d.applicant_date_signed)
+            # Question 8 is "9. Your representative's declaration" — despite the
+            # misleading XFA field name "signatrureApplicant", BOTH its signature
+            # slots belong to the representative ("Signature of representative")
+            # and the supervising lawyer ("(if applicable) Signature of
+            # supervising lawyer"). Neither is the applicant's, so we write
+            # nothing here — the representative signs by hand. (The applicant's
+            # own declaration/signature is Section E below.) Writing
+            # d.applicant_signature here previously put the CLIENT's name in the
+            # representative's signature line — Phase X2 obs #2.
         else:
             # action doesn't include B — clear everything under SectionB
             for tag in ("familyName", "givenName"):

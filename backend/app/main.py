@@ -32,6 +32,7 @@ from .integrations.sheets_study_permit import (
     new_submission_id,
     release_authority_row,
     representatives_row,
+    spouse_submission_row,
     submissions_row,
 )
 
@@ -261,6 +262,9 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
         ra_row = release_authority_row(payload)
         if ra_row:
             append_rows(sheet_id, "ReleaseAuthority", [ra_row])
+        spouse_row = spouse_submission_row(payload, drive_results)
+        if spouse_row:
+            append_rows(sheet_id, "Spouse_Submissions", [spouse_row])
     except Exception:
         log.exception("Sheets append failed")
         sheets_warning = True
