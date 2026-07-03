@@ -5,10 +5,11 @@ import io
 import logging
 import os
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -166,8 +167,44 @@ def _filename(form_id: str, case_id: str, family_name: str, given_name: str) -> 
 # ---------------------------------------------------------------------------
 # POST /forms/study_permit/fill
 # ---------------------------------------------------------------------------
+def _write_sheets(sheet_id: str, payload: StudyPermitData, claims_tenant_id: str, drive_results: dict) -> None:
+    """Write all Sheets rows — runs in a background task after the HTTP response is sent."""
+    try:
+        append_rows(sheet_id, "Submissions", [submissions_row(payload, claims_tenant_id, drive_results)])
+        crows = children_rows(payload, drive_results)
+        if crows:
+            append_rows(sheet_id, "Children", crows)
+        emp_rows = employment_rows(payload)
+        if emp_rows:
+            append_rows(sheet_id, "Employment", emp_rows)
+        edu_rows = education_rows(payload)
+        if edu_rows:
+            append_rows(sheet_id, "Education", edu_rows)
+        rep_row = representatives_row(payload)
+        if rep_row:
+            append_rows(sheet_id, "Representatives", [rep_row])
+        cl_row = common_law_row(payload)
+        if cl_row:
+            append_rows(sheet_id, "CommonLaw", [cl_row])
+        cust_row = custodian_row(payload)
+        if cust_row:
+            append_rows(sheet_id, "Custodian", [cust_row])
+        ra_row = release_authority_row(payload)
+        if ra_row:
+            append_rows(sheet_id, "ReleaseAuthority", [ra_row])
+        spouse_row = spouse_submission_row(payload, drive_results)
+        if spouse_row:
+            append_rows(sheet_id, "Spouse_Submissions", [spouse_row])
+    except Exception:
+        log.exception("Sheets append failed (background)")
+
+
 @app.post("/forms/study_permit/fill")
-def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(require_token)):
+def study_permit_fill(
+    payload: StudyPermitData,
+    background_tasks: BackgroundTasks,
+    claims: TokenClaims = Depends(require_token),
+):
     if claims.form_type != "study_permit":
         raise HTTPException(status_code=403, detail="token not issued for study_permit")
 
@@ -204,15 +241,13 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
         log.exception("PDF fill failed")
         raise HTTPException(status_code=500, detail="PDF fill failed — see server logs")
 
-    # Upload each PDF to Drive
+    # Upload each PDF to Drive — all in parallel to stay under Railway's proxy timeout.
     family_name = payload.personal_info.family_name
     given_name = payload.personal_info.given_name
     drive_results: dict[str, dict] = {}
     upload_errors: list[str] = []
 
-    for form_id, pdf_bytes in pdf_bundle.items():
-        # Dependant child forms ("..._child_N") are named after the child, spouse
-        # forms ("..._spouse") after the spouse — not the main applicant.
+    def _upload_one(form_id: str, pdf_bytes: bytes) -> tuple[str, dict | Exception]:
         if "_child_" in form_id:
             ci = int(form_id.rsplit("_child_", 1)[1]) - 1
             child = payload.family.children[ci]
@@ -223,51 +258,27 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
             fam_n, giv_n = family_name, given_name
         filename = _filename(form_id, payload.case_id, fam_n, giv_n)
         try:
-            result = upload_pdf_to_drive(filename, pdf_bytes, tenant.filled_forms_folder_id)
-            drive_results[form_id] = result
-        except Exception as e:
-            log.exception(f"Drive upload failed for {form_id}")
-            upload_errors.append(f"{form_id}: {e}")
+            return form_id, upload_pdf_to_drive(filename, pdf_bytes, tenant.filled_forms_folder_id)
+        except Exception as exc:
+            return form_id, exc
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(_upload_one, fid, pdf): fid for fid, pdf in pdf_bundle.items()}
+        for future in as_completed(futures):
+            fid, result = future.result()
+            if isinstance(result, Exception):
+                log.exception(f"Drive upload failed for {fid}: {result}")
+                upload_errors.append(f"{fid}: {result}")
+            else:
+                drive_results[fid] = result
 
     if not drive_results and upload_errors:
         raise HTTPException(status_code=502, detail="Drive upload failed — see server logs")
 
-    # Write to Google Sheets
-    sheet_id = tenant.submissions_spreadsheet_id
-    sheets_warning: bool = False
-    try:
-        append_rows(
-            sheet_id,
-            "Submissions",
-            [submissions_row(payload, claims.tenant_id, drive_results)],
-        )
-        crows = children_rows(payload, drive_results)
-        if crows:
-            append_rows(sheet_id, "Children", crows)
-        emp_rows = employment_rows(payload)
-        if emp_rows:
-            append_rows(sheet_id, "Employment", emp_rows)
-        edu_rows = education_rows(payload)
-        if edu_rows:
-            append_rows(sheet_id, "Education", edu_rows)
-        rep_row = representatives_row(payload)
-        if rep_row:
-            append_rows(sheet_id, "Representatives", [rep_row])
-        cl_row = common_law_row(payload)
-        if cl_row:
-            append_rows(sheet_id, "CommonLaw", [cl_row])
-        cust_row = custodian_row(payload)
-        if cust_row:
-            append_rows(sheet_id, "Custodian", [cust_row])
-        ra_row = release_authority_row(payload)
-        if ra_row:
-            append_rows(sheet_id, "ReleaseAuthority", [ra_row])
-        spouse_row = spouse_submission_row(payload, drive_results)
-        if spouse_row:
-            append_rows(sheet_id, "Spouse_Submissions", [spouse_row])
-    except Exception:
-        log.exception("Sheets append failed")
-        sheets_warning = True
+    # Sheets writes happen after the response is sent — avoids proxy timeout.
+    background_tasks.add_task(
+        _write_sheets, tenant.submissions_spreadsheet_id, payload, claims.tenant_id, drive_results
+    )
 
     response: dict = {
         "submission_id": payload.submission_id,
@@ -281,8 +292,6 @@ def study_permit_fill(payload: StudyPermitData, claims: TokenClaims = Depends(re
     }
     if upload_errors:
         response["upload_warnings"] = True
-    if sheets_warning:
-        response["sheets_warning"] = True
     if case_numbering_warning:
         response["case_numbering_warning"] = True
     return response
