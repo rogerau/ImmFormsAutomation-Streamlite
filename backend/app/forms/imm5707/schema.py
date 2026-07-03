@@ -29,7 +29,7 @@ class Person5707(BaseModel):
     native_name: str = ""
     date_of_birth: str        # YYYY-MM-DD
     country_of_birth: str
-    address: str
+    address: str = ""   # derived from contact in fill_bundle; blank acceptable from frontend
     occupation: str
     marital_status: Optional[MaritalStatus] = None
     will_accompany: Optional[bool] = None

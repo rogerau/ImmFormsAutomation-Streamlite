@@ -77,9 +77,6 @@ export function ChildrenSiblingsStep({ control, register, errors, getValues, set
             <Field label="Country of Birth" required error={f?.children?.[idx]?.country_of_birth?.message}>
               <CountrySelect {...register(`family.children.${idx}.country_of_birth`)} className={inp} />
             </Field>
-            <Field label="Current Address" required error={f?.children?.[idx]?.address?.message}>
-              <input {...register(`family.children.${idx}.address`)} className={inp} />
-            </Field>
             <Field label="Occupation" required error={f?.children?.[idx]?.occupation?.message}>
               <input {...register(`family.children.${idx}.occupation`)} className={inp} />
             </Field>

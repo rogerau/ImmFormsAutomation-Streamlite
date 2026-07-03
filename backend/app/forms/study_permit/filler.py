@@ -11,7 +11,7 @@ from ..imm5475.filler import fill_pdf as fill_imm5475
 from ..imm5476.filler import fill_pdf as fill_imm5476
 from ..imm5646.filler import fill_pdf as fill_imm5646
 from ..imm5707.filler import fill_pdf as fill_imm5707
-from .dependents import build_child_principal_data
+from .dependents import _format_address, build_child_principal_data
 from .dependents_spouse import (
     build_spouse_imm1295_data,
     build_spouse_imm5257_data,
@@ -20,11 +20,44 @@ from .dependents_spouse import (
 from .schema import StudyPermitData
 
 
+def _enrich_family_addresses(data: StudyPermitData) -> StudyPermitData:
+    """Derive spouse/children IMM 5707 addresses from the structured contact,
+    so the frontend only collects each address once.
+
+    Spouse: if address_same_as_main (default), use the main applicant's
+    household mailing address; otherwise use the spouse's own structured address.
+    Children: always use the main applicant's household address (same household).
+    Called at the top of fill_bundle so every downstream projection sees the
+    enriched data (including build_child_principal_data's _spouse_as_parent)."""
+    family = data.family
+    changes: dict = {}
+
+    if family.spouse is not None:
+        sa = family.spouse_study_applicant
+        if sa is not None and not sa.address_same_as_main and sa.mailing_address is not None:
+            addr = _format_address(sa.mailing_address)
+        else:
+            addr = _format_address(data.contact.mailing_address)
+        if addr:
+            changes["spouse"] = family.spouse.model_copy(update={"address": addr})
+
+    household_addr = _format_address(data.contact.mailing_address)
+    if family.children and household_addr:
+        changes["children"] = [
+            c.model_copy(update={"address": household_addr}) for c in family.children
+        ]
+
+    if not changes:
+        return data
+    return data.model_copy(update={"family": family.model_copy(update=changes)})
+
+
 def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
     """
     Fill every form in the study permit bundle.
     Returns {form_id: pdf_bytes} for all applicable forms.
     """
+    data = _enrich_family_addresses(data)
     result: dict[str, bytes] = {
         "imm1294": fill_imm1294(data),
         "imm5707": fill_imm5707(data),

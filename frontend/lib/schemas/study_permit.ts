@@ -259,7 +259,9 @@ const person5707Schema = z.object({
   native_name: z.string().default(""),
   date_of_birth: dateStr,
   country_of_birth: z.string().min(1, "Required"),
-  address: z.string().min(1, "Required"),
+  // Address is derived from the household contact in the backend — not collected
+  // here for spouse/children to avoid asking the same thing twice.
+  address: z.string().default(""),
   occupation: z.string().min(1, "Required"),
   marital_status: z.preprocess(
     (v) => (v === "" || v == null ? null : v),
@@ -271,6 +273,8 @@ const person5707Schema = z.object({
 const parent5707Schema = person5707Schema.extend({
   status: ParentStatusEnum.default("Living"),
   will_accompany: requiredBoolFromString,
+  // Parents' home address IS collected explicitly — re-assert required here.
+  address: z.string().min(1, "Required"),
 });
 
 // ---- Dependant child study-permit (Phase X) ----

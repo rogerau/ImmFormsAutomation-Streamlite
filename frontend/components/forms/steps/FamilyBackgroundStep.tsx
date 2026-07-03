@@ -183,7 +183,7 @@ export function FamilyBackgroundStep({ register, errors, watch, setValue }: Prop
           label="Spouse / Common-law Partner"
           register={register}
           errors={f?.spouse}
-          showAddress
+          showAddress={false}
           showAccompany
           showMarital
           showNativeName
