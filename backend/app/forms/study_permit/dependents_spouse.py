@@ -203,6 +203,7 @@ def _common_application_fields(parent: StudyPermitData, spouse_applicant: Spouse
         current_country=sa.current_country or ppi.current_country,
         marital_status=_marital_text(spouse.marital_status or parent.family.applicant_marital_status),
         language=sa.language,
+        language_most_at_ease=sa.language_most_at_ease,
         service_in=sa.service_in,
         # Residence history — the spouse's OWN (obs #5, was missing entirely).
         current_residence=sa.current_residence,

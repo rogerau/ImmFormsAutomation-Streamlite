@@ -128,6 +128,7 @@ def build_child_principal_data(parent: StudyPermitData, child: ChildEntry) -> St
         # Phase X2 — the child's OWN language + residence history (was inferred
         # from the parent / left blank, which produced empty residence FROM/TO).
         language=sa.language,
+        language_most_at_ease=sa.language_most_at_ease,
         service_in=sa.service_in,
         current_residence=sa.current_residence,
         has_previous_residence=sa.has_previous_residence,

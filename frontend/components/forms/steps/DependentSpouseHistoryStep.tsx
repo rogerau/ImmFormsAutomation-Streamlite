@@ -60,8 +60,17 @@ export function DependentSpouseHistoryStep({ control, register, errors, optional
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Language" error={e("language")}>
+        <Field label="Language (able to communicate)" error={e("language")}>
           <select {...register("family.spouse_study_applicant.language" as any)} className={inp}>
+            <option value="English">English</option>
+            <option value="French">French</option>
+            <option value="Both">Both</option>
+            <option value="Neither">Neither</option>
+          </select>
+        </Field>
+        <Field label="Language most at ease in" error={e("language_most_at_ease")}>
+          <select {...register("family.spouse_study_applicant.language_most_at_ease" as any)} className={inp}>
+            <option value="">-- Same as above --</option>
             <option value="English">English</option>
             <option value="French">French</option>
             <option value="Both">Both</option>

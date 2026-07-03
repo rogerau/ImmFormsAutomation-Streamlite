@@ -313,10 +313,13 @@ CHILDREN_HEADERS = [
     # No custodian (IMM 5646) column: this child is accompanied by the main applicant as their
     # parent, so IRCC's custodianship requirement never applies in this flow.
     "applying_study_permit",
-    "child_passport_number", "child_dli_number", "child_school", "child_study_level",
+    "child_passport_number", "child_passport_issue_date", "child_passport_expiry_date",
+    "child_dli_number", "child_school", "child_study_level",
+    "child_study_program", "child_study_city", "child_study_province",
+    "child_study_start_date", "child_study_end_date",
     "imm1294_child_url", "imm5707_child_url",
     # Phase X2 — the child's OWN data (previously inferred from the main applicant)
-    "child_language", "child_service_in",
+    "child_language", "child_language_most_at_ease", "child_service_in",
     "child_has_national_id", "child_nat_id_number", "child_nat_id_country",
     "child_nat_id_issue", "child_nat_id_expiry",
     "child_has_us_pr_card", "child_us_pr_number", "child_us_pr_uscis", "child_us_pr_expiry",
@@ -368,13 +371,21 @@ def children_rows(data: StudyPermitData, drive_results: dict | None = None) -> l
             "Yes" if c.will_accompany else "No",
             "Yes" if applying else "No",
             (sa.passport.passport_number if sa and sa.passport else ""),
+            (sa.passport.issue_date if sa and sa.passport else ""),
+            (sa.passport.expiry_date if sa and sa.passport else ""),
             (sa.study.dli_number if sa and sa.study else ""),
             (sa.study.school_name if sa and sa.study else ""),
             (sa.study.level if sa and sa.study else ""),
+            (sa.study.program if sa and sa.study else ""),
+            (sa.study.city if sa and sa.study else ""),
+            (sa.study.province_state if sa and sa.study else ""),
+            (sa.study.start_date if sa and sa.study else ""),
+            (sa.study.end_date if sa and sa.study else ""),
             _url(f"imm1294_child_{i}") if applying else "",
             _url(f"imm5707_child_{i}") if applying else "",
             # Phase X2 — the child's own data
             (sa.language.value if sa and sa.language else "") if sa else "",
+            (sa.language_most_at_ease.value if sa and sa.language_most_at_ease else "") if sa else "",
             (sa.service_in if sa else ""),
             yn(nid.has_document) if nid else "",
             (nid.doc_number if nid else ""), (nid.country_of_issue if nid else ""),
@@ -511,7 +522,7 @@ SPOUSE_SUBMISSIONS_HEADERS = [
     # Identity — fields NOT already stored as spouse_* in the main Submissions tab
     # (family_name/given_names/dob/country_of_birth/marital_status live there already)
     "native_name", "sex", "place_birth_city", "citizenship", "current_country",
-    "language", "service_in",
+    "language", "language_most_at_ease", "service_in",
     # Passport
     "passport_number", "passport_country_of_issue", "passport_issue_date", "passport_expiry_date",
     # National ID
@@ -525,6 +536,8 @@ SPOUSE_SUBMISSIONS_HEADERS = [
     "residential_same_as_mailing",
     "residential_unit", "residential_street_number", "residential_street_name",
     "residential_city", "residential_province_state", "residential_country", "residential_postal_code",
+    # Fax (shared from household contact)
+    "has_fax", "fax_country_code", "fax_number", "fax_ext",
     # Residence history
     "current_residence_country", "current_residence_status", "current_residence_from", "current_residence_to",
     "has_previous_residence",
@@ -618,7 +631,9 @@ def spouse_submission_row(data: StudyPermitData, drive_results: dict | None = No
         (sp.native_name if sp else ""),
         (sa.sex.value if sa.sex else ""),
         sa.place_birth_city, sa.citizenship, sa.current_country,
-        (sa.language.value if sa.language else ""), sa.service_in,
+        (sa.language.value if sa.language else ""),
+        (sa.language_most_at_ease.value if sa.language_most_at_ease else ""),
+        sa.service_in,
         # Passport
         (pp.passport_number if pp else ""), (pp.country_of_issue if pp else ""),
         (pp.issue_date if pp else ""), (pp.expiry_date if pp else ""),
@@ -633,6 +648,11 @@ def spouse_submission_row(data: StudyPermitData, drive_results: dict | None = No
         yn(sa.residential_address_same_as_mailing),
         _res(ra, "unit"), _res(ra, "street_number"), _res(ra, "street_name"),
         _res(ra, "city"), _res(ra, "province_state"), _res(ra, "country"), _res(ra, "postal_code"),
+        # Fax (shared from household contact — same whether address_same_as_main or not)
+        yn(data.contact.has_fax),
+        (data.contact.fax.country_code if data.contact.fax else ""),
+        (data.contact.fax.number if data.contact.fax else ""),
+        (data.contact.fax.ext if data.contact.fax else ""),
         # Residence history
         _res(cr, "country"), _res(cr, "status"), _res(cr, "from_date"), _res(cr, "to_date"),
         yn(sa.has_previous_residence),

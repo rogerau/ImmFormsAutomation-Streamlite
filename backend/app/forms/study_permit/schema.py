@@ -110,6 +110,7 @@ class ChildStudyApplicant(BaseModel):
 
     # --- Phase X2 — the child's own data (was inferred from the main applicant) ---
     language: Language = Language.english
+    language_most_at_ease: Optional[Language] = None
     service_in: str = "English"
     national_id: Imm1294NationalID = Imm1294NationalID()
     us_pr_card: Imm1294USCard = Imm1294USCard()
@@ -178,6 +179,7 @@ class SpouseStudyApplicant(BaseModel):
     # --- Full parity (Phase G) — the spouse's own personal/background data,
     # mirroring StudyPermitData's own fields of the same name below. ---
     language: Language = Language.english
+    language_most_at_ease: Optional[Language] = None
     service_in: str = "English"
     has_education_history: bool = False
     education_history: list[Imm1294EducationEntry] = []

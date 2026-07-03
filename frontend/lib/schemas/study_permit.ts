@@ -186,6 +186,7 @@ const dependentParentSchema = z.object({
   address: z.string().default(""),
   occupation: z.string().default(""),
   status: ParentStatusEnum.default("Living"),
+  marital_status: MaritalStatusEnum.nullable().optional(),
   will_accompany: boolFromString.optional(),
 });
 
@@ -395,6 +396,7 @@ const spouseStudyApplicantSchema = z.object({
   // collected the same way as the main applicant's (StudyDetailsStep /
   // EmploymentHistoryStep), never borrowed from the main applicant.
   language: LanguageEnum.default("English"),
+  language_most_at_ease: LanguageEnum.nullable().optional(),
   service_in: ServiceInEnum.default("English"),
   has_education_history: boolFromString.optional(),
   education_history: z.array(educationEntrySchema).default([]),

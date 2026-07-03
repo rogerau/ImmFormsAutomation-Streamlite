@@ -79,6 +79,10 @@ def _build_datasets_xml(data: "Imm5257Data") -> str:
             if cit_el is not None:
                 cit_el.text = data.citizenship
 
+            visa_type_el = common.find(pd, "VisaType", "VisaType")
+            if visa_type_el is not None:
+                visa_type_el.text = data.visit.purpose_of_visit or "Visitor"
+
             if data.current_residence:
                 common.fill_residence_row(
                     common.find(pd, "CurrentCOR", "Row2"),
@@ -413,8 +417,12 @@ def _build_datasets_xml(data: "Imm5257Data") -> str:
         bg1 = page3.find("BackgroundInfo")
         if bg1 is not None:
             choices = bg1.findall("Choice")
+            # choices[0] = tuberculosis (not collected for visitor path; default N)
+            # choices[1] = medical condition
             if len(choices) >= 1:
-                choices[0].text = "Y" if data.medical_condition else "N"
+                choices[0].text = "N"
+            if len(choices) >= 2:
+                choices[1].text = "Y" if data.medical_condition else "N"
             details_el = common.find(bg1, "Details", "MedicalDetails")
             if details_el is not None:
                 details_el.text = data.medical_condition_details or ""

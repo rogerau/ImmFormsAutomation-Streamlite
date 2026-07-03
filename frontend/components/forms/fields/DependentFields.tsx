@@ -181,6 +181,19 @@ export function ParentBlock({
         <Field label="Country of Birth" error={errors?.country_of_birth?.message}>
           <CountrySelect {...register(`${prefix}.country_of_birth` as any)} className={inp} />
         </Field>
+        <Field label="Marital Status" error={errors?.marital_status?.message}>
+          <select {...register(`${prefix}.marital_status` as any)} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="Single">Single</option>
+            <option value="Married-physically present">Married (in person)</option>
+            <option value="Married-not physically present">Married (not in person)</option>
+            <option value="Common-law">Common-law</option>
+            <option value="Divorced">Divorced</option>
+            <option value="Legally separated">Legally separated</option>
+            <option value="Widowed">Widowed</option>
+            <option value="Annulled marriage">Annulled marriage</option>
+          </select>
+        </Field>
         <Field label="Status" error={errors?.status?.message}>
           <select {...register(`${prefix}.status` as any)} className={inp}>
             <option value="Living">Living</option>
