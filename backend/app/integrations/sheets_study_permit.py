@@ -315,7 +315,7 @@ CHILDREN_HEADERS = [
     "applying_study_permit",
     "child_passport_number", "child_passport_issue_date", "child_passport_expiry_date",
     "child_dli_number", "child_school", "child_study_level",
-    "child_study_program", "child_study_city", "child_study_province",
+    "child_study_program", "child_study_city", "child_study_province", "child_study_address",
     "child_study_start_date", "child_study_end_date",
     "imm1294_child_url", "imm5707_child_url",
     # Phase X2 — the child's OWN data (previously inferred from the main applicant)
@@ -379,6 +379,7 @@ def children_rows(data: StudyPermitData, drive_results: dict | None = None) -> l
             (sa.study.program if sa and sa.study else ""),
             (sa.study.city if sa and sa.study else ""),
             (sa.study.province_state if sa and sa.study else ""),
+            (sa.study.address if sa and sa.study else ""),
             (sa.study.start_date if sa and sa.study else ""),
             (sa.study.end_date if sa and sa.study else ""),
             _url(f"imm1294_child_{i}") if applying else "",

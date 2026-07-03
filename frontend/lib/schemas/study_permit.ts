@@ -295,6 +295,7 @@ const childStudySchema = z.object({
   program: z.string().default(""),
   city: z.string().default(""),
   province_state: z.string().default(""),
+  address: z.string().default(""),
   dli_number: z.string().default(""),
   start_date: dateStr,
   end_date: dateStr,
@@ -306,10 +307,14 @@ const childStudyApplicantSchema = z.object({
   citizenship: z.string().default(""),   // defaults to the parent's on the backend if blank
   current_country: z.string().default(""),
   passport: childPassportSchema.default({ passport_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
-  study: childStudySchema.default({ school_name: "", level: "", program: "", city: "", province_state: "", dli_number: "", start_date: "", end_date: "" }),
+  study: childStudySchema.default({ school_name: "", level: "", program: "", city: "", province_state: "", address: "", dli_number: "", start_date: "", end_date: "" }),
 
   // Phase X2 — the child's own data (was inferred from the main applicant).
   language: LanguageEnum.default("English"),
+  language_most_at_ease: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    LanguageEnum.nullable().optional(),
+  ),
   service_in: ServiceInEnum.default("English"),
   national_id: lenientNationalIdSchema.default({ has_document: undefined, doc_number: "", country_of_issue: "", issue_date: "", expiry_date: "" }),
   us_pr_card: lenientUsCardSchema.default({ has_card: undefined, doc_number: "", uscis_number: "", expiry_date: "" }),
@@ -396,7 +401,10 @@ const spouseStudyApplicantSchema = z.object({
   // collected the same way as the main applicant's (StudyDetailsStep /
   // EmploymentHistoryStep), never borrowed from the main applicant.
   language: LanguageEnum.default("English"),
-  language_most_at_ease: LanguageEnum.nullable().optional(),
+  language_most_at_ease: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    LanguageEnum.nullable().optional(),
+  ),
   service_in: ServiceInEnum.default("English"),
   has_education_history: boolFromString.optional(),
   education_history: z.array(educationEntrySchema).default([]),

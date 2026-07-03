@@ -149,6 +149,9 @@ export function DependentChildrenStep({ control, register, errors }: Props) {
                     <Field label="Province / State" error={(ce?.study as any)?.province_state?.message}>
                       <input {...register(`family.children.${idx}.study_applicant.study.province_state` as any)} className={inp} />
                     </Field>
+                    <Field label="School Address" error={(ce?.study as any)?.address?.message}>
+                      <input {...register(`family.children.${idx}.study_applicant.study.address` as any)} className={inp} />
+                    </Field>
                     <Field label="Start Date" required error={ce?.study?.start_date?.message}>
                       <input {...register(`family.children.${idx}.study_applicant.study.start_date` as any)} placeholder="YYYY-MM-DD" className={inp} />
                     </Field>
@@ -163,6 +166,15 @@ export function DependentChildrenStep({ control, register, errors }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Language" error={(ce as any)?.language?.message}>
                     <select {...register(`family.children.${idx}.study_applicant.language` as any)} className={inp}>
+                      <option value="English">English</option>
+                      <option value="French">French</option>
+                      <option value="Both">Both</option>
+                      <option value="Neither">Neither</option>
+                    </select>
+                  </Field>
+                  <Field label="Language most at ease in" error={(ce as any)?.language_most_at_ease?.message}>
+                    <select {...register(`family.children.${idx}.study_applicant.language_most_at_ease` as any)} className={inp}>
+                      <option value="">-- Same as above --</option>
                       <option value="English">English</option>
                       <option value="French">French</option>
                       <option value="Both">Both</option>
