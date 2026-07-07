@@ -39,6 +39,62 @@ const STEP_LABELS_BASE = [
 ];
 const STEP_LABEL_REVIEW = "Review & Sign";
 
+// Sub-fields rendered by DependentSpouseStep ("Spouse — Work Permit" /
+// "Spouse — Visitor Visa") — identity, passport, residence, address. Does
+// NOT include language/education/employment/parents/previous-marriage,
+// which live on the separate "Spouse — Background" step below even though
+// both share the same "family.spouse_study_applicant" Zod object.
+const SPOUSE_IDENTITY_FIELDS = [
+  "family.spouse_study_applicant.sex",
+  "family.spouse_study_applicant.place_birth_city",
+  "family.spouse_study_applicant.citizenship",
+  "family.spouse_study_applicant.current_country",
+  "family.spouse_study_applicant.passport",
+  "family.spouse_study_applicant.national_id",
+  "family.spouse_study_applicant.us_pr_card",
+  "family.spouse_study_applicant.current_residence",
+  "family.spouse_study_applicant.has_previous_residence",
+  "family.spouse_study_applicant.previous_residences",
+  "family.spouse_study_applicant.applying_country_same_as_current",
+  "family.spouse_study_applicant.applying_country",
+  "family.spouse_study_applicant.address_same_as_main",
+  "family.spouse_study_applicant.mailing_address",
+];
+
+// Sub-fields rendered by DependentSpouseHistoryStep ("Spouse — Background").
+// Schedule 1 (visit_background) is visitor-only and appended separately.
+const SPOUSE_BACKGROUND_FIELDS = [
+  "family.spouse_study_applicant.language",
+  "family.spouse_study_applicant.language_most_at_ease",
+  "family.spouse_study_applicant.service_in",
+  "family.spouse_study_applicant.has_education_history",
+  "family.spouse_study_applicant.education_history",
+  "family.spouse_study_applicant.occupation_history",
+  "family.spouse_study_applicant.tuberculosis",
+  "family.spouse_study_applicant.medical_condition",
+  "family.spouse_study_applicant.medical_condition_details",
+  "family.spouse_study_applicant.previously_remained_status",
+  "family.spouse_study_applicant.previously_applied_canada",
+  "family.spouse_study_applicant.previously_refused_visa",
+  "family.spouse_study_applicant.previously_refused_visa_details",
+  "family.spouse_study_applicant.criminal_record",
+  "family.spouse_study_applicant.criminal_record_details",
+  "family.spouse_study_applicant.military_service",
+  "family.spouse_study_applicant.military_service_details",
+  "family.spouse_study_applicant.political_party",
+  "family.spouse_study_applicant.war_crimes",
+  "family.spouse_study_applicant.consent_to_contact",
+  "family.spouse_study_applicant.previously_married",
+  "family.spouse_study_applicant.prev_spouse_family_name",
+  "family.spouse_study_applicant.prev_spouse_given_name",
+  "family.spouse_study_applicant.prev_spouse_date_of_birth",
+  "family.spouse_study_applicant.prev_relationship_type",
+  "family.spouse_study_applicant.prev_relationship_from",
+  "family.spouse_study_applicant.prev_relationship_to",
+  "family.spouse_study_applicant.father",
+  "family.spouse_study_applicant.mother",
+];
+
 // Turn a field-path segment into a human label: "place_birth_city" -> "Place Birth City",
 // "study_applicant" -> "Study Applicant", array index "0" -> "#1".
 function humanizeSeg(seg: string): string {
@@ -232,32 +288,41 @@ export function StudyPermitWizard({ token, claims }: Props) {
     },
     // Mutually exclusive (intake derives exactly one, never both) — whichever
     // is active fills this slot with its own label.
+    //
+    // NOTE: this step and "Spouse — Background" below both edit the same
+    // "family.spouse_study_applicant" Zod object, but they render different
+    // sub-fields (this one: identity/passport/residence/address/work-or-visit;
+    // Background: language/education/employment/previous-marriage/parents/
+    // Schedule 1). `fields` must list only the sub-paths each step actually
+    // renders — validating the whole shared object here would surface
+    // Background-step required errors (e.g. father/mother) while the user is
+    // still on this step, before those fields even exist on the page.
     {
       key: "spouse_work_permit",
       label: "Spouse — Work Permit",
-      fields: ["family.spouse_study_applicant"],
+      fields: SPOUSE_IDENTITY_FIELDS.concat(["family.spouse_study_applicant.work"]),
       render: () => <DependentSpouseStep control={control} register={register} errors={errors} setValue={setValue} optionalForms={optionalForms} />,
     },
     {
       key: "spouse_visitor",
       label: "Spouse — Visitor Visa",
-      fields: ["family.spouse_study_applicant"],
+      fields: SPOUSE_IDENTITY_FIELDS.concat(["family.spouse_study_applicant.visit"]),
       render: () => <DependentSpouseStep control={control} register={register} errors={errors} setValue={setValue} optionalForms={optionalForms} />,
     },
     // Full parity (Phase G) — the spouse's own language/education/employment/
     // background data, same key as above so it's included alongside whichever
-    // spouse path is active; same "family.spouse_study_applicant" field path
-    // (one Zod object, two steps that touch it).
+    // spouse path is active; same "family.spouse_study_applicant" object as
+    // the step above, but a disjoint set of sub-fields (see note above).
     {
       key: "spouse_work_permit",
       label: "Spouse — Background",
-      fields: ["family.spouse_study_applicant"],
+      fields: SPOUSE_BACKGROUND_FIELDS,
       render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
     },
     {
       key: "spouse_visitor",
       label: "Spouse — Background",
-      fields: ["family.spouse_study_applicant"],
+      fields: SPOUSE_BACKGROUND_FIELDS.concat(["family.spouse_study_applicant.visit_background"]),
       render: () => <DependentSpouseHistoryStep control={control} register={register} errors={errors} optionalForms={optionalForms} />,
     },
   ];

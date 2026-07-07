@@ -186,7 +186,10 @@ const dependentParentSchema = z.object({
   address: z.string().default(""),
   occupation: z.string().default(""),
   status: ParentStatusEnum.default("Living"),
-  marital_status: MaritalStatusEnum.nullable().optional(),
+  marital_status: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    MaritalStatusEnum.nullable().optional(),
+  ),
   will_accompany: boolFromString.optional(),
 });
 
