@@ -30,7 +30,6 @@ from ..imm5475.schema import Imm5475Data
 from ..imm5476.schema import Imm5476Data
 from ..imm5646.schema import Imm5646Data
 from ..imm5707.schema import Child5707, MaritalStatus, Parent5707, Person5707
-from ...eligibility.schema import StudyLevel
 
 
 class ContactInfo(BaseModel):
@@ -156,16 +155,18 @@ class ChildEntry(Child5707):
 class SpouseStudyApplicant(BaseModel):
     """Extra identity + path-specific fields a spouse/common-law partner needs to
     file their OWN application alongside the main applicant's study permit —
-    Phase 2: an open work permit (IMM 1295) when the main applicant's program
-    qualifies, or a visitor visa (IMM 5257 + Schedule 1) when it doesn't (see
-    eligibility.lookup.get_spouse_path). Only mailing/residential address,
+    Phase 2: an open work permit (IMM 1295) when `optional_forms` contains
+    "spouse_work_permit", or a visitor visa (IMM 5257 + Schedule 1) when it
+    contains "spouse_visitor" — that key is authorized server-side as a
+    subset of the token's claims (see /forms/study_permit/fill) and already
+    eligibility-checked at intake time. Only mailing/residential address,
     phone, and email are legitimately shared (the household) and reused from
     the main applicant's `contact` block by the spouse-principal projection
     (forms/study_permit/dependents_spouse.py) — every other personal/background
     fact below (full parity, Phase G) is the spouse's OWN data, collected in the
     wizard, never borrowed from the main applicant. Exactly one of `work` /
-    `visit` is populated, decided server-side by spouse_study_level at fill
-    time — never trust a client-precomputed path for which block is "the" one.
+    `visit` is populated, matching whichever of the two `optional_forms` keys
+    is present.
     """
     sex: Optional[Sex] = None
     place_birth_city: str = Field(default="", max_length=100)
@@ -289,10 +290,6 @@ class StudyPermitData(BaseModel):
 
     # --- Steps 4–5: Family data (IMM 5707) ---
     family: FamilyInfo
-
-    # Phase 2 — main applicant's program of study, drives the spouse's required
-    # path (eligibility.lookup.get_spouse_path) when spouse_study_applicant is set.
-    spouse_study_level: Optional[StudyLevel] = None
 
     # --- Background (IMM 1294 Page 4) — verbatim IRCC questions ---
     # Q86: tuberculosis (no textbox)

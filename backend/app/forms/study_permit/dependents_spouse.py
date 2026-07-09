@@ -3,7 +3,8 @@
 When a study-permit applicant has an accompanying spouse who is also filing
 their OWN application, we generate that spouse's IMM 5707 (Family Information)
 plus either IMM 1295 (open work permit) or IMM 5257 + Schedule 1 (visitor visa),
-depending on eligibility.lookup.get_spouse_path(spouse_study_level).
+depending on which of "spouse_work_permit" / "spouse_visitor" is present in
+optional_forms (see forms/study_permit/filler.py).
 
 Mirrors the child-as-principal projection in dependents.py: build_spouse_principal_data
 synthesizes a StudyPermitData in which the spouse is the principal, reusing the

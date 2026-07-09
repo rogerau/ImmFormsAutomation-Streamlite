@@ -1,8 +1,8 @@
 """Bundle filler — fills all forms in the study permit bundle and returns PDF bytes."""
 from __future__ import annotations
 
-from ...eligibility.lookup import get_child_status, get_spouse_path
-from ...eligibility.schema import ChildSchoolLevel, SpousePath, StudyLevel
+from ...eligibility.lookup import get_child_status
+from ...eligibility.schema import ChildSchoolLevel
 from ..imm1294.filler import fill_pdf as fill_imm1294
 from ..imm1295.filler import fill_pdf as fill_imm1295
 from ..imm5257.filler import fill_pdf as fill_imm5257, fill_schedule1_pdf as fill_imm5257_sch1
@@ -110,28 +110,30 @@ def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
                 result[f"{form_code.lower()}_child_{idx}"] = filler(child_data)
 
     # --- Spouse forms (Phase 2) — accompanying spouse/common-law partner filing
-    # their own application. eligibility.lookup.get_spouse_path() decides the
-    # branch from the main applicant's program: recommended_path is always
-    # either open_work_permit (-> IMM 1295) or visitor (-> IMM 5257 + Schedule 1)
-    # — the other SpousePath values only ever appear as informational
-    # alternatives, never auto-selected. Re-derived here (not trusted from the
-    # client's pre-computed optional_forms axis) so eligibility stays decided
-    # in one place. IMM 5409/5476/5475 reuse the SAME data already captured for
-    # the main applicant's own bundle when those optional forms are active —
-    # the common-law declaration and representative/release-authority
-    # designations describe the same underlying facts, so no separate spouse
-    # data entry is needed. IMM 5484/5488 (document checklists) are not
-    # fillable, same precedent as IMM 5483 for the child path.
+    # their own application. Which package to build (IMM 1295 open work permit
+    # vs IMM 5257 + Schedule 1 visitor visa) is decided by optional_forms —
+    # already eligibility-checked by the admin intake page's deriveOptionalForms()
+    # (mirroring the same dependents_eligibility.json ruleset) at token-issuance
+    # time, and already enforced server-side as a subset of the token's
+    # authorized claims.optional_forms (see /forms/study_permit/fill). It is
+    # the same signal the frontend wizard itself uses to decide which fields to
+    # render/collect for the spouse, so trusting it here keeps the generated
+    # package consistent with what was actually asked and answered. IMM
+    # 5409/5476/5475 reuse the SAME data already captured for the main
+    # applicant's own bundle when those optional forms are active — the
+    # common-law declaration and representative/release-authority designations
+    # describe the same underlying facts, so no separate spouse data entry is
+    # needed. IMM 5484/5488 (document checklists) are not fillable, same
+    # precedent as IMM 5483 for the child path.
     spouse_applicant = data.family.spouse_study_applicant
     if (
         ("spouse_work_permit" in data.optional_forms or "spouse_visitor" in data.optional_forms)
         and spouse_applicant is not None
     ):
-        spouse_path = get_spouse_path(data.spouse_study_level or StudyLevel.other)
         spouse_data = build_spouse_principal_data(data, spouse_applicant)
         result["imm5707_spouse"] = fill_imm5707(spouse_data)
 
-        if spouse_path.recommended_path == SpousePath.open_work_permit:
+        if "spouse_work_permit" in data.optional_forms:
             result["imm1295_spouse"] = fill_imm1295(build_spouse_imm1295_data(data, spouse_applicant))
         else:
             spouse_5257_data = build_spouse_imm5257_data(data, spouse_applicant)

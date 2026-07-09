@@ -36,22 +36,6 @@ export const SexEnum = z.enum(["Male", "Female"]);
 export const LanguageEnum = z.enum(["English", "French", "Both", "Neither"]);
 export const ServiceInEnum = z.enum(["English", "French"]);
 export const ParentStatusEnum = z.enum(["Living", "Deceased"]);
-// Mirrors backend eligibility.schema.StudyLevel — the principal applicant's
-// program of study, which decides the spouse's path (open work permit vs
-// visitor visa) via get_spouse_path. Asked once at intake (Phase 2), not a
-// per-field wizard question.
-export const StudyLevelEnum = z.enum([
-  "doctoral",
-  "masters_16_plus_months",
-  "masters_under_16_months",
-  "professional_degree",
-  "pilot_program",
-  "bachelors",
-  "college_diploma",
-  "certificate",
-  "language_program",
-  "other",
-]);
 export const RepActionEnum = z.enum([
   "appointing",
   "updating",
@@ -675,14 +659,6 @@ export const StudyPermitSchema = z
 
     // Steps 4-5: Family
     family: familyInfoSchema,
-
-    // Phase 2 — main applicant's program of study, drives the spouse's
-    // required path (eligibility.lookup.get_spouse_path) when
-    // family.spouse_study_applicant is set.
-    spouse_study_level: z.preprocess(
-      (v) => (v === "" || v == null ? null : v),
-      StudyLevelEnum.nullable().optional(),
-    ),
 
     // Background — IRCC IMM 1294 Page 4 verbatim questions
     tuberculosis: requiredBoolFromString,
