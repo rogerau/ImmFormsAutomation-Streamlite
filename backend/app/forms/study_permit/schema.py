@@ -159,14 +159,15 @@ class SpouseStudyApplicant(BaseModel):
     "spouse_work_permit", or a visitor visa (IMM 5257 + Schedule 1) when it
     contains "spouse_visitor" — that key is authorized server-side as a
     subset of the token's claims (see /forms/study_permit/fill) and already
-    eligibility-checked at intake time. Only mailing/residential address,
-    phone, and email are legitimately shared (the household) and reused from
-    the main applicant's `contact` block by the spouse-principal projection
-    (forms/study_permit/dependents_spouse.py) — every other personal/background
-    fact below (full parity, Phase G) is the spouse's OWN data, collected in the
-    wizard, never borrowed from the main applicant. Exactly one of `work` /
-    `visit` is populated, matching whichever of the two `optional_forms` keys
-    is present.
+    eligibility-checked at intake time. Only the mailing/residential ADDRESS is
+    legitimately shared by default (the household, via address_same_as_main)
+    and reused from the main applicant's `contact` block by the
+    spouse-principal projection (forms/study_permit/dependents_spouse.py) —
+    phone, alternate phone, fax, and email are personal, always the spouse's
+    OWN answers, never borrowed from the main applicant, same as every other
+    personal/background fact below (full parity, Phase G). Exactly one of
+    `work` / `visit` is populated, matching whichever of the two
+    `optional_forms` keys is present.
     """
     sex: Optional[Sex] = None
     place_birth_city: str = Field(default="", max_length=100)
@@ -224,6 +225,17 @@ class SpouseStudyApplicant(BaseModel):
     mailing_address: Optional[Imm1294Address] = None
     residential_address_same_as_mailing: bool = True
     residential_address: Optional[Imm1294Address] = None
+    # The spouse's OWN phone/alt phone/fax/email — always their own, unlike the
+    # address above (never inferred from the main applicant's contact block).
+    phone: str = ""
+    primary_phone_type: str = ""
+    primary_phone_country_code: str = ""
+    primary_phone_ext: str = ""
+    has_alt_phone: bool = False
+    alt_phone: Optional[Imm1294Phone] = None
+    has_fax: bool = False
+    fax: Optional[Imm1294Phone] = None
+    email: str = ""
     # The spouse's OWN parents for their IMM 5707 (Section A) + whether each
     # accompanies. Reuses Parent5707 exactly like the main applicant's father/mother.
     father: Optional[Parent5707] = None

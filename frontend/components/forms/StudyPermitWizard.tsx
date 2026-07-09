@@ -50,6 +50,15 @@ const SPOUSE_IDENTITY_FIELDS = [
   "family.spouse_study_applicant.citizenship",
   "family.spouse_study_applicant.current_country",
   "family.spouse_study_applicant.passport",
+  "family.spouse_study_applicant.phone",
+  "family.spouse_study_applicant.primary_phone_type",
+  "family.spouse_study_applicant.primary_phone_country_code",
+  "family.spouse_study_applicant.primary_phone_ext",
+  "family.spouse_study_applicant.email",
+  "family.spouse_study_applicant.has_alt_phone",
+  "family.spouse_study_applicant.alt_phone",
+  "family.spouse_study_applicant.has_fax",
+  "family.spouse_study_applicant.fax",
   "family.spouse_study_applicant.national_id",
   "family.spouse_study_applicant.us_pr_card",
   "family.spouse_study_applicant.current_residence",
@@ -203,6 +212,13 @@ export function StudyPermitWizard({ token, claims }: Props) {
           children: [],
           section_c_signature: "",
           section_c_date: "",
+          // Without an explicit default here, RHF's watched value stays
+          // `undefined` until the user touches the select, while the DOM
+          // <select> still visually shows its first option ("Yes") — the two
+          // disagree, so the "different address" block renders even though
+          // the toggle reads "Yes". Seeding true here keeps both in sync from
+          // first render (same fix as contact.residential_address_same_as_mailing below).
+          spouse_study_applicant: { address_same_as_main: true as any },
         },
         education_history: [],
         occupation_history: [],

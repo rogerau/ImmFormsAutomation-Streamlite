@@ -24,6 +24,20 @@ UNENC = os.path.join(os.path.dirname(__file__), "template", "imm1295e_unenc.pdf"
 
 XFA_NS = common.XFA_NS
 
+# WorkPermitType dropdown binds valueRef="lic" (same convention as
+# common.COUNTRY_LIC/PROVINCE_LIC) — the saved value must be the lic code,
+# not the human-readable label. Confirmed against the sibling IMM 1294 XFA
+# dataset's WorkPermitTypeList LOV (IMM 1295's own template ships the field
+# with no embedded LOV, but shares the same underlying form family).
+WORK_PERMIT_TYPE_LIC = {
+    "Exemption from Labour Market Impact Assessment": "ELMO",
+    "Labour Market Impact Assessment Stream": "LMOS",
+    "Open Work Permit": "OWP",
+    "Other": "Other",
+    "Seasonal Agricultural Workers Program": "SAWP",
+    "Start-up Business Class": "SBC",
+}
+
 
 def _build_datasets_xml(data: "Imm1295Data") -> str:
     raw = common.get_raw_datasets(UNENC)
@@ -321,7 +335,7 @@ def _build_datasets_xml(data: "Imm1295Data") -> str:
             if dow is not None:
                 wpt = common.find(dow, "TypeofWork", "WorkPermitType")
                 if wpt is not None:
-                    wpt.text = w.work_permit_type
+                    wpt.text = WORK_PERMIT_TYPE_LIC.get(w.work_permit_type, w.work_permit_type)
                 en = common.find(dow, "PurposeRow1", "EmployerName", "EmployerName")
                 if en is not None:
                     en.text = w.employer_name
@@ -440,23 +454,28 @@ def _build_datasets_xml(data: "Imm1295Data") -> str:
             if details_el is not None:
                 details_el.text = data.medical_condition_details or ""
 
+        # BackgroundInfo2 is a direct child of Page4 (a sibling of PageWrapper,
+        # not nested inside it) — confirmed against the template's XFA dataset.
+        # A previous version looked for it under PageWrapper, which silently
+        # never matched, so these three answers never rendered even though
+        # the data reached this function correctly.
+        bg2 = page4.find("BackgroundInfo2")
+        if bg2 is not None:
+            vc1 = bg2.find("VisaChoice1")
+            if vc1 is not None:
+                vc1.text = "Y" if data.previously_remained_status else "N"
+            vc2 = bg2.find("VisaChoice2")
+            if vc2 is not None:
+                vc2.text = "Y" if data.previously_applied_canada else "N"
+            vc3 = bg2.find("VisaChoice3")
+            if vc3 is not None:
+                vc3.text = "Y" if data.previously_refused_visa else "N"
+            ref_details = common.find(bg2, "Details", "refusedDetails")
+            if ref_details is not None:
+                ref_details.text = data.previously_refused_visa_details or ""
+
         wrap = page4.find("PageWrapper")
         if wrap is not None:
-            bg2 = wrap.find("BackgroundInfo2")
-            if bg2 is not None:
-                vc1 = bg2.find("VisaChoice1")
-                if vc1 is not None:
-                    vc1.text = "Y" if data.previously_remained_status else "N"
-                vc2 = bg2.find("VisaChoice2")
-                if vc2 is not None:
-                    vc2.text = "Y" if data.previously_applied_canada else "N"
-                vc3 = bg2.find("VisaChoice3")
-                if vc3 is not None:
-                    vc3.text = "Y" if data.previously_refused_visa else "N"
-                ref_details = common.find(bg2, "Details", "refusedDetails")
-                if ref_details is not None:
-                    ref_details.text = data.previously_refused_visa_details or ""
-
             bg3 = wrap.find("BackgroundInfo3")
             if bg3 is not None:
                 cc = bg3.find("Choice")

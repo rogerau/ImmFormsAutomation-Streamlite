@@ -36,6 +36,16 @@ export const SexEnum = z.enum(["Male", "Female"]);
 export const LanguageEnum = z.enum(["English", "French", "Both", "Neither"]);
 export const ServiceInEnum = z.enum(["English", "French"]);
 export const ParentStatusEnum = z.enum(["Living", "Deceased"]);
+// The 6 real IRCC IMM 1295 "type of work permit" LOV options (mirrors backend
+// imm1295.schema.WorkPermitType / imm1295/filler.py's WORK_PERMIT_TYPE_LIC).
+export const WorkPermitTypeEnum = z.enum([
+  "Exemption from Labour Market Impact Assessment",
+  "Labour Market Impact Assessment Stream",
+  "Open Work Permit",
+  "Other",
+  "Seasonal Agricultural Workers Program",
+  "Start-up Business Class",
+]);
 export const RepActionEnum = z.enum([
   "appointing",
   "updating",
@@ -328,7 +338,7 @@ const child5707Schema = person5707Schema.extend({
 // application never errors. When optional_forms includes "spouse_work_permit"
 // or "spouse_visitor", the master superRefine enforces the required subset.
 const spouseWorkDetailsSchema = z.object({
-  work_permit_type: z.string().default("Open Work Permit"),
+  work_permit_type: WorkPermitTypeEnum.default("Open Work Permit"),
   employer_name: z.string().default(""),
   employer_address: z.string().default(""),
   intended_province_state: z.string().default(""),
@@ -422,6 +432,17 @@ const spouseStudyApplicantSchema = z.object({
   mailing_address: residentialAddressSchema.nullable().optional(),
   residential_address_same_as_mailing: boolFromString.optional(),
   residential_address: residentialAddressSchema.nullable().optional(),
+  // The spouse's own phone/alt phone/fax/email — always their own, unlike the
+  // address above (never inferred from the main applicant's contact block).
+  phone: z.string().default(""),
+  primary_phone_type: z.string().default(""),
+  primary_phone_country_code: z.string().default(""),
+  primary_phone_ext: z.string().default(""),
+  has_alt_phone: boolFromString.optional(),
+  alt_phone: phoneSchema.nullable().optional(),
+  has_fax: boolFromString.optional(),
+  fax: phoneSchema.nullable().optional(),
+  email: z.string().default(""),
   // The spouse's own parents for their IMM 5707.
   father: dependentParentSchema.nullable().optional(),
   mother: dependentParentSchema.nullable().optional(),
@@ -815,6 +836,10 @@ export const StudyPermitSchema = z
       need(sa?.place_birth_city, "Required", "place_birth_city");
       need(sa?.passport?.passport_number, "Required", "passport", "passport_number");
       need(sa?.passport?.country_of_issue, "Required", "passport", "country_of_issue");
+      // The spouse's own phone/email — always theirs, never the main
+      // applicant's (unlike address, which can be toggled to "same").
+      need(sa?.phone, "Required", "phone");
+      need(sa?.email, "Required", "email");
       // Full parity (Phase G) — the spouse's own IMM 1294-style background
       // questions, mirrored from the top-level required set above.
       needAnswered(sa?.tuberculosis, "Required", "tuberculosis");
@@ -841,10 +866,13 @@ export const StudyPermitSchema = z
       // defaults to "No" (IRCC-valid), so no explicit-answer gate is enforced.
       if (wantsSpouseWork) {
         need(sa?.work?.work_permit_type, "Required", "work", "work_permit_type");
-        // Open Work Permit's job_title/position_description are hardcoded to
-        // "OPEN" (see DependentSpouseStep.tsx), not user-entered — only
-        // require position_description for the employer-specific path.
-        if (sa?.work?.work_permit_type === "Employer-Specific Work Permit") {
+        // Open Work Permit's job_title/position_description/employer are
+        // hardcoded to "OPEN"/blank (see DependentSpouseStep.tsx), not
+        // user-entered — every other work permit type is tied to a specific
+        // job, so those become required instead.
+        if (sa?.work?.work_permit_type && sa.work.work_permit_type !== "Open Work Permit") {
+          need(sa?.work?.employer_name, "Required", "work", "employer_name");
+          need(sa?.work?.job_title, "Required", "work", "job_title");
           need(sa?.work?.position_description, "Required", "work", "position_description");
         }
       }

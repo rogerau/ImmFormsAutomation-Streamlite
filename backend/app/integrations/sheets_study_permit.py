@@ -537,7 +537,9 @@ SPOUSE_SUBMISSIONS_HEADERS = [
     "residential_same_as_mailing",
     "residential_unit", "residential_street_number", "residential_street_name",
     "residential_city", "residential_province_state", "residential_country", "residential_postal_code",
-    # Fax (shared from household contact)
+    # Phone & email (spouse's own — personal, never shared with the main applicant)
+    "phone", "primary_phone_type", "primary_phone_country_code", "primary_phone_ext", "email",
+    "has_alt_phone", "alt_phone_country_code", "alt_phone_number", "alt_phone_ext",
     "has_fax", "fax_country_code", "fax_number", "fax_ext",
     # Residence history
     "current_residence_country", "current_residence_status", "current_residence_from", "current_residence_to",
@@ -559,8 +561,9 @@ SPOUSE_SUBMISSIONS_HEADERS = [
     "criminal_record", "criminal_details", "military_service", "military_details",
     "political_party", "war_crimes", "consent_to_contact",
     # Work permit (IMM 1295)
-    "work_permit_type", "work_employer_name", "work_job_title", "work_position_description",
-    "work_intended_city", "work_intended_province", "work_from", "work_to", "work_lmia_number",
+    "work_permit_type", "work_employer_name", "work_employer_address", "work_job_title",
+    "work_position_description", "work_intended_city", "work_intended_province",
+    "work_from", "work_to", "work_lmia_number",
     # Visit (IMM 5257)
     "visit_purpose", "visit_purpose_other", "visit_from", "visit_to", "visit_funds",
     "visit_contact1_name", "visit_contact1_relationship", "visit_contact1_address",
@@ -649,11 +652,17 @@ def spouse_submission_row(data: StudyPermitData, drive_results: dict | None = No
         yn(sa.residential_address_same_as_mailing),
         _res(ra, "unit"), _res(ra, "street_number"), _res(ra, "street_name"),
         _res(ra, "city"), _res(ra, "province_state"), _res(ra, "country"), _res(ra, "postal_code"),
-        # Fax (shared from household contact — same whether address_same_as_main or not)
-        yn(data.contact.has_fax),
-        (data.contact.fax.country_code if data.contact.fax else ""),
-        (data.contact.fax.number if data.contact.fax else ""),
-        (data.contact.fax.ext if data.contact.fax else ""),
+        # Phone & email — always the spouse's own (sa.*), never data.contact
+        # (the main applicant's), regardless of the address_same_as_main toggle.
+        sa.phone, sa.primary_phone_type, sa.primary_phone_country_code, sa.primary_phone_ext, sa.email,
+        yn(sa.has_alt_phone),
+        (sa.alt_phone.country_code if sa.alt_phone else ""),
+        (sa.alt_phone.number if sa.alt_phone else ""),
+        (sa.alt_phone.ext if sa.alt_phone else ""),
+        yn(sa.has_fax),
+        (sa.fax.country_code if sa.fax else ""),
+        (sa.fax.number if sa.fax else ""),
+        (sa.fax.ext if sa.fax else ""),
         # Residence history
         _res(cr, "country"), _res(cr, "status"), _res(cr, "from_date"), _res(cr, "to_date"),
         yn(sa.has_previous_residence),
@@ -682,8 +691,8 @@ def spouse_submission_row(data: StudyPermitData, drive_results: dict | None = No
         yn(sa.military_service), sa.military_service_details,
         yn(sa.political_party), yn(sa.war_crimes), yn(sa.consent_to_contact),
         # Work permit
-        _res(wk, "work_permit_type"), _res(wk, "employer_name"), _res(wk, "job_title"),
-        _res(wk, "position_description"), _res(wk, "intended_city_town"),
+        _res(wk, "work_permit_type"), _res(wk, "employer_name"), _res(wk, "employer_address"),
+        _res(wk, "job_title"), _res(wk, "position_description"), _res(wk, "intended_city_town"),
         _res(wk, "intended_province_state"), _res(wk, "how_long_from"), _res(wk, "how_long_to"),
         _res(wk, "lmia_number"),
         # Visit

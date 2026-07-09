@@ -8,7 +8,7 @@ rather than redefined.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,11 +26,22 @@ from ..imm1294.schema import (
 )
 
 
+WorkPermitType = Literal[
+    "Exemption from Labour Market Impact Assessment",
+    "Labour Market Impact Assessment Stream",
+    "Open Work Permit",
+    "Other",
+    "Seasonal Agricultural Workers Program",
+    "Start-up Business Class",
+]
+
+
 class WorkDetails(BaseModel):
     """IMM 1295 Page 3 — DetailsOfIntendedWork / IntendedLocationInCanada /
-    DetailsOfWorkCont. work_permit_type is the IRCC dropdown value (e.g.
-    "Open Work Permit", "Employer-Specific Work Permit")."""
-    work_permit_type: str = "Open Work Permit"
+    DetailsOfWorkCont. work_permit_type is the IRCC dropdown value — the six
+    options above are the real IRCC LOV labels (see WORK_PERMIT_TYPE_LIC in
+    imm1295/filler.py for the lic-code each maps to on the PDF)."""
+    work_permit_type: WorkPermitType = "Open Work Permit"
     employer_name: str = ""
     employer_address: str = ""
     intended_province_state: str = ""

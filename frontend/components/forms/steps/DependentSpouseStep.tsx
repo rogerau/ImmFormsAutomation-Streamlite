@@ -6,6 +6,15 @@ import { CountrySelect } from "@/components/forms/fields/CountrySelect";
 import { NationalIdBlock, UsCardBlock, ResidenceHistory } from "@/components/forms/fields/DependentFields";
 
 const isYes = (v: unknown) => v === true || v === "true";
+const PHONE_TYPES = ["Residence", "Work", "Cell"];
+const WORK_PERMIT_TYPES = [
+  "Open Work Permit",
+  "Exemption from Labour Market Impact Assessment",
+  "Labour Market Impact Assessment Stream",
+  "Seasonal Agricultural Workers Program",
+  "Start-up Business Class",
+  "Other",
+];
 
 interface Props {
   control: Control<StudyPermitData>;
@@ -38,16 +47,23 @@ export function DependentSpouseStep({ control, register, errors, setValue, optio
 
   const workPermitType = useWatch({ control, name: "family.spouse_study_applicant.work.work_permit_type" as any });
   const isOpenWorkPermit = isWorkPermit && (workPermitType ?? "Open Work Permit") === "Open Work Permit";
+  const hasAltPhone = isYes(useWatch({ control, name: "family.spouse_study_applicant.has_alt_phone" as any }));
+  const hasFax = isYes(useWatch({ control, name: "family.spouse_study_applicant.has_fax" as any }));
 
   // Open Work Permit doesn't have a specific employer/job — job title and
   // position description are hardcoded to "OPEN" rather than collected, and
-  // intended city/province are left blank (not asked, not hardcoded).
+  // employer name/address, intended city/province, and LMIA number are left
+  // blank (not asked, not hardcoded — a real employer/LMIA number would be
+  // inconsistent with "open"). Any non-open type needs all of these instead.
   useEffect(() => {
     if (!isOpenWorkPermit) return;
     setValue("family.spouse_study_applicant.work.job_title" as any, "OPEN");
     setValue("family.spouse_study_applicant.work.position_description" as any, "OPEN");
+    setValue("family.spouse_study_applicant.work.employer_name" as any, "");
+    setValue("family.spouse_study_applicant.work.employer_address" as any, "");
     setValue("family.spouse_study_applicant.work.intended_city_town" as any, "");
     setValue("family.spouse_study_applicant.work.intended_province_state" as any, "");
+    setValue("family.spouse_study_applicant.work.lmia_number" as any, "");
   }, [isOpenWorkPermit, setValue]);
 
   return (
@@ -109,6 +125,83 @@ export function DependentSpouseStep({ control, register, errors, setValue, optio
         </div>
       </div>
 
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+          Phone &amp; Email
+        </h4>
+        <p className="text-xs text-gray-500 mb-2">
+          The spouse's own contact details — personal, not shared with the main applicant.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Field label="Phone Type" error={(sa as any)?.primary_phone_type?.message}>
+            <select {...register("family.spouse_study_applicant.primary_phone_type" as any)} className={inp}>
+              <option value="">-- Select --</option>
+              {PHONE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </Field>
+          <Field label="Country code" error={(sa as any)?.primary_phone_country_code?.message}>
+            <input {...register("family.spouse_study_applicant.primary_phone_country_code" as any)} placeholder="1" className={inp} />
+          </Field>
+          <Field label="Primary Phone Number" required error={(sa as any)?.phone?.message}>
+            <input {...register("family.spouse_study_applicant.phone" as any)} placeholder="5550000000" className={inp} />
+          </Field>
+          <Field label="Extension" error={(sa as any)?.primary_phone_ext?.message}>
+            <input {...register("family.spouse_study_applicant.primary_phone_ext" as any)} className={inp} />
+          </Field>
+        </div>
+        <Field label="Email" required error={(sa as any)?.email?.message}>
+          <input {...register("family.spouse_study_applicant.email" as any)} type="email" className={inp} />
+        </Field>
+
+        <Field label="Do you have an alternate phone number?" error={(sa as any)?.has_alt_phone?.message}>
+          <select {...register("family.spouse_study_applicant.has_alt_phone" as any)} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+        {hasAltPhone && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-gray-50 rounded border">
+            <Field label="Type" error={(sa as any)?.alt_phone?.phone_type?.message}>
+              <select {...register("family.spouse_study_applicant.alt_phone.phone_type" as any)} className={inp}>
+                <option value="">-- Select --</option>
+                {PHONE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
+            <Field label="Country code" error={(sa as any)?.alt_phone?.country_code?.message}>
+              <input {...register("family.spouse_study_applicant.alt_phone.country_code" as any)} placeholder="1" className={inp} />
+            </Field>
+            <Field label="Number" error={(sa as any)?.alt_phone?.number?.message}>
+              <input {...register("family.spouse_study_applicant.alt_phone.number" as any)} placeholder="6045550999" className={inp} />
+            </Field>
+            <Field label="Ext" error={(sa as any)?.alt_phone?.ext?.message}>
+              <input {...register("family.spouse_study_applicant.alt_phone.ext" as any)} className={inp} />
+            </Field>
+          </div>
+        )}
+
+        <Field label="Do you have a fax number?" error={(sa as any)?.has_fax?.message}>
+          <select {...register("family.spouse_study_applicant.has_fax" as any)} className={inp}>
+            <option value="">-- Select --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </Field>
+        {hasFax && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3 bg-gray-50 rounded border">
+            <Field label="Country code" error={(sa as any)?.fax?.country_code?.message}>
+              <input {...register("family.spouse_study_applicant.fax.country_code" as any)} placeholder="1" className={inp} />
+            </Field>
+            <Field label="Number" error={(sa as any)?.fax?.number?.message}>
+              <input {...register("family.spouse_study_applicant.fax.number" as any)} className={inp} />
+            </Field>
+            <Field label="Ext" error={(sa as any)?.fax?.ext?.message}>
+              <input {...register("family.spouse_study_applicant.fax.ext" as any)} className={inp} />
+            </Field>
+          </div>
+        )}
+      </div>
+
       {/* Phase X2 — the spouse's OWN national ID, US PR card, residence history,
           and address (was previously inferred from the main applicant). */}
       <NationalIdBlock prefix="family.spouse_study_applicant" control={control} register={register} errors={sa} />
@@ -156,23 +249,32 @@ export function DependentSpouseStep({ control, register, errors, setValue, optio
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Work Permit Type" required error={(sa?.work as any)?.work_permit_type?.message}>
               <select {...register("family.spouse_study_applicant.work.work_permit_type" as any)} className={inp}>
-                <option value="Open Work Permit">Open Work Permit</option>
-                <option value="Employer-Specific Work Permit">Employer-Specific Work Permit</option>
+                {WORK_PERMIT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
           </div>
           {isOpenWorkPermit ? (
             <p className="mt-2 text-xs text-gray-500">
               An open work permit isn't tied to a specific job or location — job title, position
-              description, intended city and intended province are not collected for this path.
+              description, employer, intended city and intended province are not collected for
+              this path.
             </p>
           ) : (
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Employer Name" required error={(sa?.work as any)?.employer_name?.message}>
+                <input {...register("family.spouse_study_applicant.work.employer_name" as any)} className={inp} />
+              </Field>
+              <Field label="Employer Address" error={(sa?.work as any)?.employer_address?.message}>
+                <input {...register("family.spouse_study_applicant.work.employer_address" as any)} className={inp} />
+              </Field>
               <Field label="Job Title" required error={(sa?.work as any)?.job_title?.message}>
                 <input {...register("family.spouse_study_applicant.work.job_title" as any)} className={inp} />
               </Field>
               <Field label="Position Description" required error={(sa?.work as any)?.position_description?.message}>
                 <textarea {...register("family.spouse_study_applicant.work.position_description" as any)} rows={3} className={inp} />
+              </Field>
+              <Field label="LMIA Number" error={(sa?.work as any)?.lmia_number?.message}>
+                <input {...register("family.spouse_study_applicant.work.lmia_number" as any)} className={inp} />
               </Field>
               <Field label="Intended City/Town in Canada" error={(sa?.work as any)?.intended_city_town?.message}>
                 <input {...register("family.spouse_study_applicant.work.intended_city_town" as any)} className={inp} />

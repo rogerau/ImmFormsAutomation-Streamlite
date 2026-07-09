@@ -146,8 +146,16 @@ def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
             # obs #7 — the spouse fills & signs their OWN IMM 5476. Reuse the
             # same representative (same lawyer) but override Section A applicant
             # identity + the applicant signature with the spouse's own, instead
-            # of reusing the main applicant's identity verbatim.
+            # of reusing the main applicant's identity verbatim. type_of_application
+            # also needs to reflect the spouse's OWN permit type, not the main
+            # applicant's study permit — the main applicant's 5476 always says
+            # "Study Permit (Outside Canada)" (RepresentativeStep.tsx), which is
+            # wrong for the spouse's own accompanying application.
             spi = spouse_data.personal_info
+            spouse_application_type = (
+                "Work Permit (Outside Canada)" if "spouse_work_permit" in data.optional_forms
+                else "Visitor Visa (Outside Canada)"
+            )
             spouse_data.representative = data.representative.model_copy(update={
                 "applicant_family_name": spi.family_name,
                 "applicant_given_name": spi.given_name,
@@ -156,6 +164,7 @@ def fill_bundle(data: StudyPermitData) -> dict[str, bytes]:
                 "applicant_email": spouse_data.contact.email,
                 "applicant_signature": spouse_data.applicant_signature,
                 "applicant_date_signed": spouse_data.applicant_signature_date,
+                "type_of_application": spouse_application_type,
             })
             result["imm5476_spouse"] = fill_imm5476(spouse_data)
         if "imm5475" in data.optional_forms and data.release_authority:

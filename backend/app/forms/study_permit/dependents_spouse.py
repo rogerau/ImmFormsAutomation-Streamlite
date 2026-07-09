@@ -89,14 +89,25 @@ def _blank_parent() -> Parent5707:
 
 
 def _spouse_contact(parent: StudyPermitData, sa: SpouseStudyApplicant):
-    """The spouse's contact block. When address_same_as_main is True (default —
-    cohabiting), reuse the main applicant's household contact; otherwise use the
-    spouse's own structured address, keeping the household phone/email."""
+    """The spouse's contact block. ADDRESS: when address_same_as_main is True
+    (default — cohabiting), reuse the main applicant's household mailing/
+    residential address; otherwise use the spouse's own structured address.
+    PHONE/ALT PHONE/FAX/EMAIL are always the spouse's own answers — personal,
+    never inferred from the main applicant, regardless of the address toggle."""
     contact = deepcopy(parent.contact)
     if not sa.address_same_as_main and sa.mailing_address is not None:
         contact.mailing_address = sa.mailing_address
         contact.residential_address_same_as_mailing = sa.residential_address_same_as_mailing
         contact.residential_address = sa.residential_address
+    contact.phone = sa.phone
+    contact.primary_phone_type = sa.primary_phone_type
+    contact.primary_phone_country_code = sa.primary_phone_country_code
+    contact.primary_phone_ext = sa.primary_phone_ext
+    contact.has_alt_phone = sa.has_alt_phone
+    contact.alt_phone = sa.alt_phone
+    contact.has_fax = sa.has_fax
+    contact.fax = sa.fax
+    contact.email = sa.email
     return contact
 
 
@@ -180,12 +191,12 @@ def _common_application_fields(parent: StudyPermitData, spouse_applicant: Spouse
     """Field values shared by Imm1295Data and Imm5257Data — both reuse the same
     generic-application shape (see those schemas' module docstrings).
 
-    Only the household facts (mailing/residential address, phone, email) and
-    the applicant's own signature context are legitimately shared with the
-    main applicant. Every other personal/background fact (language,
-    education/occupation history, medical/criminal/military/political
-    declarations, consent) is the spouse's OWN data (full parity, Phase G) —
-    previously this wrongly borrowed the main applicant's answers."""
+    Only the household address (mailing/residential, via address_same_as_main)
+    is legitimately shared with the main applicant. Phone/alt phone/fax/email
+    and every other personal/background fact (language, education/occupation
+    history, medical/criminal/military/political declarations, consent) are
+    the spouse's OWN data (full parity, Phase G) — previously this wrongly
+    borrowed the main applicant's answers."""
     if spouse_applicant.passport is None:
         raise ValueError("spouse_study_applicant is missing passport details")
     spouse = _require_spouse(parent)
@@ -273,8 +284,11 @@ def build_spouse_imm1295_data(parent: StudyPermitData, spouse_applicant: SpouseS
         work = work.model_copy(update={
             "job_title": "OPEN",
             "position_description": "OPEN",
+            "employer_name": "",
+            "employer_address": "",
             "intended_city_town": "",
             "intended_province_state": "",
+            "lmia_number": "",
         })
     return Imm1295Data(
         tuberculosis=spouse_applicant.tuberculosis,
