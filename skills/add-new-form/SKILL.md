@@ -103,3 +103,9 @@ Add a small integration test that builds the payload, fills the PDF in-memory, a
 - **Dropdown shows the label as plain text.** You wrote the label instead of the export key; check `/Opt`.
 - **`PdfWriter(clone_from=...)` raises `block length` error.** PDF is encrypted; run `pikepdf` first.
 - **Field values appear blank in some viewers but show in Acrobat.** pypdf doesn't always regenerate `/AS` widget appearances — usually fine for the fillable PDF that goes back to IRCC.
+
+For **pure-XFA forms** specifically — a field silently not rendering despite
+correct data, or a dropdown resolving to the wrong option — see
+[../debug-xfa-form-field/SKILL.md](../debug-xfa-form-field/SKILL.md) for the two
+recurring root causes (wrong-parent `.find()` lookups, missing lic-code maps) and
+the verification method that actually catches them.
