@@ -5,6 +5,18 @@ description: Use when a field is missing, blank, or wrong on a generated IRCC PD
 
 # Debug: a field isn't rendering on a generated PDF
 
+> **Different symptom, different skill:** if the form looks *completely correct*
+> but IRCC **rejects it at upload** — or Adobe says "extended features are no
+> longer available", or the Validate button produces no barcode — this is not
+> your bug. Use the global **`ircc-portal-ready-forms`** skill instead.
+>
+> ⚠️ **This project is currently affected.** `backend/app/forms/xfa_filler.py`
+> still calls `pdf.save(buf)` (a full re-save that destroys IRCC's Reader-
+> Extensions signature), and `_xfa_application_common.py`'s `COUNTRY_LIC` has two
+> entries with a silent fall-through to the raw display string. Both were fixed in
+> `projects/OWPExtension-Streamlite` — port `xfa_incremental.py` and `xfa_lov.py`
+> from there.
+
 This project's pure-XFA forms (see `add-new-form/SKILL.md` for the AcroForm-vs-XFA
 distinction) are filled by building a complete datasets XML string and injecting it
 via `fill_xfa_pdf()`. Because the writer walks the XML tree with
