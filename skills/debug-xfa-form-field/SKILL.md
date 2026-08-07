@@ -17,6 +17,38 @@ description: Use when a field is missing, blank, or wrong on a generated IRCC PD
 > `projects/OWPExtension-Streamlite` — port `xfa_incremental.py` and `xfa_lov.py`
 > from there.
 
+## Known unfixed defects in this project
+
+Found 2026-08-06 while fixing the same bugs in OWPExtension. Recorded rather than
+fixed, by choice — they are real and will cause portal rejections.
+
+**1. The alias indicator writes `"1"` instead of `Y`/`N`, and never writes `N`.**
+`imm1294/filler.py:379`, `imm1295/filler.py:73`, `imm5257/filler.py:64`:
+
+```python
+if pi.alias_family_name:
+    ...
+    common.set_path(pd, "AliasName", "AliasNameIndicator", "AliasNameIndicator", "1")
+```
+
+The template's `AliasNameIndicator` is an **exclGroup** whose only legal values
+are `Y` and `N`, carrying `<validate nullTest="error">` — i.e. IRCC question 2a
+is mandatory. Two failures in one: the value is wrong when there IS an alias, and
+the question is left blank when there is not. Confirmed against portal-accepted
+forms, which carry `N`. Fix: write `yn(flag)` unconditionally.
+
+**2. `PAID_BY_OPTIONS` offers four values IRCC does not accept.**
+`frontend/components/forms/steps/StudyDetailsStep.tsx:29-31` lists seven options,
+but the template's own `ExpensesPaidBySPList` contains exactly three —
+`Myself`, `Parents`, `Other`. The field is `<choiceList>`-bound and runs
+`val.validateDropDown(this)`, so choosing **Other family member**, **Employer**,
+**Government** or **Sponsor** produces a form that fails Validate. Fix: cut the
+list to the three LOV values; the `paidBy === "Other"` conditional that reveals
+`expenses_paid_by_other` is already correct.
+
+Both are fixed in `projects/OWPExtension-Streamlite` — see its
+`_inland_common.py` and `fields/ui.tsx` (`EXPENSES_PAID_BY`).
+
 This project's pure-XFA forms (see `add-new-form/SKILL.md` for the AcroForm-vs-XFA
 distinction) are filled by building a complete datasets XML string and injecting it
 via `fill_xfa_pdf()`. Because the writer walks the XML tree with
